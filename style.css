@@ -1575,3 +1575,76 @@ body.weather-rain .maplibregl-canvas{filter:saturate(1.08) brightness(.94) contr
   .weather-info span{font-size:12px;}
   .weather-info small{font-size:10px;}
 }
+
+
+/* ===== v46 final cleanup ===== */
+.player-anchor,.scan-ring{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}
+#app::after{content:none!important;}
+.screen-vignette{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,.02) 26%,rgba(255,255,255,0) 55%,rgba(0,0,0,.08) 100%),
+    radial-gradient(ellipse at 50% 76%,rgba(255,255,255,0) 0 46%,rgba(64,126,186,.06) 72%,rgba(10,25,50,.16) 100%)!important;
+}
+.cloud-band{top:-10vh!important;height:24vh!important;opacity:.84!important;filter:blur(4px)!important;}
+.cloud-band-b{top:0vh!important;height:22vh!important;opacity:.56!important;filter:blur(10px)!important;}
+.mist-layer{top:8vh!important;height:20vh!important;opacity:.34!important;filter:blur(10px)!important;}
+.mist-layer-b{top:14vh!important;height:16vh!important;opacity:.16!important;filter:blur(18px)!important;}
+.snow-dust{opacity:.14!important;}
+.horizon-cloud-fx::after{content:"";position:absolute;left:0;right:0;top:16vh;height:14vh;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,0));pointer-events:none;}
+
+/* rain dibuat tipis supaya tidak muncul garis aneh */
+.rain-back{opacity:.16!important;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.45) 0 2px,transparent 2px 18px)!important;background-size:22px 22px!important;animation:rainDiagBack .7s linear infinite!important;}
+.rain-front{opacity:.24!important;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.72) 0 2px,transparent 2px 12px)!important;background-size:16px 16px!important;animation:rainDiagFront .42s linear infinite!important;}
+@keyframes rainDiagBack{from{background-position:0 0;}to{background-position:-36px 72px;}}
+@keyframes rainDiagFront{from{background-position:0 0;}to{background-position:-52px 104px;}}
+
+#map{background:linear-gradient(180deg,#d8efff 0%,#c0e6ff 26%,#8fd986 100%)!important;}
+.maplibregl-canvas{filter:saturate(1.18) brightness(1.01) contrast(1.03) hue-rotate(-4deg)!important;}
+body.is-night .maplibregl-canvas{filter:saturate(1.00) brightness(.74) contrast(1.06)!important;}
+body.weather-rain .maplibregl-canvas{filter:saturate(1.04) brightness(.92) contrast(1.02)!important;}
+
+.maplibregl-marker.player-map-marker,.player-map-marker{
+  width:116px!important;
+  height:146px!important;
+  z-index:90!important;
+  filter:drop-shadow(0 14px 20px rgba(14,35,79,.26))!important;
+  overflow:visible!important;
+}
+.player-map-marker .player-ring{
+  width:102px!important;height:102px!important;left:50%!important;top:78%!important;
+  transform:translate(-50%,-50%)!important;
+  border:3px solid rgba(88,214,255,.72)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset,0 0 24px rgba(80,202,255,.24)!important;
+}
+.player-map-marker .player-shadow{
+  width:42px!important;height:12px!important;left:50%!important;top:94%!important;
+  transform:translate(-50%,-50%)!important;
+  background:rgba(9,23,54,.16)!important;filter:blur(3px)!important;
+}
+.player-map-marker .player-sprite{
+  width:100px!important;height:100px!important;
+  left:50%!important;top:49%!important;
+  transform:translate(-50%,-50%)!important;
+  background-image:url("assets/sprout_character.png")!important;
+  background-size:500px 500px!important;
+  background-repeat:no-repeat!important;
+  image-rendering:auto!important;
+}
+.player-map-marker .player-sprite.idle,.player-map-marker .player-sprite.walk,.player-map-marker .player-sprite.run,.player-map-marker .player-sprite.face-left,.player-map-marker .player-sprite.face-right,.player-map-marker .player-sprite.face-up,.player-map-marker .player-sprite.face-down{
+  background-position:var(--sprite-x,0px) var(--sprite-y,0px)!important;
+  transform:translate(-50%,-50%)!important;
+  animation:none!important;
+}
+
+.weather-chip{min-width:232px!important;top:14px!important;}
+.top-status.compact-status{top:14px!important;}
+.top-actions{top:74px!important;}
+.bottom-left-profile{bottom:20px!important;}
+.main-action{bottom:20px!important;}
+.move-pad{bottom:106px!important;}
+.mapdex-action{bottom:100px!important;}
+.dex-action{bottom:22px!important;}
+
+@media (max-width:820px){
+  .weather-chip{min-width:190px!important;max-width:54vw!important;}
+}
