@@ -37,6 +37,8 @@ const state = {
   gpsSmoothBase: null,
   gpsLastAcceptedAt: 0,
   gpsLastAccuracy: null,
+  roadHeadingDeg: null,
+  roadHeadingLastAt: 0,
   headingCameraLastAt: 0,
   lastCameraCenter: null,
   compassRequested: false,
@@ -1031,8 +1033,10 @@ function nearestPointOnScreenLine(point, coords){
   let best = null;
   let bestD2 = Infinity;
   for(let i=0;i<coords.length-1;i++){
-    const a = map.project(coords[i]);
-    const b = map.project(coords[i+1]);
+    const aLngLat = coords[i];
+    const bLngLat = coords[i+1];
+    const a = map.project(aLngLat);
+    const b = map.project(bLngLat);
     const vx = b.x - a.x, vy = b.y - a.y;
     const wx = p.x - a.x, wy = p.y - a.y;
     const len2 = vx*vx + vy*vy;
@@ -1040,9 +1044,18 @@ function nearestPointOnScreenLine(point, coords){
     const t = Math.max(0, Math.min(1, (wx*vx + wy*vy) / len2));
     const x = a.x + vx*t, y = a.y + vy*t;
     const d2 = (p.x-x)*(p.x-x) + (p.y-y)*(p.y-y);
-    if(d2 < bestD2){ bestD2 = d2; best = map.unproject([x,y]).toArray(); }
+    if(d2 < bestD2){
+      bestD2 = d2;
+      best = {
+        coord: map.unproject([x,y]).toArray(),
+        d2,
+        tangentPx: { x: vx, y: vy },
+        segmentCoords: [aLngLat, bLngLat],
+        t
+      };
+    }
   }
-  return best ? { coord: best, d2: bestD2 } : null;
+  return best;
 }
 function getLineCoordinatesFromFeature(feature){
   const geom = feature && feature.geometry;
@@ -1051,12 +1064,12 @@ function getLineCoordinatesFromFeature(feature){
   if(geom.type === 'MultiLineString') return geom.coordinates || [];
   return [];
 }
-function snapCoordToNearestRoad(coord, radiusPx=170){
-  if(!map || !map.loaded || !map.loaded()) return coord;
+function getNearestRoadProjection(coord, radiusPx=170){
+  if(!map || !map.loaded || !map.loaded()) return null;
   const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
-  if(!layers.length) return coord;
+  if(!layers.length) return null;
   const features = queryFeaturesAround(coord, layers, radiusPx);
-  if(!features.length) return coord;
+  if(!features.length) return null;
   let best = null;
   for(const f of features){
     const lines = getLineCoordinatesFromFeature(f);
@@ -1065,11 +1078,55 @@ function snapCoordToNearestRoad(coord, radiusPx=170){
       if(hit && (!best || hit.d2 < best.d2)) best = hit;
     }
   }
-  return best && best.coord ? best.coord : coord;
+  return best;
+}
+function tangentToHeadingDeg(tangentPx){
+  if(!tangentPx) return null;
+  const dx = Number(tangentPx.x || 0);
+  const dy = Number(tangentPx.y || 0);
+  if(Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) return null;
+  return normalizeHeading(Math.atan2(dx, -dy) * 180 / Math.PI);
+}
+function setRoadHeadingFromProjection(hit){
+  const heading = tangentToHeadingDeg(hit && hit.tangentPx);
+  if(heading === null) return null;
+  state.roadHeadingDeg = heading;
+  state.roadHeadingLastAt = Date.now();
+  return heading;
+}
+function snapCoordToNearestRoad(coord, radiusPx=170){
+  const hit = getNearestRoadProjection(coord, radiusPx);
+  if(hit && hit.coord){
+    setRoadHeadingFromProjection(hit);
+    return hit.coord;
+  }
+  return coord;
+}
+function projectCoordAlongNearestRoad(currentCoord, desiredCoord, radiusPx=185){
+  const baseHit = getNearestRoadProjection(currentCoord, radiusPx) || getNearestRoadProjection(desiredCoord, radiusPx);
+  if(!baseHit || !baseHit.coord || !baseHit.tangentPx) return snapCoordToNearestRoad(desiredCoord, radiusPx);
+  const tangent = baseHit.tangentPx;
+  const len = Math.hypot(tangent.x, tangent.y) || 1;
+  const tx = tangent.x / len;
+  const ty = tangent.y / len;
+  const a = map.project(currentCoord);
+  const b = map.project(desiredCoord);
+  const desiredDx = b.x - a.x;
+  const desiredDy = b.y - a.y;
+  const scalar = desiredDx * tx + desiredDy * ty;
+  const basePoint = map.project(baseHit.coord);
+  const px = basePoint.x + tx * scalar;
+  const py = basePoint.y + ty * scalar;
+  const projected = map.unproject([px, py]).toArray();
+  const snapped = snapCoordToNearestRoad(projected, radiusPx);
+  if(snapped && !isCoordBlockedBySolidMap(snapped) && isCoordOnRoad(snapped)) return snapped;
+  return baseHit.coord;
 }
 function smoothGpsCoord(nextCoord, accuracyMeters=20){
   const now = Date.now();
-  const snapped = snapCoordToNearestRoad(nextCoord, 190);
+  const snappedHit = getNearestRoadProjection(nextCoord, 190);
+  const snapped = snappedHit && snappedHit.coord ? snappedHit.coord : nextCoord;
+  if(snappedHit) setRoadHeadingFromProjection(snappedHit);
   if(!state.gpsSmoothBase){
     state.gpsSmoothBase = snapped;
     state.gpsLastAcceptedAt = now;
@@ -1085,7 +1142,7 @@ function smoothGpsCoord(nextCoord, accuracyMeters=20){
   const alpha = Math.max(0.045, Math.min(0.22, dt * (d > 18 ? 0.42 : 0.22)));
   const lng = state.gpsSmoothBase[0] + (snapped[0] - state.gpsSmoothBase[0]) * alpha;
   const lat = state.gpsSmoothBase[1] + (snapped[1] - state.gpsSmoothBase[1]) * alpha;
-  state.gpsSmoothBase = snapCoordToNearestRoad([lng, lat], 170);
+  state.gpsSmoothBase = projectCoordAlongNearestRoad(state.gpsSmoothBase, [lng, lat], 180);
   state.gpsLastAcceptedAt = now;
   state.gpsLastAccuracy = accuracyMeters;
   return state.gpsSmoothBase;
@@ -1110,6 +1167,8 @@ function startLocation(){
         if(!state.deviceHeadingEnabled && (pos.coords.speed || 0) > 0.6){
           applyDeviceHeadingToCamera(pos.coords.heading, 180);
         }
+      }else if(!state.deviceHeadingEnabled && typeof state.roadHeadingDeg === 'number'){
+        applyDeviceHeadingToCamera(state.roadHeadingDeg, 220);
       }
       if(!state.browsing && movedMeters > 1.2) followPlayerCamera({ duration:420 });
       detectNearby();
@@ -1225,6 +1284,7 @@ function worldFromOffset(x, y){
 function tryMoveWithCollision(mx, my){
   const originalX = state.offsetMeters.x;
   const originalY = state.offsetMeters.y;
+  const currentWorld = state.playerWorld || worldFromOffset(originalX, originalY);
   const candidates = [
     [originalX + mx, originalY + my, 'full'],
     [originalX + mx, originalY, 'x'],
@@ -1237,11 +1297,14 @@ function tryMoveWithCollision(mx, my){
       const r = state.maxOffsetMeters / d;
       tx *= r; ty *= r;
     }
-    const nextCoord = worldFromOffset(tx, ty);
+    const desiredCoord = worldFromOffset(tx, ty);
+    const nextCoord = state.roadOnlyMode ? projectCoordAlongNearestRoad(currentWorld, desiredCoord, 185) : desiredCoord;
     if(canPlayerStandAt(nextCoord)){
-      state.offsetMeters.x = tx;
-      state.offsetMeters.y = ty;
-      state.playerWorld = snapCoordToNearestRoad(nextCoord, 185);
+      const meterDx = haversineMeters([state.gpsBase[0], currentWorld[1]], [nextCoord[0], currentWorld[1]]) * (nextCoord[0] >= state.gpsBase[0] ? 1 : -1);
+      const meterDy = haversineMeters([currentWorld[0], state.gpsBase[1]], [currentWorld[0], nextCoord[1]]) * (nextCoord[1] >= state.gpsBase[1] ? 1 : -1);
+      state.offsetMeters.x = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, meterDx));
+      state.offsetMeters.y = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, meterDy));
+      state.playerWorld = nextCoord;
       return true;
     }
   }
@@ -1270,7 +1333,14 @@ function updateMovement(dt=1/60){
   if(forwardInput && strafeInput){ mx *= 0.7071; my *= 0.7071; }
 
   let facing = state.facing || "down";
-  if(Math.abs(strafeInput) > Math.abs(forwardInput)) facing = strafeInput < 0 ? "left" : "right";
+  const roadHeading = (typeof state.roadHeadingDeg === 'number' && (Date.now() - (state.roadHeadingLastAt || 0) < 1800)) ? state.roadHeadingDeg : null;
+  if(roadHeading !== null){
+    const rel = normalizeHeading(roadHeading - getCameraBearing());
+    if(rel >= 315 || rel < 45) facing = "up";
+    else if(rel < 135) facing = "right";
+    else if(rel < 225) facing = "down";
+    else facing = "left";
+  }else if(Math.abs(strafeInput) > Math.abs(forwardInput)) facing = strafeInput < 0 ? "left" : "right";
   else if(forwardInput) facing = forwardInput > 0 ? "up" : "down";
 
   const moved = tryMoveWithCollision(mx, my);
