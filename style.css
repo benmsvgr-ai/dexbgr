@@ -2226,3 +2226,51 @@ body::before,body::after,#app::before,#app::after,.map-wrap::before,.map-wrap::a
   filter:none !important;
   animation:none !important;
 }
+
+
+/* === v59 stronger no-dark + lower grounded player === */
+#nightOverlay,.night-overlay,#rainFx,.rain-fx,
+.screen-vignette,.horizon-cloud-fx,.cloud-band,.cloud-band-b,.mist-layer,.mist-layer-b,.snow-dust,
+.map-wrap::before,.map-wrap::after{
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  background:none !important;
+  animation:none !important;
+  content:none !important;
+}
+body.is-night, #app.is-night{
+  background:#dff1ff !important;
+}
+body.is-night .screen-vignette, body.is-night .night-overlay, body.is-night .horizon-cloud-fx{
+  display:none !important;
+  opacity:0 !important;
+}
+#map{
+  background:linear-gradient(180deg,#e5f4ff 0%,#d7edff 42%,#addc9d 100%) !important;
+}
+.maplibregl-canvas{
+  filter:saturate(1.08) brightness(1.18) contrast(1.01) !important;
+}
+.player-map-marker .player-ring{
+  bottom:-4px !important;
+  width:104px !important;
+  height:104px !important;
+}
+.player-map-marker .player-shadow{
+  bottom:2px !important;
+}
+.player-map-marker .player-sprite,
+.player-map-marker .player-sprite.idle,
+.player-map-marker .player-sprite.walk,
+.player-map-marker .player-sprite.run,
+.player-map-marker .player-sprite.face-left,
+.player-map-marker .player-sprite.face-right,
+.player-map-marker .player-sprite.face-up,
+.player-map-marker .player-sprite.face-down{
+  bottom:-10px !important;
+  transform:translateX(-50%) scale(.88) !important;
+}
+.player-map-marker .player-name-tag{
+  top:8px !important;
+}
