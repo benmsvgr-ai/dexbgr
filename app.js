@@ -93,6 +93,69 @@ const sheetEl = () => document.getElementById("bottomSheet");
 const miniBtn = () => document.getElementById("sheetMiniBtn");
 const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
 
+function chatDock(){ return document.getElementById("animeChatDock"); }
+function openChatDock(){ chatDock()?.classList.remove("collapsed"); }
+function closeChatDock(){ chatDock()?.classList.add("collapsed"); }
+
+const environment = {
+  timezone: "Asia/Jakarta",
+  temperature: null,
+  description: "Memuat cuaca",
+  icon: "⛅",
+  isDay: true,
+  raining: false,
+  lastFetchAt: 0,
+  lastCoords: null
+};
+
+function weatherCodeMeta(code){
+  const c = Number(code);
+  if(c === 0) return { text:'Cerah', icon:'☀️', rain:false };
+  if([1,2].includes(c)) return { text:'Cerah Berawan', icon:'⛅', rain:false };
+  if(c === 3) return { text:'Berawan', icon:'☁️', rain:false };
+  if([61,63,65,80,81,82].includes(c)) return { text:'Hujan', icon:'🌧️', rain:true };
+  return { text:'Cerah Berawan', icon:'⛅', rain:false };
+}
+function updateWeatherChip(){
+  const tempEl = document.getElementById("weatherTemp");
+  const descEl = document.getElementById("weatherDesc");
+  const iconEl = document.getElementById("weatherIcon");
+  const timeEl = document.getElementById("weatherLocTime");
+  if(tempEl) tempEl.textContent = Number.isFinite(environment.temperature) ? `${Math.round(environment.temperature)}°C` : '--°C';
+  if(descEl) descEl.textContent = environment.description || 'Cuaca';
+  if(iconEl) iconEl.textContent = environment.icon || '⛅';
+  if(timeEl){
+    const now = new Date();
+    const t = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit', timeZone: environment.timezone || 'Asia/Jakarta'});
+    const d = now.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short', timeZone: environment.timezone || 'Asia/Jakarta'});
+    timeEl.textContent = `${t} • ${d}`;
+  }
+  document.body.classList.toggle('weather-rain', !!environment.raining);
+  document.body.classList.toggle('is-night', environment.isDay === false);
+}
+async function refreshWeather(force=false){
+  try{
+    const now = Date.now();
+    const coords = state.gpsBase || state.playerWorld || [106.79884, -6.59725];
+    const [lng, lat] = coords;
+    if(!force && now - environment.lastFetchAt < 10*60*1000) return;
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,is_day,rain,showers&timezone=auto`, { cache:'no-store' });
+    if(!res.ok) return;
+    const data = await res.json();
+    const current = data.current || {};
+    const meta = weatherCodeMeta(current.weather_code);
+    environment.lastFetchAt = now;
+    environment.lastCoords = coords;
+    environment.timezone = data.timezone || "Asia/Jakarta";
+    environment.temperature = Number(current.temperature_2m);
+    environment.description = meta.text;
+    environment.icon = meta.icon;
+    environment.isDay = Number(current.is_day) === 1;
+    environment.raining = meta.rain && ((Number(current.rain||0) + Number(current.showers||0)) >= 1.0);
+    updateWeatherChip();
+  }catch(e){}
+}
+
 function setStatus(text){
   statusEl().textContent = text;
   const lamp = document.getElementById("statusLamp");
@@ -1051,6 +1114,7 @@ function startLocation(){
       if(!state.browsing && movedMeters > 1.2) followPlayerCamera({ duration:420 });
       detectNearby();
       updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • kompas aktif" : "Lokasi aktif");
+      refreshWeather();
     },
     (err) => { state.hasRealGps = false; updateStatus("Lokasi gagal: " + err.message); },
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
@@ -1280,6 +1344,8 @@ map.on("load", () => {
   renderNPCs();
   loadSheetData();
   updateZoomFog();
+  updateWeatherChip();
+  setTimeout(() => refreshWeather(true), 900);
   requestAnimationFrame(loop);
 });
 
@@ -1479,6 +1545,8 @@ document.getElementById("npcDialogQuestBtn").addEventListener("click", acceptNpc
 document.getElementById("npcDialog").addEventListener("click", (e) => { if(e.target.id === "npcDialog") closeNpcDialog(); });
 document.getElementById("questCloseBtn").addEventListener("click", dismissActiveQuestPopup);
 document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
+const __chatToggle=document.getElementById("chatToggleBtn"); if(__chatToggle){ __chatToggle.addEventListener("click", openChatDock); }
+const __chatClose=document.getElementById("chatCloseBtn"); if(__chatClose){ __chatClose.addEventListener("click", closeChatDock); }
 document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
 document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
 document.getElementById("dexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.remove("hidden"));
