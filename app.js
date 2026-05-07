@@ -34,6 +34,9 @@ const state = {
   deviceHeadingLastAt: 0,
   deviceHeadingRaw: null,
   deviceHeadingSmooth: null,
+  gpsSmoothBase: null,
+  gpsLastAcceptedAt: 0,
+  gpsLastAccuracy: null,
   headingCameraLastAt: 0,
   lastCameraCenter: null,
   compassRequested: false,
@@ -218,8 +221,8 @@ function applyPlayerSpriteFrame(){
   // Sprite utama 4x4: baris = arah, kolom = frame langkah.
   // Ini sengaja dibuat pakai background-position manual supaya karakter tidak hilang
   // dan tidak ikut muter saat map/kompas berputar.
-  const fw = 104;
-  const fh = 104;
+  const fw = 125;
+  const fh = 125;
   const facingRows = { down:0, left:1, right:2, up:3 };
   const facing = state.facing || "down";
   const row = facingRows[facing] ?? 0;
@@ -442,13 +445,14 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 73;
-const CAMERA_ZOOM = 18.25;
-// Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 122;
+const CAMERA_PITCH = 67;
+const CAMERA_ZOOM = 18.9;
+// V44 final: jarak kamera seperti referensi — karakter tetap terlihat besar,
+// tapi jalan di depan masih panjang. Jangan dibesarkan lagi nanti jadi drone view.
+const CAMERA_AHEAD_METERS = 72;
 const CAMERA_FOLLOW_MIN_MS = 210;
-const HEADING_DEADBAND_DEG = 2.8;
-const HEADING_SMOOTH_ALPHA = 0.075;
+const HEADING_DEADBAND_DEG = 7.5;
+const HEADING_SMOOTH_ALPHA = 0.045;
 function degToRad(d){ return d * Math.PI / 180; }
 function getCameraBearing(){
   if(state.deviceHeadingEnabled && typeof state.deviceHeadingBearing === "number") return state.deviceHeadingBearing;
@@ -523,8 +527,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 16.2,
-  maxZoom: 20,
+  minZoom: 17.6,
+  maxZoom: 19.15,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -952,6 +956,76 @@ async function requestDeviceCompass(){
     console.warn("Compass unavailable", err);
   }
 }
+
+function metersBetweenCoords(a, b){
+  if(!a || !b) return Infinity;
+  return haversineMeters(a, b);
+}
+function nearestPointOnScreenLine(point, coords){
+  if(!coords || coords.length < 2) return null;
+  const p = map.project(point);
+  let best = null;
+  let bestD2 = Infinity;
+  for(let i=0;i<coords.length-1;i++){
+    const a = map.project(coords[i]);
+    const b = map.project(coords[i+1]);
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const wx = p.x - a.x, wy = p.y - a.y;
+    const len2 = vx*vx + vy*vy;
+    if(!len2) continue;
+    const t = Math.max(0, Math.min(1, (wx*vx + wy*vy) / len2));
+    const x = a.x + vx*t, y = a.y + vy*t;
+    const d2 = (p.x-x)*(p.x-x) + (p.y-y)*(p.y-y);
+    if(d2 < bestD2){ bestD2 = d2; best = map.unproject([x,y]).toArray(); }
+  }
+  return best ? { coord: best, d2: bestD2 } : null;
+}
+function getLineCoordinatesFromFeature(feature){
+  const geom = feature && feature.geometry;
+  if(!geom) return [];
+  if(geom.type === 'LineString') return [geom.coordinates];
+  if(geom.type === 'MultiLineString') return geom.coordinates || [];
+  return [];
+}
+function snapCoordToNearestRoad(coord, radiusPx=170){
+  if(!map || !map.loaded || !map.loaded()) return coord;
+  const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
+  if(!layers.length) return coord;
+  const features = queryFeaturesAround(coord, layers, radiusPx);
+  if(!features.length) return coord;
+  let best = null;
+  for(const f of features){
+    const lines = getLineCoordinatesFromFeature(f);
+    for(const line of lines){
+      const hit = nearestPointOnScreenLine(coord, line);
+      if(hit && (!best || hit.d2 < best.d2)) best = hit;
+    }
+  }
+  return best && best.coord ? best.coord : coord;
+}
+function smoothGpsCoord(nextCoord, accuracyMeters=20){
+  const now = Date.now();
+  const snapped = snapCoordToNearestRoad(nextCoord, 190);
+  if(!state.gpsSmoothBase){
+    state.gpsSmoothBase = snapped;
+    state.gpsLastAcceptedAt = now;
+    state.gpsLastAccuracy = accuracyMeters;
+    return snapped;
+  }
+  const d = haversineMeters(state.gpsSmoothBase, snapped);
+  const jitterGate = Math.max(2.6, Math.min(10, (accuracyMeters || 20) * 0.22));
+  if(d < jitterGate){
+    return state.gpsSmoothBase;
+  }
+  const dt = Math.max(0.016, Math.min(2.0, (now - (state.gpsLastAcceptedAt || now)) / 1000));
+  const alpha = Math.max(0.045, Math.min(0.22, dt * (d > 18 ? 0.42 : 0.22)));
+  const lng = state.gpsSmoothBase[0] + (snapped[0] - state.gpsSmoothBase[0]) * alpha;
+  const lat = state.gpsSmoothBase[1] + (snapped[1] - state.gpsSmoothBase[1]) * alpha;
+  state.gpsSmoothBase = snapCoordToNearestRoad([lng, lat], 170);
+  state.gpsLastAcceptedAt = now;
+  state.gpsLastAccuracy = accuracyMeters;
+  return state.gpsSmoothBase;
+}
 function startLocation(){
   requestDeviceCompass();
   if(!navigator.geolocation){ updateStatus("Browser tidak mendukung lokasi"); return; }
@@ -960,16 +1034,20 @@ function startLocation(){
   state.geoWatch = navigator.geolocation.watchPosition(
     (pos) => {
       state.hasRealGps = true;
-      state.gpsBase = [pos.coords.longitude, pos.coords.latitude];
+      const rawGps = [pos.coords.longitude, pos.coords.latitude];
+      const accuracy = pos.coords && Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : 20;
+      const beforeWorld = state.playerWorld ? [state.playerWorld[0], state.playerWorld[1]] : null;
+      state.gpsBase = smoothGpsCoord(rawGps, accuracy);
       clampOffset();
       recomputePlayerWorld();
+      const movedMeters = beforeWorld ? haversineMeters(beforeWorld, state.playerWorld) : Infinity;
       if(pos.coords && Number.isFinite(pos.coords.heading)){
         // Fallback: kalau sensor kompas browser tidak aktif, pakai arah gerak GPS.
         if(!state.deviceHeadingEnabled && (pos.coords.speed || 0) > 0.6){
           applyDeviceHeadingToCamera(pos.coords.heading, 180);
         }
       }
-      if(!state.browsing) followPlayerCamera({ duration:250 });
+      if(!state.browsing && movedMeters > 1.2) followPlayerCamera({ duration:420 });
       detectNearby();
       updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • kompas aktif" : "Lokasi aktif");
     },
@@ -1018,9 +1096,7 @@ function getBlockedMapLayers(){
     const isBlocked =
       id.includes('building') || sl.includes('building') ||
       id.includes('water') || sl.includes('water') ||
-      id.includes('waterway') || sl.includes('waterway') ||
-      id.includes('landcover') || sl.includes('landcover') ||
-      id.includes('park') || id.includes('grass') || id.includes('cemetery');
+      id.includes('waterway') || sl.includes('waterway');
     if(isSolid && isBlocked && !found.includes(layer.id)) found.push(layer.id);
   });
   if(map.getLayer('bdx-building-collision') && !found.includes('bdx-building-collision')) found.push('bdx-building-collision');
@@ -1070,8 +1146,11 @@ function isCoordOnRoad(coord){
   return features.length > 0;
 }
 function canPlayerStandAt(coord){
-  if(isCoordBlockedBySolidMap(coord)) return false;
-  if(!isCoordOnRoad(coord)) return false;
+  // V44 final: player wajib berada di jalan. Kalau titik mentah masuk gedung/lahan,
+  // dia dianggap nabrak lalu dipindah ke titik jalan terdekat, bukan tembus.
+  const roadCoord = snapCoordToNearestRoad(coord, 185);
+  if(isCoordBlockedBySolidMap(roadCoord)) return false;
+  if(!isCoordOnRoad(roadCoord)) return false;
   return true;
 }
 function worldFromOffset(x, y){
@@ -1097,7 +1176,7 @@ function tryMoveWithCollision(mx, my){
     if(canPlayerStandAt(nextCoord)){
       state.offsetMeters.x = tx;
       state.offsetMeters.y = ty;
-      state.playerWorld = nextCoord;
+      state.playerWorld = snapCoordToNearestRoad(nextCoord, 185);
       return true;
     }
   }
@@ -1156,6 +1235,12 @@ function bindMoveButton(btn){
   btn.addEventListener("touchend", up);
 }
 
+function updateZoomFog(){
+  const app = document.getElementById("app");
+  if(!app || !map) return;
+  app.classList.toggle("app-max-zoom", map.getZoom() >= 18.55);
+}
+
 map.on("load", () => {
   setupMapLibre3D();
   map.addSource("route-k5",{type:"geojson",data:routeFeatures.k5});
@@ -1183,23 +1268,25 @@ map.on("load", () => {
   followPlayerCamera({ zoom: CAMERA_ZOOM });
   lockPitchOnly();
   document.getElementById("sheetContent").innerHTML = `
-    <h3>BogorDex GO v42 Smooth Compass</h3>
+    <h3>BogorDex GO v44 Cloud Road Camera</h3>
     <p>MapLibre street-anime mode: kamera lebih rendah seperti berdiri di jalan, rotate kiri-kanan aktif, pitch atas-bawah dikunci, gedung transparan, dan karakter tetap road-only.</p>
     <div class="section"><div class="section-title">Fix Inti</div><p>Basis MapLibre tetap dipakai tanpa kartu kredit Mapbox. Nuansa dibuat lebih game HP/Pokemon GO: gedung ghost transparan, kamera dari belakang karakter, MapDex phone aktif, dan laporan titik tetap jalan.</p></div>
   `;
-  state.lastPoi = {id:"intro",name:"BogorDex GO v42 Smooth Compass",desc:"Mode street-anime MapDex road-only dengan kamera lebih luas ke depan.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
+  state.lastPoi = {id:"intro",name:"BogorDex GO v44 Cloud Road Camera",desc:"Mode street-anime MapDex road-only dengan kamera lebih luas ke depan.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
   syncMiniButton();
   loadUserReports();
   renderUserReports();
   renderNPCs();
   loadSheetData();
+  updateZoomFog();
   requestAnimationFrame(loop);
 });
 
 map.on("dragstart", startBrowse);
 map.on("dragend", stopBrowse);
 map.on("zoomstart", startBrowse);
-map.on("zoomend", stopBrowse);
+map.on("zoom", updateZoomFog);
+map.on("zoomend", () => { updateZoomFog(); stopBrowse(); });
 map.on("rotatestart", startBrowse);
 map.on("rotateend", stopBrowse);
 map.on("pitchstart", () => { startBrowse(); setTimeout(lockPitchOnly, 30); });
