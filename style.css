@@ -1944,3 +1944,69 @@ body:not(.weather-rain) .rain-fx{display:none!important;}
   .main-action{bottom:12px !important; width:72px !important; height:72px !important;}
   .player-map-marker .player-name-tag{font-size:11px !important; max-width:100px; overflow:hidden; text-overflow:ellipsis;}
 }
+
+/* ===== v50 bugfix ===== */
+.player-map-marker .player-sprite.player-sprite-image{
+  display:block !important;
+  width:96px !important;
+  height:128px !important;
+  left:50% !important;
+  top:48% !important;
+  transform:translate(-50%,-50%) !important;
+  background-repeat:no-repeat !important;
+  background-position:center bottom !important;
+  background-size:contain !important;
+  background-color:transparent !important;
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.18)) !important;
+}
+.player-map-marker .player-shadow{top:87% !important;}
+.player-map-marker .player-ring{top:75% !important;}
+/* ensure old generic hidden/offroad styles don't kill sprite */
+.player-map-marker .player-sprite.player-sprite-image::before,
+.player-map-marker .player-sprite.player-sprite-image::after{content:none !important;}
+
+@media (max-width: 768px){
+  .top-status.compact-status{width:146px !important;}
+  .weather-chip{max-width:44vw !important;}
+}
+
+
+/* ===== v51 character + road focus ===== */
+.player-map-marker,.maplibregl-marker.player-map-marker{
+  width:120px!important;
+  height:152px!important;
+  overflow:visible!important;
+  z-index:120!important;
+}
+.player-map-marker .player-sprite{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  width:100px!important;
+  height:100px!important;
+  transform:translate(-50%,-50%)!important;
+  background-image:url("assets/sprout_character.png")!important;
+  background-repeat:no-repeat!important;
+  background-size:500px 500px!important;
+  background-position:var(--sprite-x,-200px) var(--sprite-y,-400px)!important;
+  image-rendering:auto!important;
+  filter:drop-shadow(0 8px 10px rgba(0,0,0,.22))!important;
+  display:block!important;
+  opacity:1!important;
+}
+.player-map-marker .player-sprite.player-sprite-image{ background-image:url("assets/sprout_character.png")!important; }
+.player-map-marker .player-name-tag{ top:6px!important; }
+.player-map-marker .player-ring{ top:78%!important; width:88px!important; height:88px!important; }
+.player-map-marker .player-shadow{ top:91%!important; width:34px!important; height:10px!important; }
+
+/* map lebih dekat dan lebih fokus */
+.weather-chip{ min-width:210px!important; }
+.top-status.compact-status{ width:190px!important; }
+
+/* kalau di HP jangan numpuk */
+@media (max-width: 768px){
+  .anime-chat-dock{top:60px!important; left:12px!important; right:12px!important; width:auto!important;}
+  .chat-toggle{top:14px!important; right:12px!important;}
+  .weather-chip{max-width:42vw!important; min-width:150px!important; padding:8px 12px!important;}
+  .top-status.compact-status{width:145px!important; padding:10px!important;}
+}
