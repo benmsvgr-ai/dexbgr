@@ -1750,3 +1750,90 @@ body.is-night .weather-chip{background:linear-gradient(180deg,rgba(25,40,83,.52)
   .chat-toggle{top:14px !important; right:10px !important; width:72px !important; height:52px !important;}
   .fab-compass{top:14px !important; right:90px !important; width:52px !important; height:52px !important;}
 }
+
+
+/* ===== popup portal fix + no fog ===== */
+.horizon-cloud-fx,
+.cloud-band,
+.cloud-band-a,
+.cloud-band-b,
+.mist-layer,
+.mist-layer-a,
+.mist-layer-b,
+.snow-dust,
+.night-overlay,
+.rain-fx{
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+}
+
+.quest-popup{
+  position:fixed !important;
+  left:50% !important;
+  bottom:118px !important;
+  top:auto !important;
+  transform:translateX(-50%) !important;
+  width:min(420px,92vw) !important;
+  z-index:999999 !important;
+  pointer-events:auto !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+.quest-popup.hidden{
+  display:block !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  transform:translateX(-50%) translateY(18px) scale(.92) !important;
+}
+.quest-aura{
+  position:absolute !important;
+  inset:-34px !important;
+  border-radius:42px !important;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(107,230,255,.42), transparent 58%),
+    radial-gradient(circle at 28% 25%, rgba(255,109,180,.28), transparent 42%) !important;
+  filter:blur(8px) !important;
+  animation:questAuraV54 1.9s ease-in-out infinite !important;
+}
+@keyframes questAuraV54{
+  0%,100%{opacity:.76;transform:scale(.98)}
+  50%{opacity:1;transform:scale(1.02)}
+}
+.quest-card{
+  position:relative !important;
+  overflow:hidden !important;
+  border-radius:28px !important;
+  padding:18px !important;
+  color:#fff !important;
+  background:linear-gradient(145deg, rgba(15,25,70,.94), rgba(24,80,146,.92) 55%, rgba(58,32,120,.94)) !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  box-shadow:0 28px 70px rgba(0,0,0,.34), 0 0 34px rgba(94,186,255,.18), inset 0 1px 0 rgba(255,255,255,.12) !important;
+}
+.quest-card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius:30px;
+  background:linear-gradient(135deg, rgba(85,205,255,.22), rgba(255,120,220,.16), rgba(85,205,255,.22));
+  z-index:-1;
+  filter:blur(12px);
+}
+.quest-footer button,
+#questStartBtn{
+  border:none !important;
+  cursor:pointer !important;
+  border-radius:999px !important;
+  padding:11px 18px !important;
+  color:#fff !important;
+  font-weight:1000 !important;
+  background:linear-gradient(180deg,#49d5ff,#1579ff) !important;
+  box-shadow:0 12px 24px rgba(21,121,255,.28), inset 0 1px 0 rgba(255,255,255,.34) !important;
+}
+
+@media (max-width:760px){
+  .quest-popup{
+    bottom:100px !important;
+    width:min(94vw,390px) !important;
+  }
+}
