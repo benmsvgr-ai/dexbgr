@@ -1815,3 +1815,132 @@ body:not(.weather-rain) .rain-fx{display:none!important;}
 
 /* Route direction */
 #map .maplibregl-canvas-container{outline:none!important;}
+
+
+/* ===== v49 final revision ===== */
+/* buang menu silang dan kartu explorer pojok kiri */
+.top-actions,
+.reference-checklist,
+.bottom-left-profile,
+.sheet-mini-btn{display:none !important;}
+
+/* chat pindah ke atas */
+.chat-toggle{
+  position:absolute !important;
+  top:14px !important;
+  right:14px !important;
+  bottom:auto !important;
+  z-index:160 !important;
+  min-width:74px !important;
+  height:42px !important;
+  border-radius:16px !important;
+}
+.anime-chat-dock{
+  position:absolute !important;
+  top:64px !important;
+  right:14px !important;
+  bottom:auto !important;
+  width:300px !important;
+  min-height:108px !important;
+  border-radius:22px !important;
+  z-index:158 !important;
+}
+.anime-chat-dock.collapsed{transform:translateY(-8px) scale(.98); opacity:0; pointer-events:none;}
+.chat-dock-head{padding:12px 14px 8px !important;}
+.chat-dock-body{padding:8px 14px 14px !important;}
+
+/* mapdex & character buttons rapih */
+.mapdex-action{right:16px !important; bottom:110px !important; width:84px !important; height:86px !important;}
+.dex-action{right:16px !important; bottom:18px !important; width:86px !important; height:58px !important;}
+.fab-locate{right:16px !important; bottom:212px !important;}
+.fab-compass{top:14px !important; right:118px !important; bottom:auto !important;}
+.main-action{bottom:18px !important; left:50% !important; transform:translateX(-50%) !important;}
+.move-pad{bottom:96px !important; left:16px !important;}
+
+/* tombol arahkan */
+.sheet-route-btn{
+  margin-top:16px !important;
+  appearance:none; border:none; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:12px 18px !important; border-radius:999px !important;
+  background:linear-gradient(180deg,#49d5ff,#1579ff) !important;
+  color:#fff !important; font-weight:1000 !important; letter-spacing:.02em;
+  box-shadow:0 12px 24px rgba(21,121,255,.28), inset 0 1px 0 rgba(255,255,255,.38) !important;
+}
+.sheet-route-btn::before{content:"➜"; font-size:14px;}
+.sheet-route-btn:hover{transform:translateY(-1px);}
+
+/* portal event tanpa hint tombol */
+.event-portal-marker.single-event .event-portal-hint{display:none !important;}
+.event-portal-marker.single-event .event-portal-label{top:-14px !important; font-size:11px !important;}
+.event-portal-marker.single-event{width:92px !important; height:122px !important;}
+
+/* awan/kabut untuk nutup bocor biru */
+.horizon-cloud-fx{display:block !important; opacity:1 !important; pointer-events:none !important;}
+.cloud-band,.cloud-band-b,.mist-layer,.mist-layer-b{display:block !important;}
+.cloud-band{
+  top:-6vh !important; height:20vh !important; opacity:.72 !important;
+  background:linear-gradient(180deg,rgba(233,245,255,.94),rgba(214,234,248,.78),rgba(214,234,248,0)) !important;
+  filter:blur(6px) !important;
+}
+.cloud-band-b{
+  top:6vh !important; height:16vh !important; opacity:.52 !important;
+  background:linear-gradient(180deg,rgba(208,228,241,.78),rgba(208,228,241,.20),rgba(208,228,241,0)) !important;
+  filter:blur(14px) !important;
+}
+.mist-layer{
+  top:11vh !important; height:12vh !important; opacity:.22 !important;
+  background:linear-gradient(180deg,rgba(223,238,247,.52),rgba(223,238,247,0)) !important;
+  filter:blur(18px) !important;
+}
+.mist-layer-b{
+  top:16vh !important; height:10vh !important; opacity:.14 !important;
+  background:linear-gradient(180deg,rgba(220,236,246,.38),rgba(220,236,246,0)) !important;
+  filter:blur(28px) !important;
+}
+.snow-dust{display:none !important;}
+
+/* karakter utama lebih jelas */
+.maplibregl-marker.player-map-marker,.player-map-marker{
+  width:118px !important;
+  height:152px !important;
+  overflow:visible !important;
+  filter:drop-shadow(0 12px 16px rgba(12,33,74,.24)) !important;
+}
+.player-map-marker .player-name-tag{
+  top:4px !important;
+  padding:5px 10px !important;
+  font-size:12px !important;
+  z-index:2;
+}
+.player-map-marker .player-sprite.player-sprite-image{
+  width:88px !important; height:112px !important;
+  left:50% !important; top:50% !important;
+  transform:translate(-50%,-50%) !important;
+  object-fit:contain !important; object-position:center bottom !important;
+  background:none !important; image-rendering:auto !important;
+}
+.player-map-marker .player-shadow{width:34px !important; height:10px !important; top:89% !important;}
+.player-map-marker .player-ring{width:86px !important; height:86px !important; top:77% !important; border-width:2px !important;}
+
+/* status/weather lebih rapih */
+.top-status.compact-status{top:14px !important; left:14px !important; width:190px !important; z-index:170 !important;}
+.weather-chip{top:14px !important; left:50% !important; transform:translateX(-50%) !important; z-index:170 !important; min-width:220px !important;}
+
+/* mobile: jangan numpuk */
+@media (max-width: 768px){
+  .top-status.compact-status{width:150px !important; padding:12px !important;}
+  .weather-chip{min-width:160px !important; max-width:42vw !important; padding:9px 12px !important;}
+  .weather-info b{font-size:15px !important;}
+  .weather-info span{font-size:12px !important;}
+  .weather-info small{font-size:10px !important;}
+  .anime-chat-dock{left:12px !important; right:12px !important; width:auto !important; top:66px !important;}
+  .chat-toggle{top:14px !important; right:12px !important; width:66px !important;}
+  .fab-compass{right:86px !important; width:46px !important; height:46px !important;}
+  .fab-locate{right:12px !important; bottom:166px !important; width:52px !important; height:52px !important;}
+  .mapdex-action{right:12px !important; bottom:94px !important; width:76px !important; height:76px !important;}
+  .dex-action{right:12px !important; bottom:16px !important; width:76px !important; height:54px !important; font-size:13px !important;}
+  .move-pad{left:12px !important; bottom:78px !important; transform:scale(.94); transform-origin:left bottom;}
+  .main-action{bottom:12px !important; width:72px !important; height:72px !important;}
+  .player-map-marker .player-name-tag{font-size:11px !important; max-width:100px; overflow:hidden; text-overflow:ellipsis;}
+}
