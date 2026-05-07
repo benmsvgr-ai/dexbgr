@@ -2039,3 +2039,107 @@ body::before,body::after,#app::before,#app::after,.map-wrap::before,.map-wrap::a
 .top-status.compact-status,.pill,.move-pad,.fab-locate,.fab-compass,.mapdex-action,.dex-action{background:linear-gradient(180deg, rgba(255,255,255,.88), rgba(230,238,255,.74))!important;border:1px solid rgba(255,255,255,.58)!important;box-shadow:0 10px 30px rgba(29,58,106,.14)!important;}
 .weather-chip{box-shadow:0 12px 34px rgba(35,63,115,.14), inset 0 1px 0 rgba(255,255,255,.55)!important;}
 .route-glow-note{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);z-index:5;font-size:12px;font-weight:700;color:#f3fbff;text-shadow:0 2px 8px rgba(13,32,70,.35);pointer-events:none;}
+
+
+/* === FINAL SPRITE SHEET FIX 125x125 === */
+.player-map-marker .player-sprite,
+.player-map-marker .player-sprite.player-sprite-image{
+  position:absolute !important;
+  left:50% !important;
+  bottom:8px !important;
+  top:auto !important;
+  width:125px !important;
+  height:125px !important;
+  margin:0 !important;
+  background-image:url("assets/sprout_character.png") !important;
+  background-repeat:no-repeat !important;
+  background-size:500px 500px !important;
+  background-position:var(--sprite-x, -125px) var(--sprite-y, -375px) !important;
+  image-rendering:auto !important;
+  transform:translateX(-50%) scale(0.88) !important;
+  transform-origin:50% 100% !important;
+  border:none !important;
+  box-shadow:none !important;
+  border-radius:0 !important;
+  overflow:visible !important;
+  z-index:3 !important;
+  filter:drop-shadow(0 6px 5px rgba(16,32,58,.18)) !important;
+}
+.player-map-marker .player-sprite::before,
+.player-map-marker .player-sprite::after,
+.player-map-marker .player-sprite.player-sprite-image::before,
+.player-map-marker .player-sprite.player-sprite-image::after{
+  content:none !important;
+  display:none !important;
+}
+.player-map-marker .player-sprite.idle,
+.player-map-marker .player-sprite.walk,
+.player-map-marker .player-sprite.run,
+.player-map-marker .player-sprite.face-left,
+.player-map-marker .player-sprite.face-right,
+.player-map-marker .player-sprite.face-up,
+.player-map-marker .player-sprite.face-down{
+  animation:none !important;
+}
+.player-map-marker{
+  position:relative !important;
+  width:150px !important;
+  height:170px !important;
+  overflow:visible !important;
+}
+.player-map-marker .player-shadow{
+  z-index:1 !important;
+}
+.player-map-marker .player-ring{
+  z-index:2 !important;
+}
+.player-map-marker .player-name-tag{
+  z-index:4 !important;
+}
+
+
+/* === V57 HARD SPRITE FIX: sprout_character 500x500, 4x4, frame 125x125 === */
+.player-map-marker{
+  position:relative !important;
+  width:140px !important;
+  height:150px !important;
+  pointer-events:none !important;
+  overflow:visible !important;
+}
+.player-map-marker .player-shadow{
+  position:absolute !important;
+  left:50% !important;
+  top:72% !important;
+  width:56px !important;
+  height:18px !important;
+  transform:translate(-50%,-50%) !important;
+}
+.player-map-marker .player-sprite,
+.player-map-marker .player-sprite.player-sprite-image{
+  position:absolute !important;
+  left:50% !important;
+  top:50% !important;
+  width:125px !important;
+  height:125px !important;
+  margin:0 !important;
+  transform:translate(-50%,-78%) scale(.84) !important;
+  transform-origin:center center !important;
+  background-image:url("assets/sprout_character.png") !important;
+  background-repeat:no-repeat !important;
+  background-size:500px 500px !important;
+  background-position:var(--sprite-x, -125px) var(--sprite-y, -375px) !important;
+  image-rendering:auto !important;
+  animation:none !important;
+  background-color:transparent !important;
+  overflow:hidden !important;
+}
+.player-map-marker .player-sprite.idle,
+.player-map-marker .player-sprite.walk,
+.player-map-marker .player-sprite.run,
+.player-map-marker .player-sprite.face-left,
+.player-map-marker .player-sprite.face-right,
+.player-map-marker .player-sprite.face-up,
+.player-map-marker .player-sprite.face-down{
+  background-position:var(--sprite-x, -125px) var(--sprite-y, -375px) !important;
+  animation:none !important;
+}
