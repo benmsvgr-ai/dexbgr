@@ -20,7 +20,7 @@ const state = {
   collisionEnabled: true,
   roadOnlyMode: true,
   roadRadiusPx: 74,
-  collisionRadiusPx: 36,
+  collisionRadiusPx: 32,
   collisionCooldown: 0,
   maxOffsetMeters: 1800,
   facing: "down",
@@ -103,7 +103,7 @@ loadPortalPopupDone();
 
 const statusEl = () => document.getElementById("statusText");
 const sheetEl = () => document.getElementById("bottomSheet");
-const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
+const playerSprite = () => document.getElementById("playerAvatarFrame") || document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
 const PLAYER_PROFILE = {
   name: "Ranger Panji",
   gender: "Laki-laki",
@@ -243,30 +243,27 @@ function setPlayerAnim(mode, facing){
   if(!el) return;
   if(facing) state.facing = facing;
   state.playerMode = mode || "idle";
-  el.classList.remove("idle","walk","run","face-down","face-up","face-left","face-right");
-  el.classList.add(state.playerMode);
-  el.classList.add("face-" + (state.facing || "up"));
   applyPlayerSpriteFrame();
 }
 
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
-  const fw = 100;
-  const fh = 100;
-  const facingRows = { down:0, left:1, right:2, up:4 };
   const facing = state.facing || "up";
-  const row = facingRows[facing] ?? 4;
-  const col = 2; // frame tengah paling aman, tidak bocor
-  el.style.setProperty("--sprite-x", (-col * fw) + "px");
-  el.style.setProperty("--sprite-y", (-row * fh) + "px");
+  const srcMap = {
+    down: "assets/player_v53/front.png",
+    left: "assets/player_v53/left.png",
+    right: "assets/player_v53/right.png",
+    up: "assets/player_v53/back.png"
+  };
+  if(el.tagName === 'IMG') el.src = srcMap[facing] || srcMap.up;
 }
 
 function createPlayerMapMarker(){
   if(state.playerMarker || !maplibregl || !map) return;
   const el = document.createElement("div");
-  el.className = "player-map-marker";
-  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-up" aria-label="Karakter utama"></div>`;
+  el.className = "player-map-marker player-map-marker-v53";
+  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><img id="playerAvatarFrame" class="player-avatar-frame" src="assets/player_v53/back.png" alt="Karakter utama">`;
   state.playerMarkerEl = el;
   state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 0], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
@@ -438,7 +435,7 @@ function openSheet(poi, mode="manual"){
   `;
   const routeBtn = document.getElementById("sheetRouteBtn");
   if(routeBtn && Array.isArray(poi.coords)){
-    routeBtn.addEventListener("click", () => setNavigationTarget({ title:poi.name, coords:poi.coords }));
+    routeBtn.addEventListener("click", async () => { await setNavigationTarget({ title:poi.name, coords:poi.coords }); });
   }
   syncMiniButton();
   updateStatus(poi.name);
@@ -572,9 +569,9 @@ const CAMERA_PITCH = 76;
 const CAMERA_ZOOM = 20.35;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
 const CAMERA_AHEAD_METERS = 4;
-const CAMERA_FOLLOW_MIN_MS = 210;
+const CAMERA_FOLLOW_MIN_MS = 420;
 const HEADING_DEADBAND_DEG = 12;
-const HEADING_SMOOTH_ALPHA = 0.03;
+const HEADING_SMOOTH_ALPHA = 0.035;
 function degToRad(d){ return d * Math.PI / 180; }
 function getCameraBearing(){
   if(state.deviceHeadingEnabled && typeof state.deviceHeadingBearing === "number") return state.deviceHeadingBearing;
@@ -611,8 +608,8 @@ function applyDeviceHeadingToCamera(heading, duration=240){
   const now = performance.now();
   if(now - (state.headingCameraLastAt || 0) < CAMERA_FOLLOW_MIN_MS) return;
   state.headingCameraLastAt = now;
-  if(map && !state.browsing && (state.move.up || state.move.down || state.move.left || state.move.right)){
-    followPlayerCamera({ bearing: state.deviceHeadingBearing, duration: Math.max(duration, 520) });
+  if(map && !state.browsing){
+    followPlayerCamera({ bearing: state.deviceHeadingBearing, duration });
   }
 }
 function cameraCenterAhead(bearing){
@@ -698,7 +695,7 @@ function setupAnimeMapMode(){
       return;
     }
     // Hilangkan layer yang sering bikin garis/strip saat pitch tinggi.
-    const noisy = id.includes('hillshade') || id.includes('contour');
+    const noisy = id.includes('hillshade') || id.includes('contour') || id.includes('landcover') || id.includes('landuse-pattern') || id.includes('background-pattern');
     if(noisy){
       try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
     }
@@ -1230,7 +1227,7 @@ async function requestDeviceCompass(){
     window.addEventListener("deviceorientationabsolute", handleDeviceOrientation, true);
     window.addEventListener("deviceorientation", handleDeviceOrientation, true);
     window.addEventListener("orientationchange", () => setTimeout(() => { if(state.deviceHeadingEnabled) followPlayerCamera({ duration:120 }); }, 180), true);
-    updateStatus("Kompas HP aktif • mode halus");
+    updateStatus("Kompas HP aktif • arah pandangan mengikuti HP");
   }catch(err){
     console.warn("Compass unavailable", err);
   }
@@ -1258,7 +1255,6 @@ function startLocation(){
       clampOffset();
       recomputePlayerWorld();
       snapPlayerToRoad(true);
-      updatePlayerMapMarker();
       snapPlayerToRoad(true);
       if(pos.coords && Number.isFinite(pos.coords.heading)){
         // Fallback: kalau sensor kompas browser tidak aktif, pakai arah gerak GPS.
@@ -1316,7 +1312,9 @@ function getBlockedMapLayers(){
     const isBlocked =
       id.includes('building') || sl.includes('building') ||
       id.includes('water') || sl.includes('water') ||
-      id.includes('waterway') || sl.includes('waterway');
+      id.includes('waterway') || sl.includes('waterway') ||
+      id.includes('landcover') || sl.includes('landcover') ||
+      id.includes('park') || id.includes('grass') || id.includes('cemetery');
     if(isSolid && isBlocked && !found.includes(layer.id)) found.push(layer.id);
   });
   if(map.getLayer('bdx-building-collision') && !found.includes('bdx-building-collision')) found.push('bdx-building-collision');
@@ -1325,25 +1323,21 @@ function getBlockedMapLayers(){
 function getRoadCollisionLayers(){
   if(!map || !map.getStyle) return [];
   const styleLayers = (map.getStyle().layers || []);
-  const found = [];
+  const primary = [];
+  const secondary = [];
   styleLayers.forEach(layer => {
     const id = String(layer.id || '').toLowerCase();
     const sl = String(layer['source-layer'] || '').toLowerCase();
     const cls = String(layer.filter || '').toLowerCase();
-    const looksRoad =
-      layer.type === 'line' &&
-      !id.includes('label') &&
-      !id.includes('rail') &&
-      !id.includes('water') &&
-      (
-        id.includes('road') || id.includes('street') || id.includes('path') || id.includes('highway') ||
-        id.includes('footway') || id.includes('service') || id.includes('track') ||
-        sl.includes('transportation') || cls.includes('road') || cls.includes('street') || cls.includes('path') ||
-        cls.includes('footway') || cls.includes('service') || cls.includes('track')
-      );
-    if(looksRoad && !found.includes(layer.id)) found.push(layer.id);
+    if(layer.type !== 'line') return;
+    if(id.includes('label') || id.includes('rail') || id.includes('route') || id.includes('water')) return;
+    const isPrimary = id.includes('road') || id.includes('street') || id.includes('highway') || cls.includes('road') || cls.includes('street') || cls.includes('highway');
+    const isWalk = id.includes('footway') || id.includes('path') || id.includes('pedestrian') || cls.includes('footway') || cls.includes('path') || cls.includes('pedestrian');
+    const isTransport = sl.includes('transportation') || id.includes('service') || cls.includes('service') || id.includes('track') || cls.includes('track');
+    if(isPrimary) primary.push(layer.id);
+    else if(isWalk || isTransport) secondary.push(layer.id);
   });
-  return found;
+  return [...new Set([...primary, ...secondary])];
 }
 function queryFeaturesAround(coord, layers, radiusPx){
   if(!layers.length) return [];
@@ -1416,7 +1410,7 @@ function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
   return coord;
 }
 function snapPlayerToRoad(force = false){
-  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 420 : 320);
+  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 520 : 360);
   if(!snapped) return;
   if(haversineMeters(state.playerWorld, snapped) > 1.4){
     state.playerWorld = snapped;
@@ -1444,7 +1438,7 @@ function tryMoveWithCollision(mx, my){
       tx *= r; ty *= r;
     }
     const nextCoord = worldFromOffset(tx, ty);
-    const snappedCoord = snapCoordToNearestRoad(nextCoord, 240);
+    const snappedCoord = snapCoordToNearestRoad(nextCoord, 320);
     if(snappedCoord && canPlayerStandAt(snappedCoord)){
       state.playerWorld = snappedCoord;
       const [baseLng, baseLat] = state.gpsBase;
@@ -1580,7 +1574,7 @@ function loop(now){
   if(state.collisionCooldown > 0) state.collisionCooldown -= 1;
   updateMovement(dt);
   state.__snapTicker = (state.__snapTicker || 0) + 1;
-  if(!state.move.up && !state.move.down && !state.move.left && !state.move.right && state.__snapTicker % 12 === 0){
+  if(!state.move.up && !state.move.down && !state.move.left && !state.move.right && state.__snapTicker % 8 === 0){
     snapPlayerToRoad(true);
     updatePlayerMapMarker();
   }
