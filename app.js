@@ -689,6 +689,7 @@ function setupMapLibre3D(){
   // V34: Pokemon GO/anime map mode. Gedung 3D disembunyikan supaya peta terasa lapang,
   // tapi layer collision transparan tetap ada agar karakter tidak gampang masuk area bangunan.
   setupAnimeMapMode();
+  enhanceRoadVisibility();
   applySceneTheme();
   refreshEnvironment(true);
 }
@@ -759,6 +760,32 @@ function setupAnimeMapMode(){
   }catch(err){
     console.warn('Ghost building layer skipped:', err);
   }
+}
+
+
+function enhanceRoadVisibility(){
+  if(!map || !map.getStyle) return;
+  const style = map.getStyle();
+  const layers = (style && style.layers) || [];
+  layers.forEach(layer => {
+    try{
+      const id = String(layer.id || '').toLowerCase();
+      const sl = String(layer['source-layer'] || '').toLowerCase();
+      const isRoad = layer.type === 'line' && (
+        id.includes('road') || id.includes('street') || id.includes('path') || id.includes('transport') ||
+        sl.includes('transportation') || sl.includes('road') || sl.includes('path')
+      );
+      if(!isRoad) return;
+      map.setPaintProperty(layer.id, 'line-opacity', 0.9);
+      if(id.includes('path') || sl.includes('path')){
+        map.setPaintProperty(layer.id, 'line-color', '#d8dde8');
+        map.setPaintProperty(layer.id, 'line-width', ['interpolate',['linear'],['zoom'],15,1.2,18,2.6,20,4.6]);
+      }else{
+        map.setPaintProperty(layer.id, 'line-color', '#c6ccd6');
+        map.setPaintProperty(layer.id, 'line-width', ['interpolate',['linear'],['zoom'],15,1.6,18,3.0,20,6.0]);
+      }
+    }catch(e){}
+  });
 }
 
 const routeFeatures = {
