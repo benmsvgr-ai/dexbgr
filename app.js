@@ -237,7 +237,7 @@ function createPlayerMapMarker(){
   el.className = "player-map-marker";
   el.innerHTML = `<div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-down"></div>`;
   state.playerMarkerEl = el;
-  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 8], rotationAlignment: "viewport", pitchAlignment: "viewport" })
+  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 2], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
     .addTo(map);
   setPlayerAnim("idle", state.facing || "down");
@@ -259,7 +259,8 @@ function clampOffset(){
 }
 function recomputePlayerWorld(){
   const [dLng, dLat] = metersToLngLatOffset(state.offsetMeters.x, state.offsetMeters.y, state.gpsBase[1]);
-  state.playerWorld = [state.gpsBase[0] + dLng, state.gpsBase[1] + dLat];
+  const raw = [state.gpsBase[0] + dLng, state.gpsBase[1] + dLat];
+  state.playerWorld = (map && map.loaded && map.loaded()) ? snapCoordToNearestRoad(raw, 220) : raw;
   updatePlayerMapMarker();
 }
 function haversineMeters(a, b){
@@ -445,11 +446,11 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 67;
-const CAMERA_ZOOM = 18.9;
+const CAMERA_PITCH = 66;
+const CAMERA_ZOOM = 18.55;
 // V44 final: jarak kamera seperti referensi — karakter tetap terlihat besar,
 // tapi jalan di depan masih panjang. Jangan dibesarkan lagi nanti jadi drone view.
-const CAMERA_AHEAD_METERS = 72;
+const CAMERA_AHEAD_METERS = 82;
 const CAMERA_FOLLOW_MIN_MS = 210;
 const HEADING_DEADBAND_DEG = 7.5;
 const HEADING_SMOOTH_ALPHA = 0.045;
@@ -527,8 +528,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 17.6,
-  maxZoom: 19.15,
+  minZoom: 17.8,
+  maxZoom: 18.85,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
