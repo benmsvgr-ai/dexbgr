@@ -15,6 +15,8 @@ const state = {
   playerMarkerEl: null,
   playerFrameTick: 0,
   playerStepFrame: 0,
+  lastRawGps: null,
+  snappedRoadCoord: null,
   collisionEnabled: true,
   roadOnlyMode: true,
   roadRadiusPx: 42,
@@ -57,19 +59,7 @@ const state = {
   ]
 };
 
-state.environment = {
-  lastFetchAt: 0,
-  lastFetchCoords: null,
-  timezone: "Asia/Jakarta",
-  temperature: null,
-  description: "Memuat cuaca",
-  icon: "⛅",
-  weatherCode: null,
-  isDay: true,
-  raining: false
-};
-
-const PORTAL_POPUP_DONE_KEY = "bogordex_portal_popup_done_v45";
+const PORTAL_POPUP_DONE_KEY = "bogordex_portal_popup_done_v41";
 function loadPortalPopupDone(){
   try{
     const raw = localStorage.getItem(PORTAL_POPUP_DONE_KEY);
@@ -227,15 +217,12 @@ function setPlayerAnim(mode, facing){
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
-  // Sprite utama 4x4: baris = arah, kolom = frame langkah.
-  // Ini sengaja dibuat pakai background-position manual supaya karakter tidak hilang
-  // dan tidak ikut muter saat map/kompas berputar.
-  const fw = 100;
-  const fh = 100;
+  const fw = 97.5;
+  const fh = 97.5;
   const facingRows = { down:0, left:1, right:2, up:3 };
   const facing = state.facing || "down";
   const row = facingRows[facing] ?? 0;
-  const col = (state.playerMode === "walk" || state.playerMode === "run") ? (state.playerStepFrame % 4) : 0;
+  const col = state.playerMode === "idle" ? 1 : (state.playerStepFrame % 4);
   el.style.setProperty("--sprite-x", (-col * fw) + "px");
   el.style.setProperty("--sprite-y", (-row * fh) + "px");
 }
@@ -246,9 +233,13 @@ function createPlayerMapMarker(){
   el.className = "player-map-marker";
   el.innerHTML = `<div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-down"></div>`;
   state.playerMarkerEl = el;
-  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 8], rotationAlignment: "viewport", pitchAlignment: "viewport" })
-    .setLngLat(state.playerWorld)
-    .addTo(map);
+  state.playerMarker = new maplibregl.Marker({
+    element: el,
+    anchor: "bottom",
+    offset: [0, 0],
+    rotationAlignment: "viewport",
+    pitchAlignment: "viewport"
+  }).setLngLat(state.playerWorld).addTo(map);
   setPlayerAnim("idle", state.facing || "down");
 }
 
@@ -285,110 +276,6 @@ function updateStatus(prefix){
   const d = Math.hypot(state.offsetMeters.x, state.offsetMeters.y).toFixed(1);
   setStatus(prefix ? `${prefix} • offset ${d} m` : `Offset manual ${d} / ${state.maxOffsetMeters} m`);
 }
-
-const WEATHER_REFRESH_MS = 10 * 60 * 1000;
-const WEATHER_REFRESH_MOVE_METERS = 200;
-
-function weatherCodeMeta(code){
-  const c = Number(code);
-  if(c === 0) return { text:'Cerah', icon:'☀️', rain:false };
-  if([1,2].includes(c)) return { text:'Cerah Berawan', icon:'⛅', rain:false };
-  if(c === 3) return { text:'Berawan', icon:'☁️', rain:false };
-  if([45,48].includes(c)) return { text:'Berkabut', icon:'🌫️', rain:false };
-  if([51,53,55,56,57].includes(c)) return { text:'Gerimis', icon:'🌦️', rain:true };
-  if([61,63,65,66,67,80,81,82].includes(c)) return { text:'Hujan', icon:'🌧️', rain:true };
-  if([71,73,75,77,85,86].includes(c)) return { text:'Salju', icon:'❄️', rain:false };
-  if([95,96,99].includes(c)) return { text:'Badai', icon:'⛈️', rain:true };
-  return { text:'Cuaca', icon:'⛅', rain:false };
-}
-
-function updateWeatherClock(){
-  const timeEl = document.getElementById('weatherLocTime');
-  if(!timeEl) return;
-  const tz = state.environment?.timezone || 'Asia/Jakarta';
-  const now = new Date();
-  const timeText = now.toLocaleTimeString('id-ID',{ hour:'2-digit', minute:'2-digit', timeZone:tz });
-  const dateText = now.toLocaleDateString('id-ID',{ weekday:'short', day:'numeric', month:'short', timeZone:tz });
-  timeEl.textContent = `${timeText} • ${dateText}`;
-}
-
-function updateWeatherChip(){
-  const tempEl = document.getElementById('weatherTemp');
-  const descEl = document.getElementById('weatherDesc');
-  const iconEl = document.getElementById('weatherIcon');
-  if(tempEl) tempEl.textContent = Number.isFinite(state.environment.temperature) ? `${Math.round(state.environment.temperature)}°C` : '--°C';
-  if(descEl) descEl.textContent = state.environment.description || 'Cuaca';
-  if(iconEl) iconEl.textContent = state.environment.icon || '⛅';
-  updateWeatherClock();
-}
-
-function applyEnvironmentClasses(){
-  const app = document.getElementById('app');
-  const raining = !!state.environment.raining;
-  const isNight = state.environment.isDay === false;
-  document.body.classList.toggle('weather-rain', raining);
-  document.body.classList.toggle('is-night', isNight);
-  if(app){
-    app.classList.toggle('weather-rain', raining);
-    app.classList.toggle('is-night', isNight);
-  }
-  updateWeatherChip();
-  applySceneTheme();
-}
-
-function applySceneTheme(){
-  if(!map || !map.getStyle || !map.isStyleLoaded()) return;
-  const isNight = document.body.classList.contains('is-night');
-  try{
-    if(map.getLayer('bdx-ghost-buildings')){
-      map.setPaintProperty('bdx-ghost-buildings', 'fill-extrusion-color', isNight ? '#7ea6ff' : '#87dcff');
-      map.setPaintProperty('bdx-ghost-buildings', 'fill-extrusion-opacity', isNight ? 0.28 : 0.34);
-    }
-  }catch(e){}
-  try{
-    if(typeof map.setLight === 'function'){
-      map.setLight({
-        anchor: 'viewport',
-        color: isNight ? '#bcd3ff' : '#fff4d2',
-        intensity: isNight ? 0.26 : 0.42,
-        position: [1.5, isNight ? 200 : 160, isNight ? 30 : 45]
-      });
-    }
-  }catch(e){}
-}
-
-async function refreshEnvironment(force=false){
-  try{
-    const [lng, lat] = state.gpsBase || state.playerWorld || [106.79884, -6.59725];
-    if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    const now = Date.now();
-    const last = state.environment.lastFetchCoords;
-    const moved = last ? haversineMeters([last.lng, last.lat], [lng, lat]) : Infinity;
-    if(!force && (now - (state.environment.lastFetchAt || 0) < WEATHER_REFRESH_MS) && moved < WEATHER_REFRESH_MOVE_METERS) return;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,is_day,rain,showers,snowfall,cloud_cover&timezone=auto`;
-    const res = await fetch(url, { cache:'no-store' });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const current = data.current || {};
-    const meta = weatherCodeMeta(current.weather_code);
-    const rainValue = Number(current.rain || 0) + Number(current.showers || 0);
-    state.environment.lastFetchAt = now;
-    state.environment.lastFetchCoords = { lat, lng };
-    state.environment.timezone = data.timezone || 'Asia/Jakarta';
-    state.environment.temperature = Number(current.temperature_2m);
-    state.environment.description = meta.text;
-    state.environment.icon = meta.icon;
-    state.environment.weatherCode = Number(current.weather_code);
-    state.environment.isDay = Number(current.is_day) === 1;
-    state.environment.raining = meta.rain || rainValue > 0.01;
-    applyEnvironmentClasses();
-  }catch(err){
-    console.warn('Weather fetch failed:', err);
-    updateWeatherChip();
-  }
-}
-
-setInterval(updateWeatherClock, 30000);
 function syncMiniButton(){
   miniBtn().classList.toggle("hidden", !(sheetEl().classList.contains("hidden-sheet") && !!state.lastPoi));
 }
@@ -639,8 +526,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 16.8,
-  maxZoom: 18.4,
+  minZoom: 16.2,
+  maxZoom: 20,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -662,8 +549,6 @@ function setupMapLibre3D(){
   // V34: Pokemon GO/anime map mode. Gedung 3D disembunyikan supaya peta terasa lapang,
   // tapi layer collision transparan tetap ada agar karakter tidak gampang masuk area bangunan.
   setupAnimeMapMode();
-  applySceneTheme();
-  refreshEnvironment(true);
 }
 
 function getVectorBuildingSourceId(){
@@ -1078,9 +963,19 @@ function startLocation(){
   state.geoWatch = navigator.geolocation.watchPosition(
     (pos) => {
       state.hasRealGps = true;
-      state.gpsBase = [pos.coords.longitude, pos.coords.latitude];
+      const rawCoord = [pos.coords.longitude, pos.coords.latitude];
+      const smoothCoord = smoothGpsCoord(rawCoord);
+      state.lastRawGps = smoothCoord;
+      state.gpsBase = smoothCoord;
       clampOffset();
       recomputePlayerWorld();
+      const snappedBase = findNearestStandableRoadCoord(state.playerWorld, { maxSnapMeters: 44 });
+      state.gpsBase = snappedBase;
+      state.offsetMeters.x = 0;
+      state.offsetMeters.y = 0;
+      state.playerWorld = snappedBase;
+      state.snappedRoadCoord = snappedBase;
+      updatePlayerMapMarker();
       if(pos.coords && Number.isFinite(pos.coords.heading)){
         // Fallback: kalau sensor kompas browser tidak aktif, pakai arah gerak GPS.
         if(!state.deviceHeadingEnabled && (pos.coords.speed || 0) > 0.6){
@@ -1089,8 +984,7 @@ function startLocation(){
       }
       if(!state.browsing) followPlayerCamera({ duration:250 });
       detectNearby();
-      updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • kompas aktif" : "Lokasi aktif");
-      refreshEnvironment();
+      updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • karakter nempel jalan" : "Lokasi aktif • karakter nempel jalan");
     },
     (err) => { state.hasRealGps = false; updateStatus("Lokasi gagal: " + err.message); },
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
@@ -1109,6 +1003,104 @@ function stopBrowse(){
     // V36: jangan paksa map balik ke karakter setelah user geser peta.
     // Karakter tetap di koordinat aslinya sebagai marker map.
   }, 220);
+}
+
+function lngLatToMetersOffset(coord, base){
+  const latRad = base[1] * Math.PI / 180;
+  return [
+    (coord[0] - base[0]) * 111320 * Math.cos(latRad),
+    (coord[1] - base[1]) * 110540
+  ];
+}
+function setPlayerWorldFromCoord(coord){
+  const [mx, my] = lngLatToMetersOffset(coord, state.gpsBase);
+  state.offsetMeters.x = mx;
+  state.offsetMeters.y = my;
+  clampOffset();
+  recomputePlayerWorld();
+}
+function nearestPointOnSegmentMeters(px, py, ax, ay, bx, by){
+  const abx = bx - ax;
+  const aby = by - ay;
+  const ab2 = abx * abx + aby * aby;
+  if(ab2 <= 1e-9) return { x: ax, y: ay, t: 0 };
+  let t = ((px - ax) * abx + (py - ay) * aby) / ab2;
+  t = Math.max(0, Math.min(1, t));
+  return { x: ax + abx * t, y: ay + aby * t, t };
+}
+function nearestPointOnLineString(coord, lineCoords){
+  if(!lineCoords || lineCoords.length < 2) return null;
+  const origin = coord;
+  const [px, py] = [0, 0];
+  let best = null;
+  for(let i = 0; i < lineCoords.length - 1; i += 1){
+    const a = lineCoords[i];
+    const b = lineCoords[i + 1];
+    if(!a || !b) continue;
+    const [ax, ay] = lngLatToMetersOffset(a, origin);
+    const [bx, by] = lngLatToMetersOffset(b, origin);
+    const hit = nearestPointOnSegmentMeters(px, py, ax, ay, bx, by);
+    const d = Math.hypot(hit.x - px, hit.y - py);
+    if(!best || d < best.distMeters){
+      const [dLng, dLat] = metersToLngLatOffset(hit.x, hit.y, origin[1]);
+      best = { coord: [origin[0] + dLng, origin[1] + dLat], distMeters: d };
+    }
+  }
+  return best;
+}
+function collectNearbyRoadLineFeatures(coord, radiiPx=[32, 54, 82, 120]){
+  const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
+  if(!layers.length) return [];
+  const seen = new Set();
+  const lines = [];
+  radiiPx.forEach(radius => {
+    const features = queryFeaturesAround(coord, layers, radius) || [];
+    features.forEach(feature => {
+      const geom = feature && feature.geometry;
+      if(!geom) return;
+      const key = JSON.stringify(geom);
+      if(seen.has(key)) return;
+      seen.add(key);
+      if(geom.type === 'LineString') lines.push(geom.coordinates);
+      if(geom.type === 'MultiLineString') geom.coordinates.forEach(line => lines.push(line));
+    });
+  });
+  return lines;
+}
+function findNearestStandableRoadCoord(coord, opts={}){
+  if(!map || !map.loaded || !map.loaded()) return coord;
+  const maxSnapMeters = opts.maxSnapMeters ?? 28;
+  const roadLines = collectNearbyRoadLineFeatures(coord, opts.radiiPx || [30, 52, 78, 110, 150]);
+  let best = null;
+  roadLines.forEach(line => {
+    const hit = nearestPointOnLineString(coord, line);
+    if(!hit) return;
+    if(!best || hit.distMeters < best.distMeters) best = hit;
+  });
+  if(!best) return coord;
+  let candidate = best.coord;
+  if(best.distMeters > maxSnapMeters && canPlayerStandAt(coord)) return coord;
+  if(canPlayerStandAt(candidate)) return candidate;
+  const searchRings = [1.5, 3, 4.5, 6, 8, 10, 12];
+  for(const radius of searchRings){
+    for(let step = 0; step < 16; step += 1){
+      const ang = (Math.PI * 2 * step) / 16;
+      const [dLng, dLat] = metersToLngLatOffset(Math.cos(ang) * radius, Math.sin(ang) * radius, candidate[1]);
+      const probe = [candidate[0] + dLng, candidate[1] + dLat];
+      if(canPlayerStandAt(probe)) return probe;
+    }
+  }
+  return canPlayerStandAt(coord) ? coord : candidate;
+}
+function smoothGpsCoord(rawCoord){
+  if(!state.lastRawGps) return rawCoord;
+  const dist = haversineMeters(state.lastRawGps, rawCoord);
+  if(dist < 1.6) return state.lastRawGps;
+  const alpha = dist < 8 ? 0.18 : 0.34;
+  return [
+    state.lastRawGps[0] + (rawCoord[0] - state.lastRawGps[0]) * alpha,
+    state.lastRawGps[1] + (rawCoord[1] - state.lastRawGps[1]) * alpha
+  ];
 }
 
 function getBuildingCollisionLayers(){
@@ -1201,9 +1193,9 @@ function tryMoveWithCollision(mx, my){
   const originalX = state.offsetMeters.x;
   const originalY = state.offsetMeters.y;
   const candidates = [
-    [originalX + mx, originalY + my, 'full'],
-    [originalX + mx, originalY, 'x'],
-    [originalX, originalY + my, 'y']
+    [originalX + mx, originalY + my],
+    [originalX + mx, originalY],
+    [originalX, originalY + my]
   ];
   for(const [nx, ny] of candidates){
     const d = Math.hypot(nx, ny);
@@ -1213,10 +1205,14 @@ function tryMoveWithCollision(mx, my){
       tx *= r; ty *= r;
     }
     const nextCoord = worldFromOffset(tx, ty);
-    if(canPlayerStandAt(nextCoord)){
-      state.offsetMeters.x = tx;
-      state.offsetMeters.y = ty;
-      state.playerWorld = nextCoord;
+    const standCoord = findNearestStandableRoadCoord(nextCoord, { maxSnapMeters: 18 });
+    if(canPlayerStandAt(standCoord)){
+      const [mx2, my2] = lngLatToMetersOffset(standCoord, state.gpsBase);
+      state.offsetMeters.x = mx2;
+      state.offsetMeters.y = my2;
+      clampOffset();
+      recomputePlayerWorld();
+      state.snappedRoadCoord = standCoord;
       return true;
     }
   }
@@ -1228,7 +1224,9 @@ function updateMovement(dt=1/60){
   const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
   const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
   if(!forwardInput && !strafeInput){
+    state.playerStepFrame = 0;
     if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle");
+    else applyPlayerSpriteFrame();
     return;
   }
 
@@ -1250,7 +1248,7 @@ function updateMovement(dt=1/60){
 
   const moved = tryMoveWithCollision(mx, my);
   state.playerFrameTick += dt;
-  if(state.playerFrameTick > 0.15){
+  if(state.playerFrameTick > 0.11){
     state.playerFrameTick = 0;
     state.playerStepFrame = (state.playerStepFrame + 1) % 4;
     applyPlayerSpriteFrame();
@@ -1277,6 +1275,18 @@ function bindMoveButton(btn){
 
 map.on("load", () => {
   setupMapLibre3D();
+  try{
+    if(typeof map.setFog === "function"){
+      map.setFog({
+        range:[0.82, 5.5],
+        color:'rgba(232,243,255,0.68)',
+        'high-color':'rgba(226,240,255,0.92)',
+        'space-color':'rgba(201,232,255,0.98)',
+        'horizon-blend':0.18,
+        'star-intensity':0
+      });
+    }
+  }catch(e){}
   map.addSource("route-k5",{type:"geojson",data:routeFeatures.k5});
   map.addSource("route-k6",{type:"geojson",data:routeFeatures.k6});
   map.addSource("route-run",{type:"geojson",data:routeFeatures.run});
@@ -1299,6 +1309,9 @@ map.on("load", () => {
   });
   recomputePlayerWorld();
   createPlayerMapMarker();
+  const startRoadCoord = findNearestStandableRoadCoord(state.playerWorld, { maxSnapMeters: 44 });
+  setPlayerWorldFromCoord(startRoadCoord);
+  state.snappedRoadCoord = startRoadCoord;
   followPlayerCamera({ zoom: CAMERA_ZOOM });
   lockPitchOnly();
   document.getElementById("sheetContent").innerHTML = `
@@ -1520,7 +1533,3 @@ document.getElementById("sheetMiniBtn").addEventListener("click", () => { if(sta
 document.querySelectorAll(".move-btn").forEach(bindMoveButton);
 document.addEventListener("keydown", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=true; if(k==="s"||k==="arrowdown") state.move.down=true; if(k==="a"||k==="arrowleft") state.move.left=true; if(k==="d"||k==="arrowright") state.move.right=true; });
 document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=false; if(k==="s"||k==="arrowdown") state.move.down=false; if(k==="a"||k==="arrowleft") state.move.left=false; if(k==="d"||k==="arrowright") state.move.right=false; });
-
-
-updateWeatherChip();
-setTimeout(() => refreshEnvironment(true), 900);
