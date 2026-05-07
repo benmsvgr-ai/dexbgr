@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BogorDex GO v42 Smooth Compass</title>
+  <title>BogorDex v45 Dynamic Weather Time 3D</title>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -12,6 +12,15 @@
   <div id="app">
     <div id="map"></div>
     <div class="screen-vignette"></div>
+    <div id="nightOverlay" class="night-overlay" aria-hidden="true"></div>
+    <div id="rainFx" class="rain-fx" aria-hidden="true"><div class="rain-layer rain-back"></div><div class="rain-layer rain-front"></div></div>
+    <div class="horizon-cloud-fx" aria-hidden="true">
+      <div class="cloud-band cloud-band-a"></div>
+      <div class="cloud-band cloud-band-b"></div>
+      <div class="mist-layer mist-layer-a"></div>
+      <div class="mist-layer mist-layer-b"></div>
+      <div class="snow-dust"></div>
+    </div>
     <div id="npcLayer" class="npc-layer" aria-label="NPC BogorDex"></div>
 
     <div class="top-status compact-status">
@@ -24,6 +33,16 @@
       <button id="toggleGovBtn" class="pill active">Instansi</button>
       <button id="toggleHealthBtn" class="pill active">Kesehatan</button>
       <button id="toggleUmkmBtn" class="pill active">UMKM</button>
+    </div>
+
+    <div id="weatherChip" class="weather-chip" aria-live="polite">
+      <div class="weather-main">
+        <span id="weatherIcon" class="weather-icon">⛅</span>
+        <div class="weather-info">
+          <div><b id="weatherTemp">--°C</b> <span id="weatherDesc">Memuat cuaca</span></div>
+          <small id="weatherLocTime">--:-- • --</small>
+        </div>
+      </div>
     </div>
 
     <button id="locateBtn" class="fab fab-locate" title="Ambil lokasi"><span>GPS</span></button>
@@ -95,7 +114,15 @@
 
     <button id="sheetMiniBtn" class="sheet-mini-btn hidden" title="Buka info">Info</button>
 
-    <div id="bottomSheet" class="bottom-sheet collapsed">
+
+    <div class="reference-checklist" aria-hidden="true">
+      <div class="ref-card"><b>✔ KAMERA & ZOOM SEPERTI GAMBAR REFERENSI</b><span>• Jarak kamera pas<br>• Fokus area dekat karakter</span></div>
+      <div class="ref-card"><b>✔ KARAKTER SELALU DI JALAN</b><span>• Auto nempel ke jalan terdekat<br>• Tidak bisa masuk gedung / tembus</span></div>
+      <div class="ref-card"><b>✔ EFEK BERAWAN & EMBUN</b><span>• Awan tebal di horizon<br>• Kabut / embun halus di kejauhan</span></div>
+      <div class="ref-card"><b>✔ SMOOTH & STABIL</b><span>• Gerakan halus tanpa jitter<br>• GPS filter + road snap</span></div>
+    </div>
+
+    <div id="bottomSheet" class="bottom-sheet collapsed hidden-sheet">
       <div id="sheetHandle" class="sheet-handle"></div>
       <button id="sheetCloseBtn" class="sheet-close-btn" title="Tutup">×</button>
       <div class="sheet-content" id="sheetContent">
