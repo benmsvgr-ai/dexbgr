@@ -246,7 +246,7 @@ function createPlayerMapMarker(){
   el.className = "player-map-marker";
   el.innerHTML = `<div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-down"></div>`;
   state.playerMarkerEl = el;
-  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 8], rotationAlignment: "viewport", pitchAlignment: "viewport" })
+  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 2], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
     .addTo(map);
   setPlayerAnim("idle", state.facing || "down");
@@ -558,10 +558,10 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 73;
-const CAMERA_ZOOM = 18.25;
+const CAMERA_PITCH = 76;
+const CAMERA_ZOOM = 18.85;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 122;
+const CAMERA_AHEAD_METERS = 88;
 const CAMERA_FOLLOW_MIN_MS = 210;
 const HEADING_DEADBAND_DEG = 2.8;
 const HEADING_SMOOTH_ALPHA = 0.075;
@@ -639,8 +639,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 16.8,
-  maxZoom: 18.4,
+  minZoom: 17.6,
+  maxZoom: 19.35,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -684,6 +684,12 @@ function setupAnimeMapMode(){
     const id = String(layer.id || '').toLowerCase();
     const sl = String(layer['source-layer'] || '').toLowerCase();
     if(id.includes('building') || sl.includes('building')){
+      try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
+      return;
+    }
+    // Hilangkan layer yang sering bikin garis/strip saat pitch tinggi.
+    const noisy = id.includes('hillshade') || id.includes('contour') || id.includes('landcover') || id.includes('landuse-pattern') || id.includes('background-pattern');
+    if(noisy){
       try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
     }
   });
