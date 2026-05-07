@@ -2023,6 +2023,19 @@ body.weather-rain .maplibregl-canvas{filter:saturate(.98) brightness(.96) contra
 .player-map-marker .player-ring{top:76%!important;width:92px!important;height:92px!important;}
 
 
-/* ChatGPT hotfix: force main character to use sprout_character.png */
-.maplibregl-marker.player-map-marker,.player-map-marker{position:relative!important;overflow:visible!important;}
-.player-map-marker .player-sprite,.player-map-marker .player-sprite.player-sprite-image{background-image:url("assets/sprout_character.png")!important;background-repeat:no-repeat!important;image-rendering:pixelated!important;}
+/* ===== V55 clean third-person bright / no fake dark fog ===== */
+.horizon-cloud-fx,.cloud-band,.cloud-band-b,.mist-layer,.mist-layer-b{display:none!important;opacity:0!important;visibility:hidden!important;}
+body::before,body::after,#app::before,#app::after,.map-wrap::before,.map-wrap::after{display:none!important;content:none!important;}
+#map,.maplibregl-canvas,.maplibregl-canvas-container{filter:brightness(1.12) saturate(1.08) contrast(1.02)!important;}
+.map-wrap{background:radial-gradient(circle at 50% 68%, rgba(255,245,190,.20) 0%, rgba(255,245,190,.08) 18%, rgba(255,255,255,0) 42%)!important;}
+.map-wrap::before{content:"";display:block!important;position:absolute;left:0;right:0;bottom:0;height:42%;pointer-events:none;z-index:1;background:radial-gradient(circle at 50% 94%, rgba(125,213,255,.22) 0%, rgba(125,213,255,.08) 14%, rgba(255,255,255,0) 32%);} 
+.map-wrap::after{content:"";display:block!important;position:absolute;left:8%;right:8%;bottom:15%;height:18%;pointer-events:none;z-index:1;background:linear-gradient(180deg, rgba(255,236,160,0), rgba(255,236,160,.12) 46%, rgba(160,232,255,.16) 100%);filter:blur(26px);} 
+.player-map-marker,.maplibregl-marker.player-map-marker{width:118px!important;height:154px!important;overflow:visible!important;z-index:30!important;}
+.player-map-marker .player-sprite,.player-map-marker .player-sprite.player-sprite-image{background-image:url("assets/sprout_character.png")!important;display:block!important;position:absolute!important;left:50%!important;top:49%!important;width:108px!important;height:140px!important;background-size:520px 620px!important;background-repeat:no-repeat!important;transform:translate(-50%,-50%)!important;z-index:3!important;filter:drop-shadow(0 4px 3px rgba(16,32,58,.18))!important;}
+.player-map-marker .player-shadow{top:91%!important;width:40px!important;height:12px!important;background:rgba(9,21,44,.22)!important;filter:blur(2px)!important;}
+.player-map-marker .player-ring{top:79%!important;width:90px!important;height:90px!important;border-color:rgba(132,226,255,.55)!important;box-shadow:0 0 0 2px rgba(255,255,255,.18) inset, 0 0 18px rgba(120,220,255,.20)!important;}
+.npc.map-npc,.npc-marker,.map-npc{filter:drop-shadow(0 4px 8px rgba(10,24,46,.18))!important;}
+.fab-compass{display:flex!important;opacity:1!important;}
+.top-status.compact-status,.pill,.move-pad,.fab-locate,.fab-compass,.mapdex-action,.dex-action{background:linear-gradient(180deg, rgba(255,255,255,.88), rgba(230,238,255,.74))!important;border:1px solid rgba(255,255,255,.58)!important;box-shadow:0 10px 30px rgba(29,58,106,.14)!important;}
+.weather-chip{box-shadow:0 12px 34px rgba(35,63,115,.14), inset 0 1px 0 rgba(255,255,255,.55)!important;}
+.route-glow-note{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);z-index:5;font-size:12px;font-weight:700;color:#f3fbff;text-shadow:0 2px 8px rgba(13,32,70,.35);pointer-events:none;}
