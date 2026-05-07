@@ -2143,3 +2143,86 @@ body::before,body::after,#app::before,#app::after,.map-wrap::before,.map-wrap::a
   background-position:var(--sprite-x, -125px) var(--sprite-y, -375px) !important;
   animation:none !important;
 }
+
+
+/* === v58 FINAL GROUND + NO DARK OVERLAY FIX === */
+.screen-vignette,
+.horizon-cloud-fx,
+.cloud-band,
+.cloud-band-b,
+.mist-layer,
+.mist-layer-b,
+.snow-dust{
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  background:none !important;
+  animation:none !important;
+}
+#map{
+  background:linear-gradient(180deg,#d9efff 0%,#cfe8ff 40%,#a8d999 100%) !important;
+}
+.maplibregl-canvas{
+  filter:saturate(1.1) brightness(1.08) contrast(.96) !important;
+}
+.maplibregl-marker.player-map-marker,
+.player-map-marker{
+  position:relative !important;
+  width:126px !important;
+  height:152px !important;
+  overflow:visible !important;
+  z-index:95 !important;
+  pointer-events:none !important;
+  filter:none !important;
+}
+.player-map-marker .player-name-tag{
+  z-index:4 !important;
+}
+.player-map-marker .player-ring{
+  position:absolute !important;
+  left:50% !important;
+  bottom:0px !important;
+  top:auto !important;
+  width:102px !important;
+  height:102px !important;
+  transform:translateX(-50%) !important;
+  border:3px solid rgba(88,225,255,.68) !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.16) inset,0 0 24px rgba(80,202,255,.26) !important;
+}
+.player-map-marker .player-shadow{
+  position:absolute !important;
+  left:50% !important;
+  bottom:8px !important;
+  top:auto !important;
+  width:52px !important;
+  height:14px !important;
+  transform:translateX(-50%) !important;
+  background:rgba(0,0,0,.18) !important;
+  filter:blur(2px) !important;
+}
+.player-map-marker .player-sprite,
+.player-map-marker .player-sprite.idle,
+.player-map-marker .player-sprite.walk,
+.player-map-marker .player-sprite.run,
+.player-map-marker .player-sprite.face-left,
+.player-map-marker .player-sprite.face-right,
+.player-map-marker .player-sprite.face-up,
+.player-map-marker .player-sprite.face-down{
+  position:absolute !important;
+  left:50% !important;
+  top:auto !important;
+  bottom:6px !important;
+  width:125px !important;
+  height:125px !important;
+  background-image:url("assets/sprout_character.png") !important;
+  background-repeat:no-repeat !important;
+  background-size:500px 500px !important;
+  background-position:var(--sprite-x,0px) var(--sprite-y,0px) !important;
+  transform:translateX(-50%) scale(.88) !important;
+  transform-origin:50% 100% !important;
+  image-rendering:auto !important;
+  opacity:1 !important;
+  visibility:visible !important;
+  filter:none !important;
+  animation:none !important;
+}
