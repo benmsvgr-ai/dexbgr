@@ -41,6 +41,11 @@ const state = {
   roadHeadingLastAt: 0,
   roadLock: null,
   roadLockAt: 0,
+  remoteRoadSnapPending: false,
+  remoteRoadSnapAt: 0,
+  remoteRoadSnapFailCount: 0,
+  remoteRoadCoord: null,
+  gpsTraceBuffer: [],
   headingCameraLastAt: 0,
   lastCameraCenter: null,
   compassRequested: false,
@@ -111,6 +116,114 @@ const environment = {
   lastFetchAt: 0,
   lastCoords: null
 };
+
+
+const REMOTE_ROAD_API = {
+  enabled: true,
+  url: window.BOGORDEX_OSRM_URL || 'https://router.project-osrm.org',
+  profile: window.BOGORDEX_OSRM_PROFILE || 'driving',
+  timeoutMs: 2200,
+  minIntervalMs: 1200,
+  traceMaxPoints: 6
+};
+
+
+function buildOsrmCoordString(coords){
+  return (coords || []).map(c => `${Number(c[0]).toFixed(6)},${Number(c[1]).toFixed(6)}`).join(';');
+}
+function fetchJsonWithTimeout(url, timeoutMs=2200){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { signal: controller.signal, cache:'no-store' })
+    .then(res => {
+      clearTimeout(timer);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .catch(err => {
+      clearTimeout(timer);
+      throw err;
+    });
+}
+function pushGpsTrace(coord, accuracyMeters=20){
+  const now = Date.now();
+  if(!coord) return;
+  const buf = state.gpsTraceBuffer || (state.gpsTraceBuffer = []);
+  const prev = buf.length ? buf[buf.length - 1] : null;
+  const moved = prev ? haversineMeters(prev.coord, coord) : Infinity;
+  if(prev && moved < Math.max(1.6, Math.min(7, (accuracyMeters || 20) * 0.12)) && (now - prev.at) < 900) return;
+  buf.push({ coord:[coord[0], coord[1]], accuracy: Math.max(5, Math.min(80, Number(accuracyMeters) || 20)), at: now });
+  while(buf.length > REMOTE_ROAD_API.traceMaxPoints) buf.shift();
+}
+async function fetchRemoteNearestRoad(coord){
+  if(!REMOTE_ROAD_API.enabled || !coord) return null;
+  const coordStr = buildOsrmCoordString([coord]);
+  const url = `${REMOTE_ROAD_API.url}/nearest/v1/${REMOTE_ROAD_API.profile}/${coordStr}?number=1`;
+  const data = await fetchJsonWithTimeout(url, REMOTE_ROAD_API.timeoutMs);
+  const wp = data && data.waypoints && data.waypoints[0];
+  if(!wp || !Array.isArray(wp.location)) return null;
+  return { coord:[wp.location[0], wp.location[1]], source:'osrm-nearest', distance: Number(wp.distance || 0) };
+}
+async function fetchRemoteMatchRoad(){
+  if(!REMOTE_ROAD_API.enabled) return null;
+  const buf = state.gpsTraceBuffer || [];
+  if(buf.length < 3) return null;
+  const coords = buf.map(p => p.coord);
+  const radiuses = buf.map(p => Math.max(5, Math.min(90, Math.round(p.accuracy || 20)))).join(';');
+  const timestamps = buf.map(p => Math.max(1, Math.round(p.at / 1000))).join(';');
+  const coordStr = buildOsrmCoordString(coords);
+  const url = `${REMOTE_ROAD_API.url}/match/v1/${REMOTE_ROAD_API.profile}/${coordStr}?overview=full&geometries=geojson&steps=false&tidy=true&gaps=ignore&radiuses=${radiuses}&timestamps=${timestamps}`;
+  const data = await fetchJsonWithTimeout(url, REMOTE_ROAD_API.timeoutMs);
+  if(!data || (data.code && data.code !== 'Ok')) return null;
+  const tracepoints = Array.isArray(data.tracepoints) ? data.tracepoints : [];
+  for(let i=tracepoints.length-1;i>=0;i--){
+    const tp = tracepoints[i];
+    if(tp && Array.isArray(tp.location)){
+      return { coord:[tp.location[0], tp.location[1]], source:'osrm-match', distance: Number(tp.distance || 0), name: tp.name || '' };
+    }
+  }
+  const matching = data.matchings && data.matchings[0];
+  const geometry = matching && matching.geometry && matching.geometry.coordinates;
+  if(Array.isArray(geometry) && geometry.length){
+    const c = geometry[geometry.length - 1];
+    return { coord:[c[0], c[1]], source:'osrm-match-geometry', distance: 0, name:'' };
+  }
+  return null;
+}
+async function refineGpsWithRemoteRoad(rawGps, accuracyMeters=20){
+  if(!REMOTE_ROAD_API.enabled || !rawGps || state.remoteRoadSnapPending) return false;
+  const now = Date.now();
+  if((now - (state.remoteRoadSnapAt || 0)) < REMOTE_ROAD_API.minIntervalMs) return false;
+  state.remoteRoadSnapPending = true;
+  state.remoteRoadSnapAt = now;
+  try{
+    pushGpsTrace(rawGps, accuracyMeters);
+    let remote = null;
+    const buf = state.gpsTraceBuffer || [];
+    const shouldUseMatch = buf.length >= 3 && (buf.length >= 4 || isCoordBlockedBySolidMap(rawGps) || accuracyMeters > 18);
+    if(shouldUseMatch){
+      remote = await fetchRemoteMatchRoad();
+    }
+    if(!remote) remote = await fetchRemoteNearestRoad(rawGps);
+    if(!remote || !remote.coord) return false;
+    const forced = forceCoordToRoadNetwork(remote.coord, { radii:[90, 150, 240, 360], requireDrivable:true, preferLocked:true });
+    state.remoteRoadCoord = forced;
+    state.gpsBase = forced;
+    state.gpsSmoothBase = forced;
+    clampOffset();
+    recomputePlayerWorld();
+    updatePlayerMapMarker();
+    if(!state.browsing) followPlayerCamera({ duration:260 });
+    detectNearby();
+    state.remoteRoadSnapFailCount = 0;
+    return true;
+  }catch(err){
+    state.remoteRoadSnapFailCount = (state.remoteRoadSnapFailCount || 0) + 1;
+    return false;
+  }finally{
+    state.remoteRoadSnapPending = false;
+  }
+}
 
 function weatherCodeMeta(code){
   const c = Number(code);
@@ -1257,6 +1370,7 @@ function startLocation(){
       const rawGps = [pos.coords.longitude, pos.coords.latitude];
       const accuracy = pos.coords && Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : 20;
       const beforeWorld = state.playerWorld ? [state.playerWorld[0], state.playerWorld[1]] : null;
+      pushGpsTrace(rawGps, accuracy);
       state.gpsBase = smoothGpsCoord(rawGps, accuracy);
       clampOffset();
       recomputePlayerWorld();
@@ -1272,6 +1386,11 @@ function startLocation(){
       if(!state.browsing && movedMeters > 1.2) followPlayerCamera({ duration:420 });
       detectNearby();
       updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • kompas aktif" : "Lokasi aktif");
+      refineGpsWithRemoteRoad(rawGps, accuracy).then((refined) => {
+        if(refined){
+          updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • road lock server" : "Lokasi aktif • road lock server");
+        }
+      });
       refreshWeather();
     },
     (err) => { state.hasRealGps = false; updateStatus("Lokasi gagal: " + err.message); },
@@ -1502,11 +1621,11 @@ map.on("load", () => {
   followPlayerCamera({ zoom: CAMERA_ZOOM });
   lockPitchOnly();
   document.getElementById("sheetContent").innerHTML = `
-    <h3>BogorDex GO v44 Cloud Road Camera</h3>
+    <h3>BogorDex GO v45 Remote Road Lock</h3>
     <p>MapLibre street-anime mode: kamera lebih rendah seperti berdiri di jalan, rotate kiri-kanan aktif, pitch atas-bawah dikunci, gedung transparan, dan karakter tetap road-only.</p>
     <div class="section"><div class="section-title">Fix Inti</div><p>Basis MapLibre tetap dipakai tanpa kartu kredit Mapbox. Nuansa dibuat lebih game HP/Pokemon GO: gedung ghost transparan, kamera dari belakang karakter, MapDex phone aktif, dan laporan titik tetap jalan.</p></div>
   `;
-  state.lastPoi = {id:"intro",name:"BogorDex GO v44 Cloud Road Camera",desc:"Mode street-anime MapDex road-only dengan kamera lebih luas ke depan.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
+  state.lastPoi = {id:"intro",name:"BogorDex GO v45 Remote Road Lock",desc:"Mode street-anime MapDex dengan remote road lock OSRM-compatible, road continuity lebih galak, dan fallback ke jalan mobil terdekat.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
   syncMiniButton();
   loadUserReports();
   renderUserReports();
