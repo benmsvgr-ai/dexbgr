@@ -1555,3 +1555,101 @@ html,body,#app{
   .mist-layer{top:11vh;height:10vh;}
   .mist-layer-b{top:15vh;height:8vh;}
 }
+
+
+/* ===== UI FX adaptation from requested version (character untouched) ===== */
+.night-overlay,
+.rain-fx{
+  position:absolute; inset:0; pointer-events:none; z-index:7;
+}
+.night-overlay{
+  opacity:0; transition:opacity .35s ease;
+  background:linear-gradient(180deg,rgba(5,12,34,.14) 0%,rgba(7,16,38,.03) 26%,rgba(3,10,30,.18) 100%),
+             radial-gradient(circle at 50% 12%,rgba(114,142,255,.12),transparent 38%);
+}
+.rain-fx{ opacity:0; transition:opacity .35s ease; }
+.rain-layer{ position:absolute; inset:-20%; background-repeat:repeat; transform:skewX(-14deg); }
+.rain-back{ opacity:.16; background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.45) 0 2px,transparent 2px 18px); background-size:22px 22px; animation:rainDiagBack 0.7s linear infinite; }
+.rain-front{ opacity:.24; background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.72) 0 2px,transparent 2px 12px); background-size:16px 16px; animation:rainDiagFront 0.42s linear infinite; }
+@keyframes rainDiagBack{from{background-position:0 0}to{background-position:-36px 72px}}
+@keyframes rainDiagFront{from{background-position:0 0}to{background-position:-52px 104px}}
+body.weather-rain .rain-fx,#app.weather-rain .rain-fx{ opacity:.18; }
+body.is-night .night-overlay,#app.is-night .night-overlay{ opacity:1; }
+
+.weather-chip{
+  position:absolute; left:50%; top:14px; transform:translateX(-50%);
+  z-index:145; display:flex; align-items:center; justify-content:center;
+  min-width:220px; max-width:min(56vw,360px);
+  padding:11px 16px; border-radius:24px;
+  background:linear-gradient(180deg,rgba(255,255,255,.48),rgba(196,222,252,.32));
+  border:1px solid rgba(255,255,255,.34);
+  box-shadow:0 18px 34px rgba(17,42,86,.18), inset 0 1px 0 rgba(255,255,255,.35);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.18);
+}
+.weather-main{display:flex;align-items:center;gap:12px;}
+.weather-icon{font-size:28px;line-height:1;}
+.weather-info{display:flex;flex-direction:column;gap:3px;}
+.weather-info b{font-size:18px;font-weight:1000;margin-right:6px;}
+.weather-info span{font-size:14px;font-weight:800;opacity:.96;}
+.weather-info small{font-size:12px;font-weight:800;opacity:.9;color:#f4fbff;}
+body.is-night .weather-chip{background:linear-gradient(180deg,rgba(25,40,83,.52),rgba(16,27,62,.36));}
+
+.mapdex-action{
+  display:flex!important; align-items:center!important; justify-content:center!important; flex-direction:column!important;
+  padding:6px!important; overflow:visible!important;
+  right:16px!important; bottom:106px!important; width:84px!important; height:92px!important;
+  border-radius:24px!important; background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(229,241,255,.90))!important;
+}
+.mapdex-action .mapdex-asset{
+  display:block; width:62px; height:62px;
+  background:url("assets/ui/mapdex-device.png") center/contain no-repeat;
+  filter:drop-shadow(0 8px 12px rgba(27,57,118,.28));
+  animation:mapDexFloat 2.8s ease-in-out infinite;
+}
+.mapdex-action small{margin-top:-2px;font-weight:1000;letter-spacing:.02em;font-size:10px;color:#173a75;text-shadow:none;}
+@keyframes mapDexFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+.chat-toggle{
+  position:absolute; right:106px; bottom:22px; z-index:82;
+  width:78px; height:56px; border:none; border-radius:18px; cursor:pointer;
+  color:#fff; font-weight:1000;
+  background:linear-gradient(135deg,rgba(96,165,250,.76),rgba(199,210,254,.60));
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 16px 30px rgba(14,30,77,.24), inset 0 1px 0 rgba(255,255,255,.16);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+}
+.chat-toggle::before{content:"✦";display:block;font-size:13px;color:#8ff3ff;margin-bottom:2px;}
+.anime-chat-dock{
+  position:absolute; right:18px; bottom:88px; width:min(320px,28vw); min-height:180px;
+  z-index:82; border-radius:28px; padding:14px 14px 12px;
+  background:linear-gradient(180deg,rgba(17,28,61,.42),rgba(16,23,49,.18));
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 20px 50px rgba(4,17,45,.28), inset 0 1px 0 rgba(255,255,255,.15);
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  color:#f8fbff; transform-origin:100% 100%; transition:transform .24s ease, opacity .24s ease; opacity:1;
+}
+.anime-chat-dock.collapsed{transform:translateY(10px) scale(.92);opacity:.18;pointer-events:none;}
+.chat-dock-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
+.chat-dock-head b{display:block;font-size:16px;}
+.chat-dock-head small{display:block;font-size:11px;opacity:.82;}
+.chat-close-btn{
+  border:none; width:30px; height:30px; border-radius:999px; cursor:pointer;
+  background:rgba(255,255,255,.12); color:#fff; font-size:18px;
+}
+.chat-dock-body{font-size:13px;line-height:1.5;color:#eef6ff;}
+.chat-placeholder-orb{
+  width:68px;height:68px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff, #8cd8ff 34%, #6177ff 68%, #b56fff 100%);
+  box-shadow:0 0 26px rgba(135,219,255,.42); margin-bottom:12px; animation:chatOrb 2.6s ease-in-out infinite;
+}
+@keyframes chatOrb{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+@media (max-width:760px){
+  .anime-chat-dock{width:min(280px,72vw);height:220px;right:10px;bottom:82px;}
+  .chat-toggle{right:98px;bottom:20px;width:72px;height:52px;}
+  .weather-chip{min-width:160px;max-width:42vw;padding:9px 12px;}
+  .weather-info b{font-size:15px;}
+  .weather-info span{font-size:12px;}
+  .weather-info small{font-size:10px;}
+}
