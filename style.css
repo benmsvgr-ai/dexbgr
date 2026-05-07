@@ -2214,3 +2214,55 @@ body.weather-rain .maplibregl-canvas{filter:saturate(.98) brightness(.96) contra
 .player-map-marker .player-sprite{
   position:absolute !important;
 }
+
+
+/* ==== V54C CLEAN VISIBILITY HOTFIX ==== */
+.screen-vignette,.horizon-cloud-fx,.reference-checklist{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;}
+#map,.maplibregl-canvas,.maplibregl-canvas-container{filter:none!important;opacity:1!important;}
+#nightOverlay{background:transparent!important;opacity:0!important;pointer-events:none!important;}
+#rainFx{pointer-events:none!important;}
+#npcLayer,.npc-layer{z-index:60!important;}
+.maplibregl-marker.npc-marker,.maplibregl-marker .npc.map-npc,.npc.map-npc{z-index:65!important;}
+.maplibregl-marker.player-map-marker,.player-map-marker{
+  position:relative!important;
+  z-index:9999!important;
+  width:128px!important;
+  height:148px!important;
+  pointer-events:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+  overflow:visible!important;
+  filter:none!important;
+}
+.player-map-marker .player-name-tag{z-index:4!important;}
+.player-map-marker .player-ring{
+  position:absolute!important;left:50%!important;top:74%!important;transform:translate(-50%,-50%)!important;
+  width:88px!important;height:88px!important;border:3px solid rgba(95,229,255,.95)!important;
+  border-radius:50%!important;opacity:.95!important;z-index:1!important;
+  box-shadow:0 0 24px rgba(86,220,255,.28)!important;
+}
+.player-map-marker .player-shadow{
+  position:absolute!important;left:50%!important;top:84%!important;transform:translate(-50%,-50%)!important;
+  width:42px!important;height:12px!important;border-radius:50%!important;
+  background:rgba(0,0,0,.20)!important;filter:blur(2px)!important;z-index:1!important;opacity:1!important;
+}
+.player-map-marker .player-sprite,
+.player-map-marker .player-sprite.player-sprite-image{
+  position:absolute!important;
+  left:50%!important;top:56%!important;
+  width:96px!important;height:96px!important;
+  transform:translate(-50%,-68%)!important;
+  background-image:url("assets/sprout_character.png")!important;
+  background-repeat:no-repeat!important;
+  background-size:384px 384px!important;
+  background-position:var(--sprite-x, 0px) var(--sprite-y, 0px)!important;
+  image-rendering:auto!important;
+  opacity:1!important;visibility:visible!important;display:block!important;
+  z-index:3!important;
+  filter:drop-shadow(0 6px 8px rgba(13,35,70,.22))!important;
+}
+.player-map-marker .player-sprite.idle,.player-map-marker .player-sprite.walk,.player-map-marker .player-sprite.run,.player-map-marker .player-sprite.face-left,.player-map-marker .player-sprite.face-right,.player-map-marker .player-sprite.face-up,.player-map-marker .player-sprite.face-down{transform:translate(-50%,-68%)!important;}
+.npc.map-npc{position:relative!important;width:76px!important;height:96px!important;transform:translate(-50%,-100%) scale(1)!important;filter:none!important;opacity:1!important;visibility:visible!important;}
+.npc.map-npc::before{display:block!important;opacity:1!important;background:rgba(0,0,0,.18)!important;}
+.npc.map-npc .npc-sprite{position:absolute!important;left:50%!important;bottom:0!important;transform:translateX(-50%)!important;width:78px!important;height:78px!important;background-size:312px 312px!important;background-repeat:no-repeat!important;opacity:1!important;visibility:visible!important;display:block!important;image-rendering:auto!important;filter:drop-shadow(0 8px 10px rgba(20,38,84,.20))!important;}
+.npc.map-npc .npc-name,.npc.map-npc .npc-quest-mark{display:block!important;opacity:1!important;}
