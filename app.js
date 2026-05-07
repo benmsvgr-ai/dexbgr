@@ -163,7 +163,7 @@ function placeNPCsNearPortals(){
   // NPC dibuat tetap di titik map yang agak menyebar. Bukan overlay layar dan bukan nempel portal.
   const base = state.gpsBase || [106.79884, -6.59725];
   const offsets = [
-    [-120, 90], [130, 78], [-96, -110], [110, -84], [0, 138]
+    [-46, 34], [52, 30], [-38, -42], [44, -34], [0, 58]
   ];
   state.npcs.forEach((npc, i) => {
     const o = offsets[i] || [0, 0];
@@ -203,6 +203,7 @@ function renderNPCs(){
       rotationAlignment: "viewport",
       pitchAlignment: "viewport"
     }).setLngLat(npc.coords).addTo(map);
+    try{ marker.getElement().classList.add("npc-marker"); }catch(e){}
     state.npcMarkers.push(marker);
   });
 }
