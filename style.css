@@ -2194,3 +2194,8 @@ body.weather-rain .maplibregl-canvas{filter:saturate(.98) brightness(.96) contra
 .weather-chip{
   min-width:170px !important;
 }
+
+
+/* force sprout character */
+.player-sprite{background-image:url("assets/sprout_character.png")!important;}
+.player-map-marker .player-sprite{background-image:url("assets/sprout_character.png")!important;}
