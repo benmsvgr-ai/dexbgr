@@ -1706,3 +1706,112 @@ body.weather-rain .rain-fx,#app.weather-rain .rain-fx{opacity:.24!important;}
 .dex-action{right:16px!important;bottom:22px!important;width:84px!important;height:58px!important;}
 @media (max-width:980px){ .anime-chat-dock{width:min(300px,54vw);} }
 @media (max-width:760px){ .anime-chat-dock{width:min(280px,72vw);height:220px;right:10px;bottom:82px;} .chat-toggle{right:98px;bottom:20px;width:72px;height:52px;} .character-profile-hero{grid-template-columns:1fr;} .character-avatar-big{margin:0 auto;} .character-stat-grid{grid-template-columns:1fr;} }
+
+
+/* ===== v48 request fixes ===== */
+.sheet-mini-btn{display:none!important;}
+/* Hapus gambar explorer/avatar di pojok kiri, sisakan kartu level saja */
+.trainer-avatar-ui{display:none!important;}
+.bottom-left-profile{min-width:160px!important;padding-left:14px!important;}
+.bottom-left-profile::before{display:none!important;}
+.trainer-meta{min-width:130px!important;margin-left:0!important;}
+
+/* MapDex pakai gambar device, bukan layer panel */
+.mapdex-action{
+  background:rgba(255,255,255,.20)!important;
+  border:1px solid rgba(255,255,255,.32)!important;
+  box-shadow:0 16px 30px rgba(12,32,75,.18), inset 0 1px 0 rgba(255,255,255,.38)!important;
+  backdrop-filter:blur(10px)!important;
+}
+.mapdex-action .mapdex-asset{
+  display:block!important;
+  width:44px!important;
+  height:36px!important;
+  margin:auto!important;
+  background:url("assets/ui/mapdex-device.png") center/contain no-repeat!important;
+  filter:drop-shadow(0 5px 8px rgba(12,33,78,.28)) saturate(1.15);
+  animation:mapdexFloat 2.4s ease-in-out infinite;
+}
+.mapdex-action small{font-size:10px!important;color:#173a75!important;text-shadow:none!important;}
+@keyframes mapdexFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.05)}}
+
+/* Karakter lebih stabil: tidak miring, tidak bocor frame */
+.maplibregl-marker.player-map-marker,.player-map-marker{
+  width:112px!important;height:146px!important;overflow:visible!important;
+}
+.player-map-marker .player-sprite{
+  width:100px!important;height:100px!important;
+  left:50%!important;top:48%!important;
+  background-size:500px 500px!important;
+  background-repeat:no-repeat!important;
+  overflow:hidden!important;
+  transform:translate(-50%,-50%)!important;
+  image-rendering:auto!important;
+}
+.player-map-marker .player-sprite.idle,.player-map-marker .player-sprite.walk,.player-map-marker .player-sprite.run,.player-map-marker .player-sprite.face-left,.player-map-marker .player-sprite.face-right,.player-map-marker .player-sprite.face-up,.player-map-marker .player-sprite.face-down{
+  background-position:var(--sprite-x,-200px) var(--sprite-y,0px)!important;
+  transform:translate(-50%,-50%)!important;
+  animation:none!important;
+}
+.player-map-marker .player-shadow{
+  width:36px!important;height:10px!important;top:90%!important;
+  background:rgba(5,20,40,.14)!important;filter:blur(3px)!important;
+}
+.player-map-marker .player-ring{top:76%!important;width:94px!important;height:94px!important;}
+
+/* Weather tidak lebay */
+.horizon-cloud-fx{opacity:.16!important;}
+.cloud-band,.cloud-band-b,.mist-layer,.mist-layer-b{display:none!important;}
+.snow-dust{display:none!important;}
+body.weather-rain .rain-fx,#app.weather-rain .rain-fx{opacity:.18!important;}
+body:not(.weather-rain) .rain-fx{display:none!important;}
+.screen-vignette{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 50%,rgba(0,0,0,.06))!important;}
+.maplibregl-canvas{filter:saturate(1.10) brightness(1.04) contrast(1.03)!important;}
+
+/* Zoom mentok: UI tetap kebaca */
+.top-status.compact-status{z-index:145!important;}
+.top-actions{z-index:145!important;}
+.weather-chip{z-index:145!important;background:linear-gradient(180deg,rgba(255,255,255,.48),rgba(196,222,252,.32))!important;color:#fff!important;}
+
+/* Portal event: satu portal pajangan, animated */
+.event-portal-marker.single-event{
+  width:96px!important;height:126px!important;border:0!important;background:transparent!important;
+  cursor:pointer;position:relative;filter:drop-shadow(0 16px 16px rgba(127,22,42,.32));
+}
+.event-portal-marker.single-event .event-portal-img{
+  position:absolute;left:50%;bottom:0;width:90px;height:120px;transform:translateX(-50%);
+  background:url("assets/ui/event-portal.png") center/contain no-repeat!important;
+  animation:portalPulseV48 1.8s ease-in-out infinite;
+}
+.event-portal-marker.single-event .event-portal-core{
+  position:absolute;left:50%;bottom:24px;width:74px;height:32px;border-radius:50%;
+  transform:translateX(-50%);
+  background:radial-gradient(circle,rgba(255,80,140,.55),rgba(255,35,90,0) 70%);
+  animation:portalAuraV48 1.4s ease-in-out infinite;
+}
+.event-portal-marker.single-event .event-portal-label{
+  position:absolute;left:50%;top:-22px;transform:translateX(-50%);
+  white-space:nowrap;padding:6px 12px;border-radius:999px;
+  background:rgba(42,46,70,.88);color:#fff;font-size:12px;font-weight:900;
+  box-shadow:0 8px 14px rgba(0,0,0,.22);
+}
+.event-portal-marker.single-event .event-portal-hint{
+  position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);
+  white-space:nowrap;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.78);
+  color:#9d174d;font-size:10px;font-weight:900;
+}
+@keyframes portalPulseV48{0%,100%{transform:translateX(-50%) translateY(0) scale(1)}50%{transform:translateX(-50%) translateY(-5px) scale(1.06)}}
+@keyframes portalAuraV48{0%,100%{opacity:.5;transform:translateX(-50%) scale(.9)}50%{opacity:1;transform:translateX(-50%) scale(1.22)}}
+
+/* Chat anime transparan */
+.chat-panel{
+  background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(138,196,255,.10))!important;
+  border:1px solid rgba(255,255,255,.26)!important;
+  box-shadow:0 22px 44px rgba(18,44,92,.16)!important;
+  backdrop-filter:blur(14px)!important;
+  -webkit-backdrop-filter:blur(14px)!important;
+}
+.chat-toggle{background:linear-gradient(135deg,rgba(96,165,250,.76),rgba(199,210,254,.60))!important;}
+
+/* Route direction */
+#map .maplibregl-canvas-container{outline:none!important;}
