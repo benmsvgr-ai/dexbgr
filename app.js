@@ -103,7 +103,14 @@ loadPortalPopupDone();
 
 const statusEl = () => document.getElementById("statusText");
 const sheetEl = () => document.getElementById("bottomSheet");
+const PLAYER_SPRITE_SHEET = "assets/sprout_character.png";
 const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
+
+function enforceSproutCharacter(){
+  document.querySelectorAll(".player-sprite").forEach((el)=>{
+    el.style.backgroundImage = `url(${PLAYER_SPRITE_SHEET})`;
+  });
+}
 const PLAYER_PROFILE = {
   name: "Ranger Panji",
   gender: "Laki-laki",
@@ -272,6 +279,7 @@ function createPlayerMapMarker(){
   el.className = "player-map-marker";
   el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-up" aria-label="Karakter utama"></div>`;
   state.playerMarkerEl = el;
+  enforceSproutCharacter();
   state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 0], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
     .addTo(map);
