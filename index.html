@@ -12,6 +12,8 @@
   <div id="app">
     <div id="map"></div>
     <div class="screen-vignette"></div>
+    <div id="nightOverlay" class="night-overlay" aria-hidden="true"></div>
+    <div id="rainFx" class="rain-fx" aria-hidden="true"><div class="rain-layer rain-back"></div><div class="rain-layer rain-front"></div></div>
     <div class="horizon-cloud-fx" aria-hidden="true">
       <div class="cloud-band cloud-band-a"></div>
       <div class="cloud-band cloud-band-b"></div>
@@ -30,6 +32,16 @@
       <button id="toggleGovBtn" class="pill active">Instansi</button>
       <button id="toggleHealthBtn" class="pill active">Kesehatan</button>
       <button id="toggleUmkmBtn" class="pill active">UMKM</button>
+    </div>
+
+    <div id="weatherChip" class="weather-chip" aria-live="polite">
+      <div class="weather-main">
+        <span id="weatherIcon" class="weather-icon">⛅</span>
+        <div class="weather-info">
+          <div><b id="weatherTemp">--°C</b> <span id="weatherDesc">Memuat cuaca</span></div>
+          <small id="weatherLocTime">--:-- • --</small>
+        </div>
+      </div>
     </div>
 
     <button id="locateBtn" class="fab fab-locate" title="Ambil lokasi"><span>GPS</span></button>
@@ -96,8 +108,23 @@
       <button class="move-btn down" data-dir="down">▼</button>
     </div>
 
-    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="phone-icon">▣</span><small>MapDex</small></button>
+    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="mapdex-asset"></span><small>MapDex</small></button>
+    <button id="chatToggleBtn" class="chat-toggle" title="Buka chat">Chat</button>
     <button id="dexBtn" class="dex-action" title="Buka BogorDex"><span class="dex-icon">Dex</span></button>
+
+    <aside id="animeChatDock" class="anime-chat-dock collapsed" aria-label="Chat karakter">
+      <div class="chat-dock-head">
+        <div>
+          <b>Chat Ranger</b>
+          <small>Firebase belum dihubungkan</small>
+        </div>
+        <button id="chatCloseBtn" class="chat-close-btn" title="Tutup">×</button>
+      </div>
+      <div class="chat-dock-body">
+        <div class="chat-placeholder-orb"></div>
+        <p>Kolom chat transparan anime sudah siap. Nanti tinggal sambungkan ke Firebase realtime chat.</p>
+      </div>
+    </aside>
 
     <button id="sheetMiniBtn" class="sheet-mini-btn hidden" title="Buka info">Info</button>
 
