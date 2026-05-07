@@ -2199,3 +2199,18 @@ body.weather-rain .maplibregl-canvas{filter:saturate(.98) brightness(.96) contra
 /* force sprout character */
 .player-sprite{background-image:url("assets/sprout_character.png")!important;}
 .player-map-marker .player-sprite{background-image:url("assets/sprout_character.png")!important;}
+
+
+/* hotfix v54b: ensure player marker children position relative to marker root */
+.maplibregl-marker.player-map-marker,
+.player-map-marker{
+  position:relative !important;
+  display:block !important;
+  overflow:visible !important;
+}
+.player-map-marker .player-name-tag,
+.player-map-marker .player-ring,
+.player-map-marker .player-shadow,
+.player-map-marker .player-sprite{
+  position:absolute !important;
+}
