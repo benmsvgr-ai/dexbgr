@@ -9,8 +9,10 @@ const state = {
   playerWorld: [106.79884, -6.59725],
   hasRealGps: false,
   geoWatch: null,
+  gpsSmooth: null,
+  gpsLastAt: 0,
   move: { up:false, down:false, left:false, right:false },
-  moveSpeedMeters: 72.0,
+  moveSpeedMeters: 46.0,
   playerMarker: null,
   playerMarkerEl: null,
   playerFrameTick: 0,
@@ -110,7 +112,9 @@ const PLAYER_PROFILE = {
   level: 10,
   summary: "Karakter utama eksplorasi BogorDex. Fokus patroli jalan, portal event, dan penelusuran titik kota."
 };
-const REALTIME_EVENT_ENDPOINT = window.BOGORDEX_GOOGLE_REALTIME_ENDPOINT || "";
+const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "";
+const TOMTOM_TRAFFIC_ENDPOINT = window.BOGORDEX_TOMTOM_TRAFFIC_ENDPOINT || "";
+const REALTIME_EVENT_ENDPOINT = TOMTOM_TRAFFIC_ENDPOINT;
 
 function setStatus(text){
   statusEl().textContent = text;
@@ -253,10 +257,14 @@ function applyPlayerSpriteFrame(){
   // dan tidak ikut muter saat map/kompas berputar.
   const fw = 100;
   const fh = 100;
-  const facingRows = { down:0, left:1, right:2, up:3 };
+  // Sprite sheet 5x5: kolom 0/4 sering bocor karena frame kepotong.
+  // Pakai frame tengah [1,2,3,2] supaya kaki/kepala tidak "nyangkut" frame sebelah.
+  const facingRows = { down:0, left:1, right:2, up:4 };
+  const frameCols = [1,2,3,2];
   const facing = state.facing || "down";
   const row = facingRows[facing] ?? 0;
-  const col = (state.playerMode === "walk" || state.playerMode === "run") ? (state.playerStepFrame % 4) : 0;
+  const frameIndex = (state.playerMode === "walk" || state.playerMode === "run") ? (state.playerStepFrame % frameCols.length) : 1;
+  const col = frameCols[frameIndex] ?? 2;
   el.style.setProperty("--sprite-x", (-col * fw) + "px");
   el.style.setProperty("--sprite-y", (-row * fh) + "px");
 }
@@ -315,12 +323,12 @@ function weatherCodeMeta(code){
   if(c === 0) return { text:'Cerah', icon:'☀️', rain:false };
   if([1,2].includes(c)) return { text:'Cerah Berawan', icon:'⛅', rain:false };
   if(c === 3) return { text:'Berawan', icon:'☁️', rain:false };
-  if([45,48].includes(c)) return { text:'Berkabut', icon:'🌫️', rain:false };
-  if([51,53,55,56,57].includes(c)) return { text:'Gerimis', icon:'🌦️', rain:true };
+  // Jangan tampilkan kabut/hujan berlebihan. Banyak API cuaca suka salah baca gerimis ringan.
+  if([45,48].includes(c)) return { text:'Berawan', icon:'☁️', rain:false };
+  if([51,53,55,56,57].includes(c)) return { text:'Berawan', icon:'☁️', rain:false };
   if([61,63,65,66,67,80,81,82].includes(c)) return { text:'Hujan', icon:'🌧️', rain:true };
-  if([71,73,75,77,85,86].includes(c)) return { text:'Salju', icon:'❄️', rain:false };
   if([95,96,99].includes(c)) return { text:'Badai', icon:'⛈️', rain:true };
-  return { text:'Cuaca', icon:'⛅', rain:false };
+  return { text:'Cerah Berawan', icon:'⛅', rain:false };
 }
 
 function updateWeatherClock(){
@@ -433,7 +441,12 @@ function openSheet(poi, mode="manual"){
       <span class="tag">${poi.group || "POI"}</span>
       ${poi.aktif ? '<span class="tag">Aktif</span>' : ""}
     </div>
+    ${Array.isArray(poi.coords) ? '<button class="sheet-route-btn" id="sheetRouteBtn">Arahkan ke sini</button>' : ''}
   `;
+  const routeBtn = document.getElementById("sheetRouteBtn");
+  if(routeBtn && Array.isArray(poi.coords)){
+    routeBtn.addEventListener("click", () => setNavigationTarget({ title:poi.name, coords:poi.coords }));
+  }
   syncMiniButton();
   updateStatus(poi.name);
 }
@@ -1025,49 +1038,136 @@ function detectNearby(){
     updateStatus(state.hasRealGps ? "Lokasi aktif" : "Lokasi simulasi");
   }
 }
-function clearEventMarkers(){ (state.eventMarkers||[]).forEach(m => { try{m.remove();}catch(e){} }); state.eventMarkers=[]; }
+
+function clearEventMarkers(){
+  (state.eventMarkers||[]).forEach(m => { try{m.remove();}catch(e){} });
+  state.eventMarkers=[];
+}
 function eventPortalElement(event){
   const el = document.createElement('button');
   el.type = 'button';
-  el.className = 'event-portal-marker ' + (event.kind || 'ramai');
-  el.innerHTML = `<span class="event-portal-core"></span><span class="event-portal-img"></span><span class="event-portal-label">${event.title}</span>`;
-  el.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); openSheet({ id:event.id, name:event.title, desc:event.desc || 'Portal event realtime.', fungsi:event.level || 'Realtime event', tupoksi:event.source || (REALTIME_EVENT_ENDPOINT ? 'Google realtime endpoint' : 'Demo local fallback'), group:'EVENT PORTAL', aktif:true }, 'manual'); });
+  el.className = 'event-portal-marker single-event ' + (event.kind || 'macet');
+  el.innerHTML = `
+    <span class="event-portal-core"></span>
+    <span class="event-portal-img"></span>
+    <span class="event-portal-label">${event.title}</span>
+    <span class="event-portal-hint">Klik • Arahkan</span>
+  `;
+  el.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    setNavigationTarget(event);
+    openSheet({
+      id:event.id,
+      name:event.title,
+      desc:event.desc || 'Portal event kepadatan lalu lintas.',
+      fungsi:'Event kemacetan / aktivitas ramai',
+      tupoksi:(TOMTOM_API_KEY ? 'Sumber disiapkan dari TomTom Traffic API.' : 'Demo pajangan dulu. Isi window.BOGORDEX_TOMTOM_API_KEY untuk data TomTom realtime.'),
+      group:'EVENT PORTAL',
+      aktif:true,
+      coords:event.coords
+    }, 'manual');
+  });
   return el;
+}
+function pickEventCoordinateFallback(){
+  const base = state.playerWorld || state.gpsBase || [106.79884,-6.59725];
+  const bearing = getCameraBearing();
+  const rad = degToRad(bearing);
+  const mx = Math.sin(rad) * 105;
+  const my = Math.cos(rad) * 105;
+  const [dLng,dLat] = metersToLngLatOffset(mx, my, base[1]);
+  const raw = [base[0] + dLng, base[1] + dLat];
+  return snapCoordToNearestRoad(raw, 220) || raw;
+}
+function eventFromTomTomIncident(incident){
+  try{
+    const coords = incident?.geometry?.coordinates;
+    let first = null;
+    if(Array.isArray(coords)){
+      if(typeof coords[0] === 'number') first = coords;
+      else if(Array.isArray(coords[0]) && typeof coords[0][0] === 'number') first = coords[0];
+      else if(Array.isArray(coords[0]) && Array.isArray(coords[0][0])) first = coords[0][0];
+    }
+    if(!first) return null;
+    const props = incident.properties || {};
+    const desc = props?.events?.[0]?.description || props?.from || 'Kepadatan lalu lintas terdeteksi.';
+    return {
+      id:'tomtom_' + (props.id || Date.now()),
+      title:'Portal Macet',
+      desc,
+      level:'Traffic realtime',
+      kind:'macet',
+      source:'TomTom Traffic',
+      coords:snapCoordToNearestRoad([Number(first[0]), Number(first[1])], 200) || [Number(first[0]), Number(first[1])]
+    };
+  }catch(e){ return null; }
 }
 async function loadRealtimeEventPortals(){
   try{
-    let items = [];
-    if(REALTIME_EVENT_ENDPOINT){
-      const res = await fetch(REALTIME_EVENT_ENDPOINT, { cache:'no-store' });
+    let event = null;
+    if(TOMTOM_API_KEY){
+      const [lng, lat] = state.gpsBase || state.playerWorld || [106.79884,-6.59725];
+      const delta = 0.018;
+      const bbox = `${lng-delta},${lat-delta},${lng+delta},${lat+delta}`;
+      const fields = encodeURIComponent('{incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,events{description,code},from,to}}}');
+      const url = TOMTOM_TRAFFIC_ENDPOINT || `https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=${bbox}&fields=${fields}&language=id-ID&t=-1&key=${encodeURIComponent(TOMTOM_API_KEY)}`;
+      const res = await fetch(url, { cache:'no-store' });
       if(res.ok){
         const data = await res.json();
-        items = Array.isArray(data?.events) ? data.events : [];
+        const incident = (data.incidents || [])[0];
+        event = eventFromTomTomIncident(incident);
       }
     }
-    if(!items.length){
-      const seed = state.pois.slice(0,3);
-      items = seed.map((poi, i) => ({
-        id:'event_'+i,
-        title: i===0 ? 'Portal Ramai' : (i===1 ? 'Portal Macet' : 'Portal Event Kota'),
-        desc: i===0 ? 'Titik sedang ramai. Hook realtime Google masih kosong, jadi sementara fallback lokal.' : (i===1 ? 'Titik terindikasi padat/kepadatan lalu lintas. Endpoint realtime belum diisi.' : 'Portal event aktif.'),
-        level: i===1 ? 'Potensi Kemacetan' : 'Aktivitas Ramai',
-        kind: i===1 ? 'macet' : 'ramai',
-        source: REALTIME_EVENT_ENDPOINT ? 'Google realtime' : 'Fallback demo',
-        coords: poi?.coords || state.playerWorld
-      }));
+    if(!event){
+      event = {
+        id:'event_pajangan_macet',
+        title:'Portal Macet',
+        desc:'Pajangan event kemacetan. Nanti tinggal isi TomTom API key untuk data realtime.',
+        level:'Demo kepadatan',
+        kind:'macet',
+        source:'Demo local',
+        coords: pickEventCoordinateFallback()
+      };
     }
-    state.eventPortals = items.filter(x => Array.isArray(x.coords) && x.coords.length===2);
+    state.eventPortals = [event]; // cuma 1 portal, bukan banyak
     renderRealtimeEventPortals();
-  }catch(err){ console.warn('Realtime event portal skipped', err); }
+  }catch(err){
+    console.warn('TomTom/event portal skipped', err);
+  }
 }
 function renderRealtimeEventPortals(){
   if(!map || !maplibregl) return;
   clearEventMarkers();
-  (state.eventPortals || []).forEach((event) => {
+  (state.eventPortals || []).slice(0,1).forEach((event) => {
     const marker = new maplibregl.Marker({ element:eventPortalElement(event), anchor:'bottom', offset:[0,8], rotationAlignment:'viewport', pitchAlignment:'viewport' }).setLngLat(event.coords).addTo(map);
     state.eventMarkers.push(marker);
   });
 }
+function ensureRouteLayer(){
+  if(!map || !map.isStyleLoaded()) return;
+  if(!map.getSource('bdx-navigation-route')){
+    map.addSource('bdx-navigation-route', { type:'geojson', data:{type:'FeatureCollection',features:[]} });
+  }
+  if(!map.getLayer('bdx-navigation-route-glow')){
+    map.addLayer({ id:'bdx-navigation-route-glow', type:'line', source:'bdx-navigation-route', paint:{ 'line-color':'#48f4ff', 'line-width':10, 'line-opacity':0.28, 'line-blur':4 } });
+  }
+  if(!map.getLayer('bdx-navigation-route-line')){
+    map.addLayer({ id:'bdx-navigation-route-line', type:'line', source:'bdx-navigation-route', paint:{ 'line-color':'#00c8ff', 'line-width':4, 'line-opacity':0.92, 'line-dasharray':[1.2,1.1] } });
+  }
+}
+function setNavigationTarget(target){
+  if(!target || !target.coords || !map) return;
+  ensureRouteLayer();
+  const src = map.getSource('bdx-navigation-route');
+  if(src){
+    src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates:[state.playerWorld, target.coords] } }] });
+  }
+  const bounds = new maplibregl.LngLatBounds(state.playerWorld, state.playerWorld).extend(target.coords);
+  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:19.4, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
+  updateStatus('Arah menuju ' + (target.title || target.name || 'portal'));
+}
+
 async function loadSheetData(){
   try{
     updateStatus("Memuat data Google Sheet…");
@@ -1132,9 +1232,21 @@ function startLocation(){
   state.geoWatch = navigator.geolocation.watchPosition(
     (pos) => {
       state.hasRealGps = true;
-      state.gpsBase = [pos.coords.longitude, pos.coords.latitude];
+      const incomingGps = [pos.coords.longitude, pos.coords.latitude];
+      if(!state.gpsSmooth){
+        state.gpsSmooth = incomingGps;
+      }else{
+        const jump = haversineMeters(state.gpsSmooth, incomingGps);
+        const alpha = jump > 65 ? 0.18 : 0.08; // jangan terlalu sensitif, biar tidak belok-belok sendiri
+        state.gpsSmooth = [
+          state.gpsSmooth[0] + (incomingGps[0] - state.gpsSmooth[0]) * alpha,
+          state.gpsSmooth[1] + (incomingGps[1] - state.gpsSmooth[1]) * alpha
+        ];
+      }
+      state.gpsBase = state.gpsSmooth;
       clampOffset();
       recomputePlayerWorld();
+      snapPlayerToRoad(true);
       snapPlayerToRoad(true);
       if(pos.coords && Number.isFinite(pos.coords.heading)){
         // Fallback: kalau sensor kompas browser tidak aktif, pakai arah gerak GPS.
@@ -1316,10 +1428,12 @@ function tryMoveWithCollision(mx, my){
       tx *= r; ty *= r;
     }
     const nextCoord = worldFromOffset(tx, ty);
-    if(canPlayerStandAt(nextCoord)){
-      state.offsetMeters.x = tx;
-      state.offsetMeters.y = ty;
-      state.playerWorld = nextCoord;
+    const snappedCoord = snapCoordToNearestRoad(nextCoord, 80);
+    if(snappedCoord && canPlayerStandAt(snappedCoord)){
+      state.playerWorld = snappedCoord;
+      const [baseLng, baseLat] = state.gpsBase;
+      state.offsetMeters.x = (snappedCoord[0] - baseLng) * (111320 * Math.cos(baseLat * Math.PI/180));
+      state.offsetMeters.y = (snappedCoord[1] - baseLat) * 110540;
       return true;
     }
   }
@@ -1600,7 +1714,7 @@ document.getElementById("closeMainMenuBtn").addEventListener("click", closeMainM
 document.querySelector("#mainMenuModal .game-menu-backdrop").addEventListener("click", closeMainMenu);
 document.getElementById("menuExploreBtn").addEventListener("click", () => { closeMainMenu(); updateStatus("Mode jelajah portal aktif"); });
 document.getElementById("menuScanBtn").addEventListener("click", () => { closeMainMenu(); scanNearestFromMenu(); });
-document.getElementById("menuDexBtn").addEventListener("click", () => { closeMainMenu(); renderDex(); document.getElementById("dexModal").classList.remove("hidden"); });
+document.getElementById("menuDexBtn").addEventListener("click", () => { closeMainMenu(); openCharacterProfile(); });
 document.getElementById("menuResetBtn").addEventListener("click", () => { closeMainMenu(); resetGameCamera(); });
 document.getElementById("menuReportBtn").addEventListener("click", () => { closeMainMenu(); openReportModal(); });
 document.getElementById("reportCloseBtn").addEventListener("click", closeReportModal);
