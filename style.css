@@ -1971,39 +1971,53 @@ body:not(.weather-rain) .rain-fx{display:none!important;}
 }
 
 
-/* ===== v53 hotfix crop karakter ===== */
-.player-map-marker{
-  width:132px !important;
-  height:168px !important;
-  overflow:visible !important;
+/* ===== v51 character + road focus ===== */
+.player-map-marker,.maplibregl-marker.player-map-marker{
+  width:120px!important;
+  height:152px!important;
+  overflow:visible!important;
+  z-index:120!important;
 }
 .player-map-marker .player-sprite{
-  position:absolute !important;
-  left:50% !important;
-  top:52% !important;
-  width:100px !important;
-  height:100px !important;
-  transform:translate(-50%,-50%) !important;
-  background-image:url("assets/sprout_character.png") !important;
-  background-repeat:no-repeat !important;
-  background-size:500px 500px !important;
-  background-color:transparent !important;
-  image-rendering:auto !important;
-  filter:drop-shadow(0 6px 10px rgba(0,0,0,.20)) !important;
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  width:100px!important;
+  height:100px!important;
+  transform:translate(-50%,-50%)!important;
+  background-image:url("assets/sprout_character.png")!important;
+  background-repeat:no-repeat!important;
+  background-size:500px 500px!important;
+  background-position:var(--sprite-x,-200px) var(--sprite-y,-400px)!important;
+  image-rendering:auto!important;
+  filter:drop-shadow(0 8px 10px rgba(0,0,0,.22))!important;
+  display:block!important;
+  opacity:1!important;
 }
-.player-map-marker .player-shadow{
-  top:90% !important;
-  width:40px !important;
-  height:12px !important;
-}
-.player-map-marker .player-ring{
-  top:78% !important;
-  width:90px !important;
-  height:90px !important;
-}
-.player-map-marker .player-name-tag{
-  top:2px !important;
+.player-map-marker .player-sprite.player-sprite-image{ background-image:url("assets/sprout_character.png")!important; }
+.player-map-marker .player-name-tag{ top:6px!important; }
+.player-map-marker .player-ring{ top:78%!important; width:88px!important; height:88px!important; }
+.player-map-marker .player-shadow{ top:91%!important; width:34px!important; height:10px!important; }
+
+/* map lebih dekat dan lebih fokus */
+.weather-chip{ min-width:210px!important; }
+.top-status.compact-status{ width:190px!important; }
+
+/* kalau di HP jangan numpuk */
+@media (max-width: 768px){
+  .anime-chat-dock{top:60px!important; left:12px!important; right:12px!important; width:auto!important;}
+  .chat-toggle{top:14px!important; right:12px!important;}
+  .weather-chip{max-width:42vw!important; min-width:150px!important; padding:8px 12px!important;}
+  .top-status.compact-status{width:145px!important; padding:10px!important;}
 }
 
-/* matikan sisa rule lama yang bikin crop */
-.player-map-marker .player-sprite.player-sprite-image{background:none !important;}
+
+/* ===== v52 focused fixes ===== */
+.maplibregl-canvas{filter:saturate(1.02) brightness(.98) contrast(1.08)!important;}
+body.weather-rain .maplibregl-canvas{filter:saturate(.98) brightness(.96) contrast(1.06)!important;}
+.horizon-cloud-fx{opacity:.35!important;}
+.cloud-band,.cloud-band-b{opacity:.28!important;}
+.mist-layer,.mist-layer-b{opacity:.08!important;}
+.player-map-marker .player-sprite.player-sprite-image{display:block!important;width:104px!important;height:136px!important;left:50%!important;top:46%!important;transform:translate(-50%,-50%)!important;z-index:3!important;}
+.player-map-marker .player-shadow{top:88%!important;width:38px!important;height:12px!important;}
+.player-map-marker .player-ring{top:76%!important;width:92px!important;height:92px!important;}
