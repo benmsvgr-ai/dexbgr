@@ -277,7 +277,7 @@ function createPlayerMapMarker(){
   if(state.playerMarker || !maplibregl || !map) return;
   const el = document.createElement("div");
   el.className = "player-map-marker";
-  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-up" aria-label="Karakter utama"></div>`;
+  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite player-sprite-image idle face-up" aria-label="Karakter utama"></div>`;
   state.playerMarkerEl = el;
   enforceSproutCharacter();
   state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 0], rotationAlignment: "viewport", pitchAlignment: "viewport" })
