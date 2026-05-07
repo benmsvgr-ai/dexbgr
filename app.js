@@ -26,7 +26,7 @@ const state = {
   activePoiId: null,
   activePoiMode: null,
   activeQuestPoiId: null,
-  portalNoticeRadiusMeters: 36,
+  portalNoticeRadiusMeters: 82,
   portalSeenIds: new Set(),
   portalDismissedIds: new Set(),
   deviceHeadingEnabled: false,
@@ -60,7 +60,7 @@ const state = {
   ]
 };
 
-const PORTAL_POPUP_DONE_KEY = "bogordex_portal_popup_done_v41";
+const PORTAL_POPUP_DONE_KEY = "bogordex_portal_popup_done_v55";
 function loadPortalPopupDone(){
   try{
     const raw = localStorage.getItem(PORTAL_POPUP_DONE_KEY);
@@ -900,14 +900,18 @@ function applyLayerFilters(){
 function questPopupEl(){ return document.getElementById("questPopup"); }
 function showQuestPopup(poi, dist){
   const el = questPopupEl();
-  if(!poi || !poi.id || !el || state.activeQuestPoiId === poi.id) return;
+  if(!poi || !poi.id || !el) return;
+  if(state.activeQuestPoiId === poi.id && !el.classList.contains("hidden")) return;
   if(state.portalDismissedIds.has(poi.id)) return;
+
   state.activeQuestPoiId = poi.id;
   state.lastPoi = poi;
+
   document.getElementById("questPortalName").textContent = poi.name;
   document.getElementById("questPortalType").textContent = poi.group || "Portal BogorDex";
   document.getElementById("questPortalDesc").textContent = poi.fungsi || poi.desc || "Dekati portal ini untuk membuka informasi lokasi dan menambah koleksi Dex.";
   document.getElementById("questPortalDistance").textContent = Math.max(1, Math.round(dist)) + " m";
+
   el.classList.remove("hidden");
   el.classList.remove("quest-pop");
   void el.offsetWidth;
@@ -950,7 +954,7 @@ function updateNearestHighlight(){
 }
 function detectNearby(){
   updateNearestHighlight();
-  const hit = nearestPoiWithin(state.playerWorld, state.portalNoticeRadiusMeters);
+  const hit = nearestPoiWithin(state.playerWorld, Math.max(state.portalNoticeRadiusMeters || 0, 82));
   if(hit){
     state.discovered.add(hit.poi.id);
     renderDex();
