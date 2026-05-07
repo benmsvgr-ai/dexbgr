@@ -2012,12 +2012,54 @@ body:not(.weather-rain) .rain-fx{display:none!important;}
 }
 
 
-/* ===== v52 focused fixes ===== */
-.maplibregl-canvas{filter:saturate(1.02) brightness(.98) contrast(1.08)!important;}
-body.weather-rain .maplibregl-canvas{filter:saturate(.98) brightness(.96) contrast(1.06)!important;}
-.horizon-cloud-fx{opacity:.35!important;}
-.cloud-band,.cloud-band-b{opacity:.28!important;}
-.mist-layer,.mist-layer-b{opacity:.08!important;}
-.player-map-marker .player-sprite.player-sprite-image{display:block!important;width:104px!important;height:136px!important;left:50%!important;top:46%!important;transform:translate(-50%,-50%)!important;z-index:3!important;}
-.player-map-marker .player-shadow{top:88%!important;width:38px!important;height:12px!important;}
-.player-map-marker .player-ring{top:76%!important;width:92px!important;height:92px!important;}
+/* ===== v53 clean fix final ===== */
+/* clean player system: hide legacy sprite rules inside map marker */
+.player-map-marker-v53 .player-sprite{display:none !important;}
+.player-map-marker-v53,
+.maplibregl-marker.player-map-marker-v53{
+  width:126px !important;
+  height:164px !important;
+  overflow:visible !important;
+  z-index:140 !important;
+  filter:drop-shadow(0 10px 14px rgba(0,0,0,.18)) !important;
+}
+.player-map-marker-v53 .player-name-tag{
+  top:2px !important;
+  padding:6px 10px !important;
+  font-size:12px !important;
+}
+.player-map-marker-v53 .player-avatar-frame{
+  position:absolute !important;
+  left:50% !important;
+  top:51% !important;
+  width:96px !important;
+  height:124px !important;
+  transform:translate(-50%,-50%) !important;
+  object-fit:contain !important;
+  object-position:center bottom !important;
+  display:block !important;
+  opacity:1 !important;
+  image-rendering:auto !important;
+  filter:drop-shadow(0 8px 10px rgba(0,0,0,.16)) !important;
+  pointer-events:none !important;
+}
+.player-map-marker-v53 .player-ring{
+  width:86px !important;
+  height:86px !important;
+  top:77% !important;
+  border-width:2px !important;
+}
+.player-map-marker-v53 .player-shadow{
+  width:34px !important;
+  height:10px !important;
+  top:90% !important;
+  filter:blur(3px) !important;
+}
+/* reduce washed-out white map */
+.screen-vignette{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0) 48%,rgba(0,0,0,.05)) !important;}
+.horizon-cloud-fx{opacity:.34 !important;}
+.cloud-band{opacity:.28 !important;}
+.cloud-band-b{opacity:.18 !important;}
+.mist-layer{opacity:.08 !important;}
+.mist-layer-b{opacity:.04 !important;}
+.maplibregl-canvas{filter:saturate(1.08) brightness(1.02) contrast(1.01) !important;}
