@@ -17,8 +17,8 @@ const state = {
   playerStepFrame: 0,
   collisionEnabled: true,
   roadOnlyMode: true,
-  roadRadiusPx: 42,
-  collisionRadiusPx: 18,
+  roadRadiusPx: 74,
+  collisionRadiusPx: 26,
   collisionCooldown: 0,
   maxOffsetMeters: 1800,
   facing: "down",
@@ -48,6 +48,8 @@ const state = {
   reportMarkers: [],
   userReports: [],
   npcMarkers: [],
+  eventMarkers: [],
+  eventPortals: [],
   npcs: [
     { id:"npc_explorer", name:"Pak Ranger", role:"Penjaga Portal", asset:"assets/npc/npc-explorer.png", bubble:"Ranger, portal biru itu jalur transportasi. Coba dekati sampai quest aktif.", quest:"Misi: cari portal transportasi/BisKita terdekat lalu buka Dex-nya." },
     { id:"npc_nenek", name:"Nenek Data", role:"Warga Senior", asset:"assets/npc/npc-nenek.png", bubble:"Nak, jangan cuma lihat peta. Dengarkan warga, baru pilih lokasi yang tepat.", quest:"Misi: temui satu titik layanan publik dan baca fungsi/tupoksinya." },
@@ -69,7 +71,7 @@ state.environment = {
   raining: false
 };
 
-const PORTAL_POPUP_DONE_KEY = "bogordex_portal_popup_done_v45";
+const PORTAL_POPUP_DONE_KEY = "bogordex_portal_popup_done_v47";
 function loadPortalPopupDone(){
   try{
     const raw = localStorage.getItem(PORTAL_POPUP_DONE_KEY);
@@ -99,8 +101,16 @@ loadPortalPopupDone();
 
 const statusEl = () => document.getElementById("statusText");
 const sheetEl = () => document.getElementById("bottomSheet");
-const miniBtn = () => document.getElementById("sheetMiniBtn");
 const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
+const PLAYER_PROFILE = {
+  name: "Ranger Panji",
+  gender: "Laki-laki",
+  status: "BogorDex Ranger",
+  mode: "Road Patrol",
+  level: 10,
+  summary: "Karakter utama eksplorasi BogorDex. Fokus patroli jalan, portal event, dan penelusuran titik kota."
+};
+const REALTIME_EVENT_ENDPOINT = window.BOGORDEX_GOOGLE_REALTIME_ENDPOINT || "";
 
 function setStatus(text){
   statusEl().textContent = text;
@@ -113,6 +123,17 @@ function setStatus(text){
     else lamp.classList.add("lamp-green");
   }
 }
+function updatePlayerUiMeta(){
+  document.querySelectorAll('.trainer-name').forEach(el => el.textContent = PLAYER_PROFILE.status);
+  document.querySelectorAll('.trainer-level').forEach(el => el.textContent = `Lv ${PLAYER_PROFILE.level} Explorer`);
+  const ids = { profileName:PLAYER_PROFILE.name, profileName2:PLAYER_PROFILE.name, profileGender:PLAYER_PROFILE.gender, profileRole:PLAYER_PROFILE.status, profileMode:PLAYER_PROFILE.mode, profileLevel:String(PLAYER_PROFILE.level), profileStatus:PLAYER_PROFILE.status + ' • ' + PLAYER_PROFILE.mode, profileSummary:PLAYER_PROFILE.summary };
+  Object.entries(ids).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.textContent=val; });
+  const lbl = document.querySelector('.player-name-tag b');
+  if(lbl) lbl.textContent = PLAYER_PROFILE.name;
+}
+function chatDock(){ return document.getElementById('animeChatDock'); }
+function openChatDock(){ chatDock()?.classList.remove('collapsed'); }
+function closeChatDock(){ chatDock()?.classList.add('collapsed'); }
 
 function clearNPCMarkers(){
   if(!state.npcMarkers) state.npcMarkers = [];
@@ -244,7 +265,7 @@ function createPlayerMapMarker(){
   if(state.playerMarker || !maplibregl || !map) return;
   const el = document.createElement("div");
   el.className = "player-map-marker";
-  el.innerHTML = `<div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-down"></div>`;
+  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-down"></div>`;
   state.playerMarkerEl = el;
   state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 2], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
@@ -372,15 +393,16 @@ async function refreshEnvironment(force=false){
     const current = data.current || {};
     const meta = weatherCodeMeta(current.weather_code);
     const rainValue = Number(current.rain || 0) + Number(current.showers || 0);
+    const cloudCover = Number(current.cloud_cover || 0);
     state.environment.lastFetchAt = now;
     state.environment.lastFetchCoords = { lat, lng };
     state.environment.timezone = data.timezone || 'Asia/Jakarta';
     state.environment.temperature = Number(current.temperature_2m);
-    state.environment.description = meta.text;
-    state.environment.icon = meta.icon;
+    state.environment.description = rainValue > 0.12 ? "Hujan" : (cloudCover > 78 ? "Berawan" : "Cerah Berawan");
+    state.environment.icon = rainValue > 0.12 ? "🌧️" : (cloudCover > 78 ? "☁️" : "⛅");
     state.environment.weatherCode = Number(current.weather_code);
     state.environment.isDay = Number(current.is_day) === 1;
-    state.environment.raining = meta.rain || rainValue > 0.01;
+    state.environment.raining = rainValue > 0.12;
     applyEnvironmentClasses();
   }catch(err){
     console.warn('Weather fetch failed:', err);
@@ -389,9 +411,7 @@ async function refreshEnvironment(force=false){
 }
 
 setInterval(updateWeatherClock, 30000);
-function syncMiniButton(){
-  miniBtn().classList.toggle("hidden", !(sheetEl().classList.contains("hidden-sheet") && !!state.lastPoi));
-}
+function syncMiniButton(){}
 function openSheet(poi, mode="manual"){
   sheetEl().classList.remove("hidden-sheet");
   sheetEl().classList.remove("collapsed");
@@ -428,23 +448,7 @@ function closeSheet(resetStatus=true, fullyHide=true){
   if(resetStatus) updateStatus(state.hasRealGps ? "Lokasi aktif" : "Lokasi simulasi");
   syncMiniButton();
 }
-function renderDex(){
-  document.getElementById("dexFound").textContent = state.discovered.size;
-  document.getElementById("dexTotal").textContent = state.pois.length;
-  const grid = document.getElementById("dexGrid");
-  grid.innerHTML = "";
-  state.pois.forEach((poi) => {
-    const unlocked = state.discovered.has(poi.id);
-    const card = document.createElement("div");
-    card.className = "dex-card" + (unlocked ? "" : " locked");
-    card.innerHTML = `
-      <h4>${unlocked ? poi.name : "Belum ditemukan"}</h4>
-      <p>${unlocked ? (poi.fungsi || "Belum diisi.") : "Dekati titik ini di map untuk membuka entri BogorDex."}</p>
-      <div class="tag-row"><span class="tag">${unlocked ? (poi.group || "POI") : "Terkunci"}</span></div>
-    `;
-    grid.appendChild(card);
-  });
-}
+function renderDex(){ updatePlayerUiMeta(); }
 function normalizeGroup(group){
   const g = String(group || "").toUpperCase().trim();
   if(g.includes("HALTE")) return "halte";
@@ -558,10 +562,10 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 76;
-const CAMERA_ZOOM = 18.85;
+const CAMERA_PITCH = 78;
+const CAMERA_ZOOM = 19.25;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 88;
+const CAMERA_AHEAD_METERS = 70;
 const CAMERA_FOLLOW_MIN_MS = 210;
 const HEADING_DEADBAND_DEG = 2.8;
 const HEADING_SMOOTH_ALPHA = 0.075;
@@ -639,8 +643,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 17.6,
-  maxZoom: 19.35,
+  minZoom: 18.4,
+  maxZoom: 20.2,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -1021,6 +1025,49 @@ function detectNearby(){
     updateStatus(state.hasRealGps ? "Lokasi aktif" : "Lokasi simulasi");
   }
 }
+function clearEventMarkers(){ (state.eventMarkers||[]).forEach(m => { try{m.remove();}catch(e){} }); state.eventMarkers=[]; }
+function eventPortalElement(event){
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'event-portal-marker ' + (event.kind || 'ramai');
+  el.innerHTML = `<span class="event-portal-core"></span><span class="event-portal-img"></span><span class="event-portal-label">${event.title}</span>`;
+  el.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); openSheet({ id:event.id, name:event.title, desc:event.desc || 'Portal event realtime.', fungsi:event.level || 'Realtime event', tupoksi:event.source || (REALTIME_EVENT_ENDPOINT ? 'Google realtime endpoint' : 'Demo local fallback'), group:'EVENT PORTAL', aktif:true }, 'manual'); });
+  return el;
+}
+async function loadRealtimeEventPortals(){
+  try{
+    let items = [];
+    if(REALTIME_EVENT_ENDPOINT){
+      const res = await fetch(REALTIME_EVENT_ENDPOINT, { cache:'no-store' });
+      if(res.ok){
+        const data = await res.json();
+        items = Array.isArray(data?.events) ? data.events : [];
+      }
+    }
+    if(!items.length){
+      const seed = state.pois.slice(0,3);
+      items = seed.map((poi, i) => ({
+        id:'event_'+i,
+        title: i===0 ? 'Portal Ramai' : (i===1 ? 'Portal Macet' : 'Portal Event Kota'),
+        desc: i===0 ? 'Titik sedang ramai. Hook realtime Google masih kosong, jadi sementara fallback lokal.' : (i===1 ? 'Titik terindikasi padat/kepadatan lalu lintas. Endpoint realtime belum diisi.' : 'Portal event aktif.'),
+        level: i===1 ? 'Potensi Kemacetan' : 'Aktivitas Ramai',
+        kind: i===1 ? 'macet' : 'ramai',
+        source: REALTIME_EVENT_ENDPOINT ? 'Google realtime' : 'Fallback demo',
+        coords: poi?.coords || state.playerWorld
+      }));
+    }
+    state.eventPortals = items.filter(x => Array.isArray(x.coords) && x.coords.length===2);
+    renderRealtimeEventPortals();
+  }catch(err){ console.warn('Realtime event portal skipped', err); }
+}
+function renderRealtimeEventPortals(){
+  if(!map || !maplibregl) return;
+  clearEventMarkers();
+  (state.eventPortals || []).forEach((event) => {
+    const marker = new maplibregl.Marker({ element:eventPortalElement(event), anchor:'bottom', offset:[0,8], rotationAlignment:'viewport', pitchAlignment:'viewport' }).setLngLat(event.coords).addTo(map);
+    state.eventMarkers.push(marker);
+  });
+}
 async function loadSheetData(){
   try{
     updateStatus("Memuat data Google Sheet…");
@@ -1037,6 +1084,7 @@ async function loadSheetData(){
   updateNearestHighlight();
   renderDex();
   renderNPCs();
+  await loadRealtimeEventPortals();
   updateStatus(`Mode game aktif • ${state.pois.length} portal`);
 }
 function normalizeHeading(value){
@@ -1087,6 +1135,7 @@ function startLocation(){
       state.gpsBase = [pos.coords.longitude, pos.coords.latitude];
       clampOffset();
       recomputePlayerWorld();
+      snapPlayerToRoad(true);
       if(pos.coords && Number.isFinite(pos.coords.heading)){
         // Fallback: kalau sensor kompas browser tidak aktif, pakai arah gerak GPS.
         if(!state.deviceHeadingEnabled && (pos.coords.speed || 0) > 0.6){
@@ -1203,6 +1252,54 @@ function worldFromOffset(x, y){
   const [dLng, dLat] = metersToLngLatOffset(x, y, state.gpsBase[1]);
   return [state.gpsBase[0] + dLng, state.gpsBase[1] + dLat];
 }
+function nearestPointOnSegmentPx(p, a, b){
+  const abx = b.x - a.x, aby = b.y - a.y;
+  const apx = p.x - a.x, apy = p.y - a.y;
+  const ab2 = abx*abx + aby*aby || 1;
+  const t = Math.max(0, Math.min(1, (apx*abx + apy*aby) / ab2));
+  return { x:a.x + abx*t, y:a.y + aby*t, t };
+}
+function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
+  if(!map || !map.loaded || !map.loaded()) return coord;
+  const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
+  if(!layers.length) return coord;
+  const p = map.project(coord);
+  let best = null;
+  let bestDist = Infinity;
+  const feats = queryFeaturesAround(coord, layers, maxRadiusPx);
+  feats.forEach(feat => {
+    const geom = feat?.geometry;
+    if(!geom) return;
+    const lines = geom.type === 'LineString' ? [geom.coordinates] : (geom.type === 'MultiLineString' ? geom.coordinates : []);
+    lines.forEach(line => {
+      for(let i=0;i<line.length-1;i++){
+        const a = map.project(line[i]);
+        const b = map.project(line[i+1]);
+        const np = nearestPointOnSegmentPx(p, a, b);
+        const dx = np.x - p.x, dy = np.y - p.y;
+        const d = Math.hypot(dx, dy);
+        if(d < bestDist){ bestDist = d; best = map.unproject([np.x, np.y]); }
+      }
+    });
+  });
+  if(best && bestDist <= maxRadiusPx){
+    return [best.lng, best.lat];
+  }
+  return coord;
+}
+function snapPlayerToRoad(force = false){
+  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 180 : 120);
+  if(!snapped) return;
+  if(haversineMeters(state.playerWorld, snapped) > 1.4){
+    state.playerWorld = snapped;
+    const [baseLng, baseLat] = state.gpsBase;
+    const dx = (snapped[0] - baseLng) * (111320 * Math.cos(baseLat * Math.PI/180));
+    const dy = (snapped[1] - baseLat) * 110540;
+    state.offsetMeters.x = dx;
+    state.offsetMeters.y = dy;
+    updatePlayerMapMarker();
+  }
+}
 function tryMoveWithCollision(mx, my){
   const originalX = state.offsetMeters.x;
   const originalY = state.offsetMeters.y;
@@ -1263,6 +1360,7 @@ function updateMovement(dt=1/60){
   }
   if(!playerSprite().classList.contains("walk") || state.facing !== facing) setPlayerAnim("walk", facing);
   if(moved){
+    snapPlayerToRoad();
     updatePlayerMapMarker();
     if(!state.browsing){ followPlayerCamera({ duration: 120 }); }
     detectNearby();
@@ -1516,17 +1614,20 @@ document.getElementById("npcDialogQuestBtn").addEventListener("click", acceptNpc
 document.getElementById("npcDialog").addEventListener("click", (e) => { if(e.target.id === "npcDialog") closeNpcDialog(); });
 document.getElementById("questCloseBtn").addEventListener("click", dismissActiveQuestPopup);
 document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
+document.getElementById("chatToggleBtn").addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
+document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
 document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
 document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
 document.getElementById("dexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.remove("hidden"));
 document.getElementById("closeDexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.add("hidden"));
 document.getElementById("sheetHandle").addEventListener("click", () => { sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.toggle("collapsed"); syncMiniButton(); });
 document.getElementById("sheetCloseBtn").addEventListener("click", (e) => { e.stopPropagation(); closeSheet(true, true); });
-document.getElementById("sheetMiniBtn").addEventListener("click", () => { if(state.lastPoi) openSheet(state.lastPoi, state.activePoiMode || "manual"); });
+const __sheetMiniBtn = document.getElementById("sheetMiniBtn"); if(__sheetMiniBtn){ __sheetMiniBtn.addEventListener("click", () => { if(state.lastPoi) openSheet(state.lastPoi, state.activePoiMode || "manual"); }); }
 document.querySelectorAll(".move-btn").forEach(bindMoveButton);
 document.addEventListener("keydown", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=true; if(k==="s"||k==="arrowdown") state.move.down=true; if(k==="a"||k==="arrowleft") state.move.left=true; if(k==="d"||k==="arrowright") state.move.right=true; });
 document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=false; if(k==="s"||k==="arrowdown") state.move.down=false; if(k==="a"||k==="arrowleft") state.move.left=false; if(k==="d"||k==="arrowright") state.move.right=false; });
 
 
 updateWeatherChip();
+updatePlayerUiMeta();
 setTimeout(() => refreshEnvironment(true), 900);
