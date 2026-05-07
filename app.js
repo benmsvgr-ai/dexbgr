@@ -37,15 +37,6 @@ const state = {
   gpsSmoothBase: null,
   gpsLastAcceptedAt: 0,
   gpsLastAccuracy: null,
-  roadHeadingDeg: null,
-  roadHeadingLastAt: 0,
-  roadLock: null,
-  roadLockAt: 0,
-  remoteRoadSnapPending: false,
-  remoteRoadSnapAt: 0,
-  remoteRoadSnapFailCount: 0,
-  remoteRoadCoord: null,
-  gpsTraceBuffer: [],
   headingCameraLastAt: 0,
   lastCameraCenter: null,
   compassRequested: false,
@@ -116,114 +107,6 @@ const environment = {
   lastFetchAt: 0,
   lastCoords: null
 };
-
-
-const REMOTE_ROAD_API = {
-  enabled: true,
-  url: window.BOGORDEX_OSRM_URL || 'https://router.project-osrm.org',
-  profile: window.BOGORDEX_OSRM_PROFILE || 'driving',
-  timeoutMs: 2200,
-  minIntervalMs: 1200,
-  traceMaxPoints: 6
-};
-
-
-function buildOsrmCoordString(coords){
-  return (coords || []).map(c => `${Number(c[0]).toFixed(6)},${Number(c[1]).toFixed(6)}`).join(';');
-}
-function fetchJsonWithTimeout(url, timeoutMs=2200){
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { signal: controller.signal, cache:'no-store' })
-    .then(res => {
-      clearTimeout(timer);
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .catch(err => {
-      clearTimeout(timer);
-      throw err;
-    });
-}
-function pushGpsTrace(coord, accuracyMeters=20){
-  const now = Date.now();
-  if(!coord) return;
-  const buf = state.gpsTraceBuffer || (state.gpsTraceBuffer = []);
-  const prev = buf.length ? buf[buf.length - 1] : null;
-  const moved = prev ? haversineMeters(prev.coord, coord) : Infinity;
-  if(prev && moved < Math.max(1.6, Math.min(7, (accuracyMeters || 20) * 0.12)) && (now - prev.at) < 900) return;
-  buf.push({ coord:[coord[0], coord[1]], accuracy: Math.max(5, Math.min(80, Number(accuracyMeters) || 20)), at: now });
-  while(buf.length > REMOTE_ROAD_API.traceMaxPoints) buf.shift();
-}
-async function fetchRemoteNearestRoad(coord){
-  if(!REMOTE_ROAD_API.enabled || !coord) return null;
-  const coordStr = buildOsrmCoordString([coord]);
-  const url = `${REMOTE_ROAD_API.url}/nearest/v1/${REMOTE_ROAD_API.profile}/${coordStr}?number=1`;
-  const data = await fetchJsonWithTimeout(url, REMOTE_ROAD_API.timeoutMs);
-  const wp = data && data.waypoints && data.waypoints[0];
-  if(!wp || !Array.isArray(wp.location)) return null;
-  return { coord:[wp.location[0], wp.location[1]], source:'osrm-nearest', distance: Number(wp.distance || 0) };
-}
-async function fetchRemoteMatchRoad(){
-  if(!REMOTE_ROAD_API.enabled) return null;
-  const buf = state.gpsTraceBuffer || [];
-  if(buf.length < 3) return null;
-  const coords = buf.map(p => p.coord);
-  const radiuses = buf.map(p => Math.max(5, Math.min(90, Math.round(p.accuracy || 20)))).join(';');
-  const timestamps = buf.map(p => Math.max(1, Math.round(p.at / 1000))).join(';');
-  const coordStr = buildOsrmCoordString(coords);
-  const url = `${REMOTE_ROAD_API.url}/match/v1/${REMOTE_ROAD_API.profile}/${coordStr}?overview=full&geometries=geojson&steps=false&tidy=true&gaps=ignore&radiuses=${radiuses}&timestamps=${timestamps}`;
-  const data = await fetchJsonWithTimeout(url, REMOTE_ROAD_API.timeoutMs);
-  if(!data || (data.code && data.code !== 'Ok')) return null;
-  const tracepoints = Array.isArray(data.tracepoints) ? data.tracepoints : [];
-  for(let i=tracepoints.length-1;i>=0;i--){
-    const tp = tracepoints[i];
-    if(tp && Array.isArray(tp.location)){
-      return { coord:[tp.location[0], tp.location[1]], source:'osrm-match', distance: Number(tp.distance || 0), name: tp.name || '' };
-    }
-  }
-  const matching = data.matchings && data.matchings[0];
-  const geometry = matching && matching.geometry && matching.geometry.coordinates;
-  if(Array.isArray(geometry) && geometry.length){
-    const c = geometry[geometry.length - 1];
-    return { coord:[c[0], c[1]], source:'osrm-match-geometry', distance: 0, name:'' };
-  }
-  return null;
-}
-async function refineGpsWithRemoteRoad(rawGps, accuracyMeters=20){
-  if(!REMOTE_ROAD_API.enabled || !rawGps || state.remoteRoadSnapPending) return false;
-  const now = Date.now();
-  if((now - (state.remoteRoadSnapAt || 0)) < REMOTE_ROAD_API.minIntervalMs) return false;
-  state.remoteRoadSnapPending = true;
-  state.remoteRoadSnapAt = now;
-  try{
-    pushGpsTrace(rawGps, accuracyMeters);
-    let remote = null;
-    const buf = state.gpsTraceBuffer || [];
-    const shouldUseMatch = buf.length >= 3 && (buf.length >= 4 || isCoordBlockedBySolidMap(rawGps) || accuracyMeters > 18);
-    if(shouldUseMatch){
-      remote = await fetchRemoteMatchRoad();
-    }
-    if(!remote) remote = await fetchRemoteNearestRoad(rawGps);
-    if(!remote || !remote.coord) return false;
-    const forced = forceCoordToRoadNetwork(remote.coord, { radii:[90, 150, 240, 360], requireDrivable:true, preferLocked:true });
-    state.remoteRoadCoord = forced;
-    state.gpsBase = forced;
-    state.gpsSmoothBase = forced;
-    clampOffset();
-    recomputePlayerWorld();
-    updatePlayerMapMarker();
-    if(!state.browsing) followPlayerCamera({ duration:260 });
-    detectNearby();
-    state.remoteRoadSnapFailCount = 0;
-    return true;
-  }catch(err){
-    state.remoteRoadSnapFailCount = (state.remoteRoadSnapFailCount || 0) + 1;
-    return false;
-  }finally{
-    state.remoteRoadSnapPending = false;
-  }
-}
 
 function weatherCodeMeta(code){
   const c = Number(code);
@@ -440,7 +323,7 @@ function clampOffset(){
 function recomputePlayerWorld(){
   const [dLng, dLat] = metersToLngLatOffset(state.offsetMeters.x, state.offsetMeters.y, state.gpsBase[1]);
   const raw = [state.gpsBase[0] + dLng, state.gpsBase[1] + dLat];
-  state.playerWorld = (map && map.loaded && map.loaded()) ? forceCoordToRoadNetwork(raw, { radii:[120, 190, 280, 360], requireDrivable:true, preferLocked:true }) : raw;
+  state.playerWorld = (map && map.loaded && map.loaded()) ? snapCoordToNearestRoad(raw, 220) : raw;
   updatePlayerMapMarker();
 }
 function haversineMeters(a, b){
@@ -1148,10 +1031,8 @@ function nearestPointOnScreenLine(point, coords){
   let best = null;
   let bestD2 = Infinity;
   for(let i=0;i<coords.length-1;i++){
-    const aLngLat = coords[i];
-    const bLngLat = coords[i+1];
-    const a = map.project(aLngLat);
-    const b = map.project(bLngLat);
+    const a = map.project(coords[i]);
+    const b = map.project(coords[i+1]);
     const vx = b.x - a.x, vy = b.y - a.y;
     const wx = p.x - a.x, wy = p.y - a.y;
     const len2 = vx*vx + vy*vy;
@@ -1159,18 +1040,9 @@ function nearestPointOnScreenLine(point, coords){
     const t = Math.max(0, Math.min(1, (wx*vx + wy*vy) / len2));
     const x = a.x + vx*t, y = a.y + vy*t;
     const d2 = (p.x-x)*(p.x-x) + (p.y-y)*(p.y-y);
-    if(d2 < bestD2){
-      bestD2 = d2;
-      best = {
-        coord: map.unproject([x,y]).toArray(),
-        d2,
-        tangentPx: { x: vx, y: vy },
-        segmentCoords: [aLngLat, bLngLat],
-        t
-      };
-    }
+    if(d2 < bestD2){ bestD2 = d2; best = map.unproject([x,y]).toArray(); }
   }
-  return best;
+  return best ? { coord: best, d2: bestD2 } : null;
 }
 function getLineCoordinatesFromFeature(feature){
   const geom = feature && feature.geometry;
@@ -1179,168 +1051,25 @@ function getLineCoordinatesFromFeature(feature){
   if(geom.type === 'MultiLineString') return geom.coordinates || [];
   return [];
 }
-function roadFeatureMeta(feature){
-  const props = (feature && feature.properties) || {};
-  const cls = String(props.class || props.type || props.kind || props.subclass || '').toLowerCase();
-  const layer = String((feature && feature.layer && feature.layer.id) || '').toLowerCase();
-  const sourceLayer = String((feature && feature.sourceLayer) || (feature && feature.source && feature.source['source-layer']) || '').toLowerCase();
-  const label = [cls, layer, sourceLayer].join(' ');
-  const nonDrivable = /(footway|path|pedestrian|steps|stairs|cycleway|cycle lane|bridleway|track trail|sidewalk|corridor)/.test(label);
-  const stronglyDrivable = /(motorway|trunk|primary|secondary|tertiary|street|road|residential|service|living_street|unclassified|link|transportation)/.test(label);
-  return { cls, layer, sourceLayer, nonDrivable, stronglyDrivable };
-}
-function roadFeatureWeight(feature){
-  const meta = roadFeatureMeta(feature);
-  if(meta.nonDrivable) return 0.45;
-  if(meta.stronglyDrivable) return 1.25;
-  return 1.0;
-}
-function lockRoadFromProjection(hit){
-  if(!hit || !hit.segmentCoords || hit.segmentCoords.length < 2) return;
-  state.roadLock = {
-    segmentCoords: hit.segmentCoords.map(c => [c[0], c[1]]),
-    coord: hit.coord ? [hit.coord[0], hit.coord[1]] : null,
-    featureMeta: hit.feature ? roadFeatureMeta(hit.feature) : null,
-    layerId: hit.layerId || null
-  };
-  state.roadLockAt = Date.now();
-}
-function getProjectionOnLockedRoad(coord){
-  const lock = state.roadLock;
-  if(!lock || !lock.segmentCoords || lock.segmentCoords.length < 2 || !map || !map.loaded || !map.loaded()) return null;
-  const hit = nearestPointOnScreenLine(coord, lock.segmentCoords);
-  if(!hit) return null;
-  hit.feature = { properties: lock.featureMeta || {} };
-  hit.layerId = lock.layerId || null;
-  return hit;
-}
-function getNearestRoadProjection(coord, radiusPx=170, options={}){
-  if(!map || !map.loaded || !map.loaded()) return null;
-  const preferLocked = options.preferLocked !== false;
-  const includeNonDrivable = options.includeNonDrivable !== false;
-  if(preferLocked){
-    const locked = getProjectionOnLockedRoad(coord);
-    if(locked){
-      const dp = Math.sqrt(Math.max(0, locked.d2 || 0));
-      if(dp <= Math.max(18, radiusPx * 0.85)) return locked;
-    }
-  }
+function snapCoordToNearestRoad(coord, radiusPx=170){
+  if(!map || !map.loaded || !map.loaded()) return coord;
   const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
-  if(!layers.length) return null;
+  if(!layers.length) return coord;
   const features = queryFeaturesAround(coord, layers, radiusPx);
-  if(!features.length) return null;
+  if(!features.length) return coord;
   let best = null;
-  let bestScore = Infinity;
   for(const f of features){
-    const meta = roadFeatureMeta(f);
-    if(!includeNonDrivable && meta.nonDrivable) continue;
     const lines = getLineCoordinatesFromFeature(f);
     for(const line of lines){
       const hit = nearestPointOnScreenLine(coord, line);
-      if(!hit) continue;
-      const weight = roadFeatureWeight(f);
-      const score = hit.d2 / Math.max(0.15, weight);
-      if(score < bestScore){
-        bestScore = score;
-        best = { ...hit, feature: f, layerId: (f.layer && f.layer.id) || null };
-      }
+      if(hit && (!best || hit.d2 < best.d2)) best = hit;
     }
   }
-  return best;
-}
-function tangentToHeadingDeg(tangentPx){
-  if(!tangentPx) return null;
-  const dx = Number(tangentPx.x || 0);
-  const dy = Number(tangentPx.y || 0);
-  if(Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) return null;
-  return normalizeHeading(Math.atan2(dx, -dy) * 180 / Math.PI);
-}
-function setRoadHeadingFromProjection(hit){
-  const heading = tangentToHeadingDeg(hit && hit.tangentPx);
-  if(heading === null) return null;
-  state.roadHeadingDeg = heading;
-  state.roadHeadingLastAt = Date.now();
-  return heading;
-}
-function findBestRoadNetworkCoord(coord, options={}){
-  const radii = options.radii || [110, 170, 240, 320, 420];
-  const requireDrivable = options.requireDrivable !== false;
-  const preferLocked = options.preferLocked !== false;
-  for(const radiusPx of radii){
-    const hit = getNearestRoadProjection(coord, radiusPx, { preferLocked, includeNonDrivable: !requireDrivable });
-    if(hit && hit.coord){
-      lockRoadFromProjection(hit);
-      setRoadHeadingFromProjection(hit);
-      return hit;
-    }
-  }
-  if(requireDrivable){
-    for(const radiusPx of radii){
-      const hit = getNearestRoadProjection(coord, radiusPx, { preferLocked:false, includeNonDrivable:true });
-      if(hit && hit.coord){
-        lockRoadFromProjection(hit);
-        setRoadHeadingFromProjection(hit);
-        return hit;
-      }
-    }
-  }
-  return null;
-}
-function forceCoordToRoadNetwork(coord, options={}){
-  const hit = findBestRoadNetworkCoord(coord, options);
-  return hit && hit.coord ? hit.coord : coord;
-}
-function snapCoordToNearestRoad(coord, radiusPx=170){
-  const hit = findBestRoadNetworkCoord(coord, { radii:[Math.max(70, radiusPx*0.55), radiusPx, Math.round(radiusPx*1.45)], requireDrivable:true, preferLocked:true });
-  return hit && hit.coord ? hit.coord : coord;
-}
-function projectCoordAlongNearestRoad(currentCoord, desiredCoord, radiusPx=185){
-  const currentPx = map.project(currentCoord);
-  const desiredPx = map.project(desiredCoord);
-  const wantedDx = desiredPx.x - currentPx.x;
-  const wantedDy = desiredPx.y - currentPx.y;
-  const wantedLen = Math.hypot(wantedDx, wantedDy) || 1;
-  const lockedHit = getProjectionOnLockedRoad(desiredCoord) || getProjectionOnLockedRoad(currentCoord);
-  let baseHit = lockedHit;
-  if(baseHit && baseHit.tangentPx){
-    const len = Math.hypot(baseHit.tangentPx.x, baseHit.tangentPx.y) || 1;
-    const align = Math.abs((wantedDx * (baseHit.tangentPx.x / len) + wantedDy * (baseHit.tangentPx.y / len)) / wantedLen);
-    if(align < 0.26) baseHit = null;
-  }
-  if(!baseHit) baseHit = pickRoadProjectionForMove(currentCoord, desiredCoord, radiusPx) || getNearestRoadProjection(currentCoord, radiusPx, { preferLocked:true, includeNonDrivable:false }) || getNearestRoadProjection(desiredCoord, radiusPx, { preferLocked:true, includeNonDrivable:false });
-  if(!baseHit || !baseHit.coord || !baseHit.tangentPx) return forceCoordToRoadNetwork(desiredCoord, { radii:[radiusPx, Math.round(radiusPx*1.5), Math.round(radiusPx*2.2)] });
-  const tangent = baseHit.tangentPx;
-  const len = Math.hypot(tangent.x, tangent.y) || 1;
-  const tx = tangent.x / len;
-  const ty = tangent.y / len;
-  const scalar = wantedDx * tx + wantedDy * ty;
-  const basePoint = map.project(baseHit.coord);
-  const px = basePoint.x + tx * scalar;
-  const py = basePoint.y + ty * scalar;
-  const projected = map.unproject([px, py]).toArray();
-  const snappedHit = pickRoadProjectionForMove(baseHit.coord, projected, Math.max(90, Math.round(radiusPx * 0.95))) || findBestRoadNetworkCoord(projected, { radii:[Math.max(70, radiusPx*0.55), radiusPx, Math.round(radiusPx*1.4)], requireDrivable:true, preferLocked:true });
-  const snapped = snappedHit && snappedHit.coord ? snappedHit.coord : baseHit.coord;
-  if(snapped && !isCoordBlockedBySolidMap(snapped) && isCoordOnRoad(snapped)){
-    if(snappedHit) lockRoadFromProjection(snappedHit);
-    else lockRoadFromProjection(baseHit);
-    return snapped;
-  }
-  lockRoadFromProjection(baseHit);
-  return baseHit.coord;
+  return best && best.coord ? best.coord : coord;
 }
 function smoothGpsCoord(nextCoord, accuracyMeters=20){
   const now = Date.now();
-  const rawBlocked = isCoordBlockedBySolidMap(nextCoord);
-  const snappedHit = findBestRoadNetworkCoord(nextCoord, {
-    radii: rawBlocked ? [150, 220, 300, 420, 560] : [100, 170, 240, 320],
-    requireDrivable: true,
-    preferLocked: true
-  });
-  const snapped = snappedHit && snappedHit.coord ? snappedHit.coord : nextCoord;
-  if(snappedHit){
-    setRoadHeadingFromProjection(snappedHit);
-    lockRoadFromProjection(snappedHit);
-  }
+  const snapped = snapCoordToNearestRoad(nextCoord, 190);
   if(!state.gpsSmoothBase){
     state.gpsSmoothBase = snapped;
     state.gpsLastAcceptedAt = now;
@@ -1348,20 +1077,15 @@ function smoothGpsCoord(nextCoord, accuracyMeters=20){
     return snapped;
   }
   const d = haversineMeters(state.gpsSmoothBase, snapped);
-  const jitterGate = Math.max(2.2, Math.min(9, (accuracyMeters || 20) * 0.18));
-  if(d < jitterGate) return state.gpsSmoothBase;
-  const dt = Math.max(0.016, Math.min(2.2, (now - (state.gpsLastAcceptedAt || now)) / 1000));
-  const hardJump = rawBlocked || d > Math.max(22, (accuracyMeters || 20) * 1.6);
-  if(hardJump){
-    state.gpsSmoothBase = forceCoordToRoadNetwork(snapped, { radii:[140, 220, 320, 460, 620], requireDrivable:true, preferLocked:true });
-    state.gpsLastAcceptedAt = now;
-    state.gpsLastAccuracy = accuracyMeters;
+  const jitterGate = Math.max(2.6, Math.min(10, (accuracyMeters || 20) * 0.22));
+  if(d < jitterGate){
     return state.gpsSmoothBase;
   }
-  const alpha = Math.max(0.055, Math.min(0.24, dt * (d > 14 ? 0.48 : 0.24)));
+  const dt = Math.max(0.016, Math.min(2.0, (now - (state.gpsLastAcceptedAt || now)) / 1000));
+  const alpha = Math.max(0.045, Math.min(0.22, dt * (d > 18 ? 0.42 : 0.22)));
   const lng = state.gpsSmoothBase[0] + (snapped[0] - state.gpsSmoothBase[0]) * alpha;
   const lat = state.gpsSmoothBase[1] + (snapped[1] - state.gpsSmoothBase[1]) * alpha;
-  state.gpsSmoothBase = projectCoordAlongNearestRoad(state.gpsSmoothBase, [lng, lat], 190);
+  state.gpsSmoothBase = snapCoordToNearestRoad([lng, lat], 170);
   state.gpsLastAcceptedAt = now;
   state.gpsLastAccuracy = accuracyMeters;
   return state.gpsSmoothBase;
@@ -1377,27 +1101,19 @@ function startLocation(){
       const rawGps = [pos.coords.longitude, pos.coords.latitude];
       const accuracy = pos.coords && Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : 20;
       const beforeWorld = state.playerWorld ? [state.playerWorld[0], state.playerWorld[1]] : null;
-      pushGpsTrace(rawGps, accuracy);
       state.gpsBase = smoothGpsCoord(rawGps, accuracy);
       clampOffset();
       recomputePlayerWorld();
       const movedMeters = beforeWorld ? haversineMeters(beforeWorld, state.playerWorld) : Infinity;
       if(pos.coords && Number.isFinite(pos.coords.heading)){
         // Fallback: kalau sensor kompas browser tidak aktif, pakai arah gerak GPS.
-        if(!state.deviceHeadingEnabled && !isManualMoveActive() && (pos.coords.speed || 0) > 0.6){
+        if(!state.deviceHeadingEnabled && (pos.coords.speed || 0) > 0.6){
           applyDeviceHeadingToCamera(pos.coords.heading, 180);
         }
-      }else if(!state.deviceHeadingEnabled && !isManualMoveActive() && typeof state.roadHeadingDeg === 'number'){
-        applyDeviceHeadingToCamera(state.roadHeadingDeg, 220);
       }
       if(!state.browsing && movedMeters > 1.2) followPlayerCamera({ duration:420 });
       detectNearby();
       updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • kompas aktif" : "Lokasi aktif");
-      refineGpsWithRemoteRoad(rawGps, accuracy).then((refined) => {
-        if(refined){
-          updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • road lock server" : "Lokasi aktif • road lock server");
-        }
-      });
       refreshWeather();
     },
     (err) => { state.hasRealGps = false; updateStatus("Lokasi gagal: " + err.message); },
@@ -1497,7 +1213,7 @@ function isCoordOnRoad(coord){
 function canPlayerStandAt(coord){
   // V44 final: player wajib berada di jalan. Kalau titik mentah masuk gedung/lahan,
   // dia dianggap nabrak lalu dipindah ke titik jalan terdekat, bukan tembus.
-  const roadCoord = forceCoordToRoadNetwork(coord, { radii:[120,185,260,340], requireDrivable:true, preferLocked:true });
+  const roadCoord = snapCoordToNearestRoad(coord, 185);
   if(isCoordBlockedBySolidMap(roadCoord)) return false;
   if(!isCoordOnRoad(roadCoord)) return false;
   return true;
@@ -1509,7 +1225,6 @@ function worldFromOffset(x, y){
 function tryMoveWithCollision(mx, my){
   const originalX = state.offsetMeters.x;
   const originalY = state.offsetMeters.y;
-  const currentWorld = state.playerWorld || worldFromOffset(originalX, originalY);
   const candidates = [
     [originalX + mx, originalY + my, 'full'],
     [originalX + mx, originalY, 'x'],
@@ -1522,14 +1237,11 @@ function tryMoveWithCollision(mx, my){
       const r = state.maxOffsetMeters / d;
       tx *= r; ty *= r;
     }
-    const desiredCoord = worldFromOffset(tx, ty);
-    const nextCoord = state.roadOnlyMode ? projectCoordAlongNearestRoad(currentWorld, desiredCoord, 185) : desiredCoord;
+    const nextCoord = worldFromOffset(tx, ty);
     if(canPlayerStandAt(nextCoord)){
-      const meterDx = haversineMeters([state.gpsBase[0], currentWorld[1]], [nextCoord[0], currentWorld[1]]) * (nextCoord[0] >= state.gpsBase[0] ? 1 : -1);
-      const meterDy = haversineMeters([currentWorld[0], state.gpsBase[1]], [currentWorld[0], nextCoord[1]]) * (nextCoord[1] >= state.gpsBase[1] ? 1 : -1);
-      state.offsetMeters.x = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, meterDx));
-      state.offsetMeters.y = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, meterDy));
-      state.playerWorld = nextCoord;
+      state.offsetMeters.x = tx;
+      state.offsetMeters.y = ty;
+      state.playerWorld = snapCoordToNearestRoad(nextCoord, 185);
       return true;
     }
   }
@@ -1537,77 +1249,18 @@ function tryMoveWithCollision(mx, my){
   return false;
 }
 
-function isManualMoveActive(){
-  return !!(state.move.up || state.move.down || state.move.left || state.move.right);
-}
-function getStableMoveBearing(){
-  const now = Date.now();
-  const liveBearing = normalizeHeading(getCameraBearing());
-  if(!isManualMoveActive()){
-    state.manualMoveBearing = null;
-    state.manualMoveBearingAt = 0;
-    return liveBearing;
-  }
-  const stillFresh = typeof state.manualMoveBearing === 'number' && (now - (state.manualMoveBearingAt || 0) < 220);
-  if(!stillFresh || !Number.isFinite(state.manualMoveBearing)) state.manualMoveBearing = liveBearing;
-  else {
-    const delta = normalizeHeading(liveBearing - state.manualMoveBearing);
-    const signed = delta > 180 ? delta - 360 : delta;
-    state.manualMoveBearing = normalizeHeading(state.manualMoveBearing + signed * 0.12);
-  }
-  state.manualMoveBearingAt = now;
-  return state.manualMoveBearing;
-}
-function pickRoadProjectionForMove(currentCoord, desiredCoord, radiusPx=185){
-  if(!map || !map.loaded || !map.loaded()) return null;
-  const currentPx = map.project(currentCoord);
-  const desiredPx = map.project(desiredCoord);
-  const wantedDx = desiredPx.x - currentPx.x;
-  const wantedDy = desiredPx.y - currentPx.y;
-  const wantedLen = Math.hypot(wantedDx, wantedDy) || 1;
-  const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
-  if(!layers.length) return null;
-  const features = queryFeaturesAround(desiredCoord, layers, radiusPx);
-  if(!features.length) return null;
-  let best = null;
-  let bestScore = Infinity;
-  for(const f of features){
-    const meta = roadFeatureMeta(f);
-    const lines = getLineCoordinatesFromFeature(f);
-    for(const line of lines){
-      const hit = nearestPointOnScreenLine(desiredCoord, line);
-      if(!hit || !hit.tangentPx) continue;
-      const len = Math.hypot(hit.tangentPx.x, hit.tangentPx.y) || 1;
-      const ax = hit.tangentPx.x / len;
-      const ay = hit.tangentPx.y / len;
-      const align = Math.abs((wantedDx * ax + wantedDy * ay) / wantedLen);
-      const distPenalty = Math.sqrt(Math.max(0, hit.d2 || 0));
-      const alignPenalty = (1 - align) * 120;
-      const lockPenalty = state.roadLock && state.roadLock.segmentCoords && state.roadLock.segmentCoords.length >= 2
-        ? Math.min(36, haversineMeters(hit.coord, state.roadLock.coord || currentCoord) * 0.55)
-        : 0;
-      const drivablePenalty = meta.nonDrivable ? 48 : (meta.stronglyDrivable ? -10 : 0);
-      const score = distPenalty + alignPenalty + lockPenalty + drivablePenalty;
-      if(score < bestScore){
-        bestScore = score;
-        best = { ...hit, feature: f, layerId: (f.layer && f.layer.id) || null };
-      }
-    }
-  }
-  return best;
-}
 function updateMovement(dt=1/60){
   const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
   const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
   if(!forwardInput && !strafeInput){
-    state.manualMoveBearing = null;
-    state.manualMoveBearingAt = 0;
     if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle");
     return;
   }
 
+  // V38: gerak karakter mengikuti arah kamera, bukan utara/selatan absolut.
+  // Jadi saat map di-rotate kiri/kanan, tombol atas tetap berarti maju ke depan layar.
   const step = state.moveSpeedMeters * Math.min(0.033, Math.max(0.008, dt));
-  const bearingRad = degToRad(getStableMoveBearing());
+  const bearingRad = degToRad(getCameraBearing());
   const forwardX = Math.sin(bearingRad);
   const forwardY = Math.cos(bearingRad);
   const rightX = Math.cos(bearingRad);
@@ -1617,14 +1270,7 @@ function updateMovement(dt=1/60){
   if(forwardInput && strafeInput){ mx *= 0.7071; my *= 0.7071; }
 
   let facing = state.facing || "down";
-  const roadHeading = (typeof state.roadHeadingDeg === 'number' && (Date.now() - (state.roadHeadingLastAt || 0) < 1800)) ? state.roadHeadingDeg : null;
-  if(roadHeading !== null){
-    const rel = normalizeHeading(roadHeading - getCameraBearing());
-    if(rel >= 315 || rel < 45) facing = "up";
-    else if(rel < 135) facing = "right";
-    else if(rel < 225) facing = "down";
-    else facing = "left";
-  }else if(Math.abs(strafeInput) > Math.abs(forwardInput)) facing = strafeInput < 0 ? "left" : "right";
+  if(Math.abs(strafeInput) > Math.abs(forwardInput)) facing = strafeInput < 0 ? "left" : "right";
   else if(forwardInput) facing = forwardInput > 0 ? "up" : "down";
 
   const moved = tryMoveWithCollision(mx, my);
@@ -1687,11 +1333,11 @@ map.on("load", () => {
   followPlayerCamera({ zoom: CAMERA_ZOOM });
   lockPitchOnly();
   document.getElementById("sheetContent").innerHTML = `
-    <h3>BogorDex GO v45 Remote Road Lock</h3>
+    <h3>BogorDex GO v44 Cloud Road Camera</h3>
     <p>MapLibre street-anime mode: kamera lebih rendah seperti berdiri di jalan, rotate kiri-kanan aktif, pitch atas-bawah dikunci, gedung transparan, dan karakter tetap road-only.</p>
     <div class="section"><div class="section-title">Fix Inti</div><p>Basis MapLibre tetap dipakai tanpa kartu kredit Mapbox. Nuansa dibuat lebih game HP/Pokemon GO: gedung ghost transparan, kamera dari belakang karakter, MapDex phone aktif, dan laporan titik tetap jalan.</p></div>
   `;
-  state.lastPoi = {id:"intro",name:"BogorDex GO v45 Remote Road Lock",desc:"Mode street-anime MapDex dengan remote road lock OSRM-compatible, road continuity lebih galak, dan fallback ke jalan mobil terdekat.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
+  state.lastPoi = {id:"intro",name:"BogorDex GO v44 Cloud Road Camera",desc:"Mode street-anime MapDex road-only dengan kamera lebih luas ke depan.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
   syncMiniButton();
   loadUserReports();
   renderUserReports();
