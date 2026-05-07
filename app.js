@@ -20,7 +20,7 @@ const state = {
   collisionEnabled: true,
   roadOnlyMode: true,
   roadRadiusPx: 74,
-  collisionRadiusPx: 26,
+  collisionRadiusPx: 32,
   collisionCooldown: 0,
   maxOffsetMeters: 1800,
   facing: "down",
@@ -112,7 +112,7 @@ const PLAYER_PROFILE = {
   level: 10,
   summary: "Karakter utama eksplorasi BogorDex. Fokus patroli jalan, portal event, dan penelusuran titik kota."
 };
-const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "";
+const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "31o6wgDj0WALXnVE0xNqd3M6gVki7A3e";
 const TOMTOM_TRAFFIC_ENDPOINT = window.BOGORDEX_TOMTOM_TRAFFIC_ENDPOINT || "";
 const REALTIME_EVENT_ENDPOINT = TOMTOM_TRAFFIC_ENDPOINT;
 
@@ -252,21 +252,21 @@ function setPlayerAnim(mode, facing){
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
+  const fw = 100;
+  const fh = 100;
+  const facingRows = { down:0, left:1, right:2, up:4 };
   const facing = state.facing || "up";
-  const srcMap = {
-    down: "assets/player/player-front.png",
-    left: "assets/player/player-left.png",
-    right: "assets/player/player-right.png",
-    up: "assets/player/player-back.png"
-  };
-  if(el.tagName === "IMG") el.src = srcMap[facing] || srcMap.up;
+  const row = facingRows[facing] ?? 4;
+  const col = 2; // frame tengah paling aman, tidak bocor
+  el.style.setProperty("--sprite-x", (-col * fw) + "px");
+  el.style.setProperty("--sprite-y", (-row * fh) + "px");
 }
 
 function createPlayerMapMarker(){
   if(state.playerMarker || !maplibregl || !map) return;
   const el = document.createElement("div");
   el.className = "player-map-marker";
-  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><img id="playerSpriteMap" class="player-sprite player-sprite-image idle face-up" src="assets/player/player-back.png" alt="Karakter utama">`;
+  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-up" aria-label="Karakter utama"></div>`;
   state.playerMarkerEl = el;
   state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 0], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
@@ -568,10 +568,10 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 74;
-const CAMERA_ZOOM = 19.85;
+const CAMERA_PITCH = 76;
+const CAMERA_ZOOM = 20.35;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 18;
+const CAMERA_AHEAD_METERS = 4;
 const CAMERA_FOLLOW_MIN_MS = 210;
 const HEADING_DEADBAND_DEG = 2.8;
 const HEADING_SMOOTH_ALPHA = 0.075;
@@ -649,8 +649,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 18.4,
-  maxZoom: 20.2,
+  minZoom: 19.6,
+  maxZoom: 21.0,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -1147,15 +1147,35 @@ function ensureRouteLayer(){
     map.addLayer({ id:'bdx-navigation-route-line', type:'line', source:'bdx-navigation-route', paint:{ 'line-color':'#00c8ff', 'line-width':4, 'line-opacity':0.92, 'line-dasharray':[1.2,1.1] } });
   }
 }
+function buildSnappedRoutePoints(start, target){
+  const pts = [];
+  const startSnap = snapCoordToNearestRoad(start, 300) || start;
+  const targetSnap = snapCoordToNearestRoad(target, 300) || target;
+  pts.push(startSnap);
+  const steps = 16;
+  for(let i=1;i<steps;i++){
+    const t = i / steps;
+    const interp = [
+      startSnap[0] + (targetSnap[0] - startSnap[0]) * t,
+      startSnap[1] + (targetSnap[1] - startSnap[1]) * t
+    ];
+    const snapped = snapCoordToNearestRoad(interp, 240) || interp;
+    const prev = pts[pts.length - 1];
+    if(!prev || haversineMeters(prev, snapped) > 3) pts.push(snapped);
+  }
+  pts.push(targetSnap);
+  return pts;
+}
 function setNavigationTarget(target){
   if(!target || !target.coords || !map) return;
   ensureRouteLayer();
+  const routeCoords = buildSnappedRoutePoints(state.playerWorld, target.coords);
   const src = map.getSource('bdx-navigation-route');
   if(src){
-    src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates:[state.playerWorld, target.coords] } }] });
+    src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: routeCoords } }] });
   }
-  const bounds = new maplibregl.LngLatBounds(state.playerWorld, state.playerWorld).extend(target.coords);
-  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:19.85, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
+  const bounds = routeCoords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(routeCoords[0], routeCoords[0]));
+  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:20.25, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
   updateStatus('Arah menuju ' + (target.title || target.name || 'portal'));
 }
 
@@ -1315,9 +1335,13 @@ function getRoadCollisionLayers(){
       layer.type === 'line' &&
       !id.includes('label') &&
       !id.includes('rail') &&
-      !id.includes('route') &&
       !id.includes('water') &&
-      (id.includes('road') || id.includes('street') || id.includes('path') || id.includes('highway') || sl.includes('transportation') || cls.includes('road') || cls.includes('street') || cls.includes('path'));
+      (
+        id.includes('road') || id.includes('street') || id.includes('path') || id.includes('highway') ||
+        id.includes('footway') || id.includes('service') || id.includes('track') ||
+        sl.includes('transportation') || cls.includes('road') || cls.includes('street') || cls.includes('path') ||
+        cls.includes('footway') || cls.includes('service') || cls.includes('track')
+      );
     if(looksRoad && !found.includes(layer.id)) found.push(layer.id);
   });
   return found;
@@ -1393,7 +1417,7 @@ function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
   return coord;
 }
 function snapPlayerToRoad(force = false){
-  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 260 : 180);
+  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 420 : 320);
   if(!snapped) return;
   if(haversineMeters(state.playerWorld, snapped) > 1.4){
     state.playerWorld = snapped;
@@ -1421,7 +1445,7 @@ function tryMoveWithCollision(mx, my){
       tx *= r; ty *= r;
     }
     const nextCoord = worldFromOffset(tx, ty);
-    const snappedCoord = snapCoordToNearestRoad(nextCoord, 80);
+    const snappedCoord = snapCoordToNearestRoad(nextCoord, 240);
     if(snappedCoord && canPlayerStandAt(snappedCoord)){
       state.playerWorld = snappedCoord;
       const [baseLng, baseLat] = state.gpsBase;
