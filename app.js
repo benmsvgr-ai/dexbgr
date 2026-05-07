@@ -352,7 +352,7 @@ function updateWeatherChip(){
 function applyEnvironmentClasses(){
   const app = document.getElementById('app');
   const raining = !!state.environment.raining;
-  const isNight = state.environment.isDay === false;
+  const isNight = false;
   document.body.classList.toggle('weather-rain', raining);
   document.body.classList.toggle('is-night', isNight);
   if(app){
@@ -365,7 +365,7 @@ function applyEnvironmentClasses(){
 
 function applySceneTheme(){
   if(!map || !map.getStyle || !map.isStyleLoaded()) return;
-  const isNight = document.body.classList.contains('is-night');
+  const isNight = false;
   try{
     if(map.getLayer('bdx-ghost-buildings')){
       map.setPaintProperty('bdx-ghost-buildings', 'fill-extrusion-color', isNight ? '#7ea6ff' : '#87dcff');
