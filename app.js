@@ -901,10 +901,7 @@ function questPopupEl(){ return document.getElementById("questPopup"); }
 function showQuestPopup(poi, dist){
   const el = questPopupEl();
   if(!poi || !poi.id || !el || state.activeQuestPoiId === poi.id) return;
-  if(state.portalDismissedIds.has(poi.id) || state.portalSeenIds.has(poi.id)) return;
-  // Portal quest hanya boleh muncul sekali. Begitu popup pertama kali tampil,
-  // id langsung disimpan supaya tidak spam muncul lagi walaupun user masih di radius.
-  markPortalPopupDone(poi.id);
+  if(state.portalDismissedIds.has(poi.id)) return;
   state.activeQuestPoiId = poi.id;
   state.lastPoi = poi;
   document.getElementById("questPortalName").textContent = poi.name;
