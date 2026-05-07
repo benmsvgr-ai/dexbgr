@@ -103,14 +103,7 @@ loadPortalPopupDone();
 
 const statusEl = () => document.getElementById("statusText");
 const sheetEl = () => document.getElementById("bottomSheet");
-const PLAYER_SPRITE_SHEET = "assets/sprout_character.png";
 const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
-
-function enforceSproutCharacter(){
-  document.querySelectorAll(".player-sprite").forEach((el)=>{
-    el.style.backgroundImage = `url(${PLAYER_SPRITE_SHEET})`;
-  });
-}
 const PLAYER_PROFILE = {
   name: "Ranger Panji",
   gender: "Laki-laki",
@@ -163,13 +156,12 @@ function placeNPCsNearPortals(){
   // NPC dibuat tetap di titik map yang agak menyebar. Bukan overlay layar dan bukan nempel portal.
   const base = state.gpsBase || [106.79884, -6.59725];
   const offsets = [
-    [-46, 34], [52, 30], [-38, -42], [44, -34], [0, 58]
+    [-420, 300], [390, 260], [-360, -310], [430, -250], [40, 430]
   ];
   state.npcs.forEach((npc, i) => {
     const o = offsets[i] || [0, 0];
     const [dLng,dLat] = metersToLngLatOffset(o[0], o[1], base[1]);
-    const raw = [base[0] + dLng, base[1] + dLat];
-    npc.coords = snapCoordToNearestRoad(raw, 180) || raw;
+    npc.coords = [base[0] + dLng, base[1] + dLat];
   });
 }
 function npcElement(npc, idx){
@@ -203,7 +195,6 @@ function renderNPCs(){
       rotationAlignment: "viewport",
       pitchAlignment: "viewport"
     }).setLngLat(npc.coords).addTo(map);
-    try{ marker.getElement().classList.add("npc-marker"); }catch(e){}
     state.npcMarkers.push(marker);
   });
 }
@@ -254,22 +245,19 @@ function setPlayerAnim(mode, facing){
   state.playerMode = mode || "idle";
   el.classList.remove("idle","walk","run","face-down","face-up","face-left","face-right");
   el.classList.add(state.playerMode);
-  el.classList.add("face-" + (state.facing || "down"));
+  el.classList.add("face-" + (state.facing || "up"));
   applyPlayerSpriteFrame();
 }
 
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
-  const fw = 128;
-  const fh = 128;
-  const facingRows = { down:0, left:1, right:2, up:3 };
-  const facing = state.facing || "down";
-  const row = facingRows[facing] ?? 0;
-  const isMoving = state.playerMode === "walk" || state.playerMode === "run";
-  const movingFrames = [0, 1, 2, 3];
-  const idleFrame = { down:1, left:1, right:1, up:1 };
-  const col = isMoving ? movingFrames[state.playerStepFrame % movingFrames.length] : (idleFrame[facing] ?? 1);
+  const fw = 100;
+  const fh = 100;
+  const facingRows = { down:0, left:1, right:2, up:4 };
+  const facing = state.facing || "up";
+  const row = facingRows[facing] ?? 4;
+  const col = 2; // frame tengah paling aman, tidak bocor
   el.style.setProperty("--sprite-x", (-col * fw) + "px");
   el.style.setProperty("--sprite-y", (-row * fh) + "px");
 }
@@ -280,7 +268,6 @@ function createPlayerMapMarker(){
   el.className = "player-map-marker";
   el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite player-sprite-image idle face-up" aria-label="Karakter utama"></div>`;
   state.playerMarkerEl = el;
-  enforceSproutCharacter();
   state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 0], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
     .addTo(map);
@@ -581,10 +568,10 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 68;
-const CAMERA_ZOOM = 20.65;
+const CAMERA_PITCH = 76;
+const CAMERA_ZOOM = 20.35;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 14;
+const CAMERA_AHEAD_METERS = 4;
 const CAMERA_FOLLOW_MIN_MS = 210;
 const HEADING_DEADBAND_DEG = 12;
 const HEADING_SMOOTH_ALPHA = 0.03;
@@ -679,17 +666,6 @@ const map = new maplibregl.Map({
 });
 try{ map.touchZoomRotate.enableRotation(); }catch(e){}
 try{ map.dragRotate.enable(); }catch(e){}
-
-(function applyLocalMapBounds(){
-  const [lng, lat] = state.gpsBase;
-  const [dxLng, dyLat] = metersToLngLatOffset(900, 900, lat);
-  try{
-    map.setMaxBounds([
-      [lng - Math.abs(dxLng), lat - Math.abs(dyLat)],
-      [lng + Math.abs(dxLng), lat + Math.abs(dyLat)]
-    ]);
-  }catch(e){}
-})();
 
 
 function setupMapLibre3D(){
@@ -1199,7 +1175,7 @@ function setNavigationTarget(target){
     src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: routeCoords } }] });
   }
   const bounds = routeCoords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(routeCoords[0], routeCoords[0]));
-  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:20.55, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
+  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:20.25, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
   updateStatus('Arah menuju ' + (target.title || target.name || 'portal'));
 }
 
@@ -1283,6 +1259,7 @@ function startLocation(){
       recomputePlayerWorld();
       snapPlayerToRoad(true);
       updatePlayerMapMarker();
+      snapPlayerToRoad(true);
       if(pos.coords && Number.isFinite(pos.coords.heading)){
         // Fallback: kalau sensor kompas browser tidak aktif, pakai arah gerak GPS.
         if(!state.deviceHeadingEnabled && (pos.coords.speed || 0) > 0.6){
@@ -1409,15 +1386,15 @@ function nearestPointOnSegmentPx(p, a, b){
   return { x:a.x + abx*t, y:a.y + aby*t, t };
 }
 function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
-  if(!map || !map.loaded || !map.loaded()) return null;
+  if(!map || !map.loaded || !map.loaded()) return coord;
   const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
-  if(!layers.length) return null;
+  if(!layers.length) return coord;
   const p = map.project(coord);
   let best = null;
   let bestDist = Infinity;
   let feats = queryFeaturesAround(coord, layers, maxRadiusPx);
-  if(!feats.length) feats = queryFeaturesAround(coord, layers, Math.max(maxRadiusPx, 150));
-  if(!feats.length) feats = queryFeaturesAround(coord, layers, Math.max(maxRadiusPx, 210));
+  if(!feats.length) feats = queryFeaturesAround(coord, layers, Math.max(maxRadiusPx, 180));
+  if(!feats.length) feats = queryFeaturesAround(coord, layers, Math.max(maxRadiusPx, 260));
   feats.forEach(feat => {
     const geom = feat?.geometry;
     if(!geom) return;
@@ -1436,38 +1413,28 @@ function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
   if(best && bestDist <= maxRadiusPx){
     return [best.lng, best.lat];
   }
-  return null;
-}
-function applySnappedWorld(snapped){
-  if(!snapped) return false;
-  if(isCoordBlockedBySolidMap(snapped)) return false;
-  const [baseLng, baseLat] = state.gpsBase;
-  state.playerWorld = snapped;
-  state.offsetMeters.x = (snapped[0] - baseLng) * (111320 * Math.cos(baseLat * Math.PI/180));
-  state.offsetMeters.y = (snapped[1] - baseLat) * 110540;
-  updatePlayerMapMarker();
-  return true;
+  return coord;
 }
 function snapPlayerToRoad(force = false){
-  const current = state.playerWorld;
-  const snapped = snapCoordToNearestRoad(current, force ? 220 : 108);
+  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 420 : 320);
   if(!snapped) return;
-  const dist = haversineMeters(current, snapped);
-  if(!canPlayerStandAt(current)){
-    applySnappedWorld(snapped);
-    return;
-  }
-  if(dist > (force ? 0.35 : 0.18)){
-    applySnappedWorld(snapped);
+  if(haversineMeters(state.playerWorld, snapped) > 1.4){
+    state.playerWorld = snapped;
+    const [baseLng, baseLat] = state.gpsBase;
+    const dx = (snapped[0] - baseLng) * (111320 * Math.cos(baseLat * Math.PI/180));
+    const dy = (snapped[1] - baseLat) * 110540;
+    state.offsetMeters.x = dx;
+    state.offsetMeters.y = dy;
+    updatePlayerMapMarker();
   }
 }
 function tryMoveWithCollision(mx, my){
   const originalX = state.offsetMeters.x;
   const originalY = state.offsetMeters.y;
   const candidates = [
-    [originalX + mx, originalY + my],
-    [originalX + mx, originalY],
-    [originalX, originalY + my]
+    [originalX + mx, originalY + my, 'full'],
+    [originalX + mx, originalY, 'x'],
+    [originalX, originalY + my, 'y']
   ];
   for(const [nx, ny] of candidates){
     const d = Math.hypot(nx, ny);
@@ -1477,19 +1444,16 @@ function tryMoveWithCollision(mx, my){
       tx *= r; ty *= r;
     }
     const nextCoord = worldFromOffset(tx, ty);
-    const snappedCoord = snapCoordToNearestRoad(nextCoord, 96) || nextCoord;
-    if(canPlayerStandAt(snappedCoord)){
-      return applySnappedWorld(snappedCoord);
-    }
-    if(canPlayerStandAt(nextCoord)){
-      state.offsetMeters.x = tx;
-      state.offsetMeters.y = ty;
-      state.playerWorld = nextCoord;
+    const snappedCoord = snapCoordToNearestRoad(nextCoord, 240);
+    if(snappedCoord && canPlayerStandAt(snappedCoord)){
+      state.playerWorld = snappedCoord;
+      const [baseLng, baseLat] = state.gpsBase;
+      state.offsetMeters.x = (snappedCoord[0] - baseLng) * (111320 * Math.cos(baseLat * Math.PI/180));
+      state.offsetMeters.y = (snappedCoord[1] - baseLat) * 110540;
       return true;
     }
   }
   state.collisionCooldown = 12;
-  snapPlayerToRoad(true);
   return false;
 }
 
@@ -1497,8 +1461,7 @@ function updateMovement(dt=1/60){
   const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
   const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
   if(!forwardInput && !strafeInput){
-    snapPlayerToRoad(false);
-    if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle", state.facing || "down");
+    if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle");
     return;
   }
 
@@ -1515,8 +1478,8 @@ function updateMovement(dt=1/60){
   if(forwardInput && strafeInput){ mx *= 0.7071; my *= 0.7071; }
 
   let facing = state.facing || "down";
-  if(Math.abs(forwardInput) >= Math.abs(strafeInput) && forwardInput) facing = forwardInput > 0 ? "up" : "down";
-  else if(strafeInput) facing = strafeInput < 0 ? "left" : "right";
+  if(Math.abs(strafeInput) > Math.abs(forwardInput)) facing = strafeInput < 0 ? "left" : "right";
+  else if(forwardInput) facing = forwardInput > 0 ? "up" : "down";
 
   const moved = tryMoveWithCollision(mx, my);
   state.playerFrameTick += dt;
