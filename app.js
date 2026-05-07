@@ -245,40 +245,33 @@ function setPlayerAnim(mode, facing){
   state.playerMode = mode || "idle";
   el.classList.remove("idle","walk","run","face-down","face-up","face-left","face-right");
   el.classList.add(state.playerMode);
-  el.classList.add("face-" + (state.facing || "down"));
+  el.classList.add("face-" + (state.facing || "up"));
   applyPlayerSpriteFrame();
 }
 
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
-  // Sprite utama 4x4: baris = arah, kolom = frame langkah.
-  // Ini sengaja dibuat pakai background-position manual supaya karakter tidak hilang
-  // dan tidak ikut muter saat map/kompas berputar.
-  const fw = 100;
-  const fh = 100;
-  // Sprite sheet 5x5: kolom 0/4 sering bocor karena frame kepotong.
-  // Pakai frame tengah [1,2,3,2] supaya kaki/kepala tidak "nyangkut" frame sebelah.
-  const facingRows = { down:0, left:1, right:2, up:4 };
-  const frameCols = [1,2,3,2];
-  const facing = state.facing || "down";
-  const row = facingRows[facing] ?? 0;
-  const frameIndex = (state.playerMode === "walk" || state.playerMode === "run") ? (state.playerStepFrame % frameCols.length) : 1;
-  const col = frameCols[frameIndex] ?? 2;
-  el.style.setProperty("--sprite-x", (-col * fw) + "px");
-  el.style.setProperty("--sprite-y", (-row * fh) + "px");
+  const facing = state.facing || "up";
+  const srcMap = {
+    down: "assets/player/player-front.png",
+    left: "assets/player/player-left.png",
+    right: "assets/player/player-right.png",
+    up: "assets/player/player-back.png"
+  };
+  if(el.tagName === "IMG") el.src = srcMap[facing] || srcMap.up;
 }
 
 function createPlayerMapMarker(){
   if(state.playerMarker || !maplibregl || !map) return;
   const el = document.createElement("div");
   el.className = "player-map-marker";
-  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-down"></div>`;
+  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><img id="playerSpriteMap" class="player-sprite player-sprite-image idle face-up" src="assets/player/player-back.png" alt="Karakter utama">`;
   state.playerMarkerEl = el;
-  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 2], rotationAlignment: "viewport", pitchAlignment: "viewport" })
+  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 0], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
     .addTo(map);
-  setPlayerAnim("idle", state.facing || "down");
+  setPlayerAnim("idle", state.facing || "up");
 }
 
 function updatePlayerMapMarker(){
@@ -441,7 +434,7 @@ function openSheet(poi, mode="manual"){
       <span class="tag">${poi.group || "POI"}</span>
       ${poi.aktif ? '<span class="tag">Aktif</span>' : ""}
     </div>
-    ${Array.isArray(poi.coords) ? '<button class="sheet-route-btn" id="sheetRouteBtn">Arahkan ke sini</button>' : ''}
+    ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">Arahkan</button>' : ''}
   `;
   const routeBtn = document.getElementById("sheetRouteBtn");
   if(routeBtn && Array.isArray(poi.coords)){
@@ -575,10 +568,10 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 78;
-const CAMERA_ZOOM = 19.25;
+const CAMERA_PITCH = 74;
+const CAMERA_ZOOM = 19.85;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 70;
+const CAMERA_AHEAD_METERS = 18;
 const CAMERA_FOLLOW_MIN_MS = 210;
 const HEADING_DEADBAND_DEG = 2.8;
 const HEADING_SMOOTH_ALPHA = 0.075;
@@ -1051,12 +1044,10 @@ function eventPortalElement(event){
     <span class="event-portal-core"></span>
     <span class="event-portal-img"></span>
     <span class="event-portal-label">${event.title}</span>
-    <span class="event-portal-hint">Klik • Arahkan</span>
   `;
   el.addEventListener('click', (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
-    setNavigationTarget(event);
     openSheet({
       id:event.id,
       name:event.title,
@@ -1164,7 +1155,7 @@ function setNavigationTarget(target){
     src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates:[state.playerWorld, target.coords] } }] });
   }
   const bounds = new maplibregl.LngLatBounds(state.playerWorld, state.playerWorld).extend(target.coords);
-  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:19.4, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
+  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:19.85, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
   updateStatus('Arah menuju ' + (target.title || target.name || 'portal'));
 }
 
@@ -1378,7 +1369,9 @@ function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
   const p = map.project(coord);
   let best = null;
   let bestDist = Infinity;
-  const feats = queryFeaturesAround(coord, layers, maxRadiusPx);
+  let feats = queryFeaturesAround(coord, layers, maxRadiusPx);
+  if(!feats.length) feats = queryFeaturesAround(coord, layers, Math.max(maxRadiusPx, 180));
+  if(!feats.length) feats = queryFeaturesAround(coord, layers, Math.max(maxRadiusPx, 260));
   feats.forEach(feat => {
     const geom = feat?.geometry;
     if(!geom) return;
@@ -1400,7 +1393,7 @@ function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
   return coord;
 }
 function snapPlayerToRoad(force = false){
-  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 180 : 120);
+  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 260 : 180);
   if(!snapped) return;
   if(haversineMeters(state.playerWorld, snapped) > 1.4){
     state.playerWorld = snapped;
@@ -1516,6 +1509,7 @@ map.on("load", () => {
     }
   });
   recomputePlayerWorld();
+  snapPlayerToRoad(true);
   createPlayerMapMarker();
   followPlayerCamera({ zoom: CAMERA_ZOOM });
   lockPitchOnly();
@@ -1562,6 +1556,11 @@ function loop(now){
   lastFrameTime = now;
   if(state.collisionCooldown > 0) state.collisionCooldown -= 1;
   updateMovement(dt);
+  state.__snapTicker = (state.__snapTicker || 0) + 1;
+  if(!state.move.up && !state.move.down && !state.move.left && !state.move.right && state.__snapTicker % 12 === 0){
+    snapPlayerToRoad(true);
+    updatePlayerMapMarker();
+  }
   animatePortalRings();
   updateNpcNearState();
   // Kamera kompas sudah di-throttle di applyDeviceHeadingToCamera.
@@ -1636,7 +1635,7 @@ function scanNearestFromMenu(){
   state.discovered.add(hit.poi.id);
   markPortalPopupDone(hit.poi.id);
   renderDex();
-  map.easeTo({center: hit.poi.coords, zoom: 18.2, pitch: CAMERA_PITCH, bearing: getCameraBearing(), duration: 450});
+  map.easeTo({center: hit.poi.coords, zoom: 19.45, pitch: CAMERA_PITCH, bearing: getCameraBearing(), duration: 450});
   openSheet(hit.poi, 'manual');
   updateStatus('Scan menemukan: ' + hit.poi.name);
 }
@@ -1657,7 +1656,7 @@ function getMapDexItems(){
 }
 function focusMapDexItem(item){
   closeMapDex();
-  map.easeTo({ center:item.coords, zoom:18.25, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
+  map.easeTo({ center:item.coords, zoom:19.45, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
   if(item.type === "portal" && item.ref){ markPortalPopupDone(item.ref.id); openSheet(item.ref, "manual"); }
   if(item.type === "npc" && item.ref) openNpcDialog(item.ref.id);
   if(item.type === "report" && item.ref){
