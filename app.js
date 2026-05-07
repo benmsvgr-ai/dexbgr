@@ -255,12 +255,14 @@ function setPlayerAnim(mode, facing){
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
-  const fw = 100;
-  const fh = 100;
-  const facingRows = { down:0, left:1, right:2, up:4 };
+  const fw = 125;
+  const fh = 125;
+  const facingRows = { down:0, left:1, right:2, up:3 };
   const facing = state.facing || "up";
-  const row = facingRows[facing] ?? 4;
-  const col = 2; // frame tengah paling aman, tidak bocor
+  const row = facingRows[facing] ?? 3;
+  const mode = state.playerMode || "idle";
+  const cycle = mode === "idle" ? [1] : [0,1,2,3];
+  const col = cycle[Math.floor(Date.now()/160) % cycle.length] ?? 1;
   el.style.setProperty("--sprite-x", (-col * fw) + "px");
   el.style.setProperty("--sprite-y", (-row * fh) + "px");
 }
@@ -269,7 +271,7 @@ function createPlayerMapMarker(){
   if(state.playerMarker || !maplibregl || !map) return;
   const el = document.createElement("div");
   el.className = "player-map-marker";
-  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-up" aria-label="Karakter utama"></div>`;
+  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite player-sprite-image idle face-up" aria-label="Karakter utama"></div>`;
   state.playerMarkerEl = el;
   state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 0], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
