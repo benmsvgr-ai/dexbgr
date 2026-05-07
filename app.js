@@ -10,7 +10,7 @@ const state = {
   hasRealGps: false,
   geoWatch: null,
   move: { up:false, down:false, left:false, right:false },
-  moveSpeedMeters: 72.0,
+  moveSpeedMeters: 28.0,
   playerMarker: null,
   playerMarkerEl: null,
   playerFrameTick: 0,
@@ -51,6 +51,7 @@ const state = {
   manualRoadSnapPending: false,
   manualRoadSnapAt: 0,
   manualRoadCoord: null,
+  lastManualInputAt: 0,
   headingCameraLastAt: 0,
   lastCameraCenter: null,
   compassRequested: false,
@@ -189,35 +190,29 @@ async function fetchRemoteRouteAnchor(fromCoord, toCoord){
 async function snapManualMovementToRoad(force=false){
   if(!REMOTE_ROAD_API.enabled || state.manualRoadSnapPending || !state.playerWorld) return false;
   const now = Date.now();
-  if(!force && (now - (state.manualRoadSnapAt || 0)) < REMOTE_ROAD_API.manualSnapIntervalMs) return false;
+  if(!force && (now - (state.manualRoadSnapAt || 0)) < Math.max(560, REMOTE_ROAD_API.manualSnapIntervalMs)) return false;
   const current = state.playerWorld ? [state.playerWorld[0], state.playerWorld[1]] : null;
-  const base = recentRemoteRoadCoord() || state.gpsBase || current;
-  if(!current || !base) return false;
-  const moved = haversineMeters(base, current);
-  if(!force && moved < REMOTE_ROAD_API.manualSnapDistanceMeters) return false;
+  if(!current) return false;
+  const movedSinceTouch = now - (state.lastManualInputAt || 0);
+  if(!force && movedSinceTouch < 220) return false;
   state.manualRoadSnapPending = true;
   state.manualRoadSnapAt = now;
   try{
-    let remote = await fetchRemoteRouteAnchor(base, current);
-    if(!remote) remote = await fetchRemoteNearestRoad(current);
+    let remote = await fetchRemoteNearestRoad(current);
     if(!remote || !remote.coord) return false;
-    const snapped = remote.coord;
+    const snapped = forceCoordToRoadNetwork(remote.coord, { radii:[90, 150, 240, 360], requireDrivable:true, preferLocked:true });
+    if(!snapped) return false;
+    const drift = haversineMeters(current, snapped);
+    if(!force && drift < 1.5) return false;
     state.manualRoadCoord = snapped;
+    state.remoteRoadCoord = snapped;
+    state.gpsBase = snapped;
+    state.gpsSmoothBase = snapped;
     state.playerWorld = snapped;
     state.offsetMeters.x = 0;
     state.offsetMeters.y = 0;
-    state.gpsBase = snapped;
-    state.gpsSmoothBase = snapped;
-    state.remoteRoadCoord = snapped;
-    if(Array.isArray(remote.next)){
-      const heading = bearingBetween(snapped, remote.next);
-      if(Number.isFinite(heading)){
-        state.roadHeadingDeg = heading;
-        state.roadHeadingLastAt = Date.now();
-      }
-    }
     updatePlayerMapMarker();
-    if(!state.browsing) followPlayerCamera({ duration:160 });
+    if(!state.browsing) followPlayerCamera({ duration:120 });
     detectNearby();
     return true;
   }catch(err){
@@ -271,6 +266,7 @@ async function fetchRemoteMatchRoad(){
 }
 async function refineGpsWithRemoteRoad(rawGps, accuracyMeters=20){
   if(!REMOTE_ROAD_API.enabled || !rawGps || state.remoteRoadSnapPending) return false;
+  if(state.manualMoveBasisBearing !== null || (Date.now() - (state.lastManualInputAt || 0)) < 900) return false;
   const now = Date.now();
   if((now - (state.remoteRoadSnapAt || 0)) < REMOTE_ROAD_API.minIntervalMs) return false;
   state.remoteRoadSnapPending = true;
@@ -520,7 +516,7 @@ function recomputePlayerWorld(){
   const base = recentRemoteRoadCoord() || state.gpsBase;
   const [dLng, dLat] = metersToLngLatOffset(state.offsetMeters.x, state.offsetMeters.y, base[1]);
   const raw = [base[0] + dLng, base[1] + dLat];
-  state.playerWorld = raw;
+  state.playerWorld = forceCoordToRoadNetwork(raw, { radii:[80, 130, 200, 280], requireDrivable:true, preferLocked:true }) || raw;
   updatePlayerMapMarker();
 }
 function haversineMeters(a, b){
@@ -1569,6 +1565,7 @@ function isCoordOnRoad(coord){
 }
 function canPlayerStandAt(coord){
   if(isCoordBlockedBySolidMap(coord)) return false;
+  if(state.roadOnlyMode && !isCoordOnRoad(coord)) return false;
   return true;
 }
 function worldFromOffset(x, y){
@@ -1580,14 +1577,18 @@ function tryMoveWithCollision(mx, my){
   const base = recentRemoteRoadCoord() || state.gpsBase || currentWorld;
   const [dLng, dLat] = metersToLngLatOffset(mx, my, currentWorld[1]);
   const desiredCoord = [currentWorld[0] + dLng, currentWorld[1] + dLat];
-  if(!canPlayerStandAt(desiredCoord)){
+  let groundedCoord = forceCoordToRoadNetwork(desiredCoord, { radii:[70, 110, 160, 240], requireDrivable:true, preferLocked:true }) || desiredCoord;
+  if(!canPlayerStandAt(groundedCoord)){
+    groundedCoord = forceCoordToRoadNetwork(desiredCoord, { radii:[120, 180, 260, 360], requireDrivable:true, preferLocked:false }) || groundedCoord;
+  }
+  if(!canPlayerStandAt(groundedCoord)){
     state.collisionCooldown = 12;
     return false;
   }
-  state.playerWorld = desiredCoord;
-  state.offsetMeters.x = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, haversineMeters([base[0], currentWorld[1]], [desiredCoord[0], currentWorld[1]]) * (desiredCoord[0] >= base[0] ? 1 : -1)));
-  state.offsetMeters.y = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, haversineMeters([currentWorld[0], base[1]], [currentWorld[0], desiredCoord[1]]) * (desiredCoord[1] >= base[1] ? 1 : -1)));
-  snapManualMovementToRoad(false);
+  state.playerWorld = groundedCoord;
+  state.manualRoadCoord = groundedCoord;
+  state.offsetMeters.x = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, haversineMeters([base[0], base[1]], [groundedCoord[0], base[1]]) * (groundedCoord[0] >= base[0] ? 1 : -1)));
+  state.offsetMeters.y = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, haversineMeters([base[0], base[1]], [base[0], groundedCoord[1]]) * (groundedCoord[1] >= base[1] ? 1 : -1)));
   return true;
 }
 
@@ -1596,6 +1597,7 @@ function updateMovement(dt=1/60){
   const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
   if(!forwardInput && !strafeInput){
     if(state.manualMoveBasisBearing !== null){
+      state.lastManualInputAt = Date.now();
       snapManualMovementToRoad(true);
       state.manualMoveBasisBearing = null;
     }
@@ -1605,6 +1607,7 @@ function updateMovement(dt=1/60){
 
   if(state.manualMoveBasisBearing === null) state.manualMoveBasisBearing = getCameraBearing();
   state.manualMoveLastAt = Date.now();
+  state.lastManualInputAt = Date.now();
   const step = state.moveSpeedMeters * Math.min(0.03, Math.max(0.008, dt));
   const bearingRad = degToRad(state.manualMoveBasisBearing);
   const forwardX = Math.sin(bearingRad);
