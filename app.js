@@ -112,7 +112,7 @@ const PLAYER_PROFILE = {
   level: 10,
   summary: "Karakter utama eksplorasi BogorDex. Fokus patroli jalan, portal event, dan penelusuran titik kota."
 };
-const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "31o6wgDj0WALXnVE0xNqd3M6gVki7A3e";
+const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "";
 const TOMTOM_TRAFFIC_ENDPOINT = window.BOGORDEX_TOMTOM_TRAFFIC_ENDPOINT || "";
 const REALTIME_EVENT_ENDPOINT = TOMTOM_TRAFFIC_ENDPOINT;
 
@@ -252,14 +252,14 @@ function setPlayerAnim(mode, facing){
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
-  const fw = 100;
-  const fh = 100;
-  const facingRows = { down:0, left:1, right:2, up:4 };
   const facing = state.facing || "up";
-  const row = facingRows[facing] ?? 4;
-  const col = 2; // frame tengah paling aman, tidak bocor
-  el.style.setProperty("--sprite-x", (-col * fw) + "px");
-  el.style.setProperty("--sprite-y", (-row * fh) + "px");
+  const pos = {
+    down: "-200px 0px",
+    left: "-200px -100px",
+    right: "-200px -200px",
+    up: "-200px -400px"
+  };
+  el.style.backgroundPosition = pos[facing] || pos.up;
 }
 
 function createPlayerMapMarker(){
@@ -569,9 +569,9 @@ function darken(hex, amount){
 }
 
 const CAMERA_PITCH = 76;
-const CAMERA_ZOOM = 20.35;
+const CAMERA_ZOOM = 19.6;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 4;
+const CAMERA_AHEAD_METERS = 16;
 const CAMERA_FOLLOW_MIN_MS = 210;
 const HEADING_DEADBAND_DEG = 2.8;
 const HEADING_SMOOTH_ALPHA = 0.075;
@@ -649,8 +649,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 19.6,
-  maxZoom: 21.0,
+  minZoom: 18.8,
+  maxZoom: 20.0,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -1152,7 +1152,7 @@ function buildSnappedRoutePoints(start, target){
   const startSnap = snapCoordToNearestRoad(start, 300) || start;
   const targetSnap = snapCoordToNearestRoad(target, 300) || target;
   pts.push(startSnap);
-  const steps = 16;
+  const steps = 10;
   for(let i=1;i<steps;i++){
     const t = i / steps;
     const interp = [
@@ -1175,7 +1175,7 @@ function setNavigationTarget(target){
     src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: routeCoords } }] });
   }
   const bounds = routeCoords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(routeCoords[0], routeCoords[0]));
-  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:20.25, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
+  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:19.95, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
   updateStatus('Arah menuju ' + (target.title || target.name || 'portal'));
 }
 
@@ -1335,6 +1335,7 @@ function getRoadCollisionLayers(){
       layer.type === 'line' &&
       !id.includes('label') &&
       !id.includes('rail') &&
+      !id.includes('route') &&
       !id.includes('water') &&
       (
         id.includes('road') || id.includes('street') || id.includes('path') || id.includes('highway') ||
@@ -1417,7 +1418,7 @@ function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
   return coord;
 }
 function snapPlayerToRoad(force = false){
-  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 420 : 320);
+  const snapped = snapCoordToNearestRoad(state.playerWorld, force ? 360 : 260);
   if(!snapped) return;
   if(haversineMeters(state.playerWorld, snapped) > 1.4){
     state.playerWorld = snapped;
@@ -1445,7 +1446,7 @@ function tryMoveWithCollision(mx, my){
       tx *= r; ty *= r;
     }
     const nextCoord = worldFromOffset(tx, ty);
-    const snappedCoord = snapCoordToNearestRoad(nextCoord, 240);
+    const snappedCoord = snapCoordToNearestRoad(nextCoord, 220);
     if(snappedCoord && canPlayerStandAt(snappedCoord)){
       state.playerWorld = snappedCoord;
       const [baseLng, baseLat] = state.gpsBase;
