@@ -1837,3 +1837,127 @@ body.is-night .weather-chip{background:linear-gradient(180deg,rgba(25,40,83,.52)
     width:min(94vw,390px) !important;
   }
 }
+
+
+/* ===== v55 no fog + cinematic portal popup ===== */
+.horizon-cloud-fx,
+.cloud-band,
+.cloud-band-a,
+.cloud-band-b,
+.mist-layer,
+.mist-layer-a,
+.mist-layer-b,
+.snow-dust,
+.night-overlay,
+.rain-fx{
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+#map{
+  background:linear-gradient(180deg,#d8ecff 0%,#cfe8ff 36%,#a9deaf 100%) !important;
+}
+.maplibregl-canvas{
+  filter:saturate(1.06) brightness(1.06) contrast(1.02) !important;
+}
+.screen-vignette{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.01) 0%, rgba(255,255,255,0) 46%, rgba(0,0,0,.05) 100%),
+    radial-gradient(circle at 50% 42%, transparent 0 58%, rgba(41,76,140,.02) 74%, rgba(14,36,86,.06) 100%) !important;
+}
+
+.quest-popup{
+  position:fixed !important;
+  left:50% !important;
+  bottom:108px !important;
+  top:auto !important;
+  transform:translateX(-50%) !important;
+  z-index:999999 !important;
+  width:min(460px,94vw) !important;
+  pointer-events:auto !important;
+}
+.quest-popup.hidden{
+  display:block !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  transform:translateX(-50%) translateY(22px) scale(.92) !important;
+}
+.quest-popup.quest-pop{
+  animation:questPopupCinematic .34s cubic-bezier(.2,.8,.2,1) both !important;
+}
+@keyframes questPopupCinematic{
+  from{opacity:0; transform:translateX(-50%) translateY(26px) scale(.88)}
+  to{opacity:1; transform:translateX(-50%) translateY(0) scale(1)}
+}
+.quest-aura{
+  position:absolute !important;
+  inset:-42px !important;
+  border-radius:46px !important;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(107,230,255,.46), transparent 58%),
+    radial-gradient(circle at 28% 25%, rgba(255,109,180,.34), transparent 42%),
+    radial-gradient(circle at 72% 30%, rgba(255,210,92,.22), transparent 38%) !important;
+  filter:blur(10px) !important;
+  animation:questAuraV55 1.7s ease-in-out infinite !important;
+}
+@keyframes questAuraV55{
+  0%,100%{opacity:.72; transform:scale(.98)}
+  50%{opacity:1; transform:scale(1.03)}
+}
+.quest-card{
+  position:relative !important;
+  overflow:hidden !important;
+  border-radius:32px !important;
+  padding:18px !important;
+  color:#fff !important;
+  background:linear-gradient(145deg, rgba(15,25,70,.97), rgba(24,80,146,.94) 55%, rgba(58,32,120,.96)) !important;
+  border:1px solid rgba(255,255,255,.26) !important;
+  box-shadow:0 28px 70px rgba(0,0,0,.34), 0 0 34px rgba(94,186,255,.18), inset 0 1px 0 rgba(255,255,255,.12) !important;
+}
+.quest-card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius:34px;
+  background:linear-gradient(135deg, rgba(85,205,255,.22), rgba(255,120,220,.16), rgba(85,205,255,.22));
+  z-index:-1;
+  filter:blur(12px);
+}
+.quest-topline{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  font-size:11px !important;
+  text-transform:uppercase !important;
+  letter-spacing:.12em !important;
+  font-weight:1000 !important;
+  color:#bfe7ff !important;
+}
+.quest-main h3{
+  font-size:24px !important;
+  margin:0 !important;
+}
+.quest-type{
+  display:inline-flex !important;
+  margin-top:6px !important;
+  padding:5px 10px !important;
+  border-radius:999px !important;
+  background:rgba(255,255,255,.12) !important;
+  font-size:11px !important;
+  font-weight:900 !important;
+}
+.quest-footer button,
+#questStartBtn{
+  border:none !important;
+  cursor:pointer !important;
+  border-radius:999px !important;
+  padding:11px 18px !important;
+  color:#fff !important;
+  font-weight:1000 !important;
+  background:linear-gradient(180deg,#49d5ff,#1579ff) !important;
+  box-shadow:0 12px 24px rgba(21,121,255,.28), inset 0 1px 0 rgba(255,255,255,.34) !important;
+}
+@media (max-width:760px){
+  .quest-popup{ bottom:94px !important; width:min(94vw,390px) !important; }
+}
