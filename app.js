@@ -9,16 +9,18 @@ const state = {
   playerWorld: [106.79884, -6.59725],
   hasRealGps: false,
   geoWatch: null,
+  gpsSmooth: null,
+  gpsLastAt: 0,
   move: { up:false, down:false, left:false, right:false },
-  moveSpeedMeters: 28.0,
+  moveSpeedMeters: 46.0,
   playerMarker: null,
   playerMarkerEl: null,
   playerFrameTick: 0,
   playerStepFrame: 0,
   collisionEnabled: true,
   roadOnlyMode: true,
-  roadRadiusPx: 42,
-  collisionRadiusPx: 18,
+  roadRadiusPx: 74,
+  collisionRadiusPx: 36,
   collisionCooldown: 0,
   maxOffsetMeters: 1800,
   facing: "down",
@@ -34,24 +36,6 @@ const state = {
   deviceHeadingLastAt: 0,
   deviceHeadingRaw: null,
   deviceHeadingSmooth: null,
-  gpsSmoothBase: null,
-  gpsLastAcceptedAt: 0,
-  gpsLastAccuracy: null,
-  roadHeadingDeg: null,
-  roadHeadingLastAt: 0,
-  roadLock: null,
-  roadLockAt: 0,
-  remoteRoadSnapPending: false,
-  remoteRoadSnapAt: 0,
-  remoteRoadSnapFailCount: 0,
-  remoteRoadCoord: null,
-  gpsTraceBuffer: [],
-  manualMoveBasisBearing: null,
-  manualMoveLastAt: 0,
-  manualRoadSnapPending: false,
-  manualRoadSnapAt: 0,
-  manualRoadCoord: null,
-  lastManualInputAt: 0,
   headingCameraLastAt: 0,
   lastCameraCenter: null,
   compassRequested: false,
@@ -66,6 +50,8 @@ const state = {
   reportMarkers: [],
   userReports: [],
   npcMarkers: [],
+  eventMarkers: [],
+  eventPortals: [],
   npcs: [
     { id:"npc_explorer", name:"Pak Ranger", role:"Penjaga Portal", asset:"assets/npc/npc-explorer.png", bubble:"Ranger, portal biru itu jalur transportasi. Coba dekati sampai quest aktif.", quest:"Misi: cari portal transportasi/BisKita terdekat lalu buka Dex-nya." },
     { id:"npc_nenek", name:"Nenek Data", role:"Warga Senior", asset:"assets/npc/npc-nenek.png", bubble:"Nak, jangan cuma lihat peta. Dengarkan warga, baru pilih lokasi yang tepat.", quest:"Misi: temui satu titik layanan publik dan baca fungsi/tupoksinya." },
@@ -75,7 +61,19 @@ const state = {
   ]
 };
 
-const PORTAL_POPUP_DONE_KEY = "bogordex_portal_popup_done_v41";
+state.environment = {
+  lastFetchAt: 0,
+  lastFetchCoords: null,
+  timezone: "Asia/Jakarta",
+  temperature: null,
+  description: "Memuat cuaca",
+  icon: "⛅",
+  weatherCode: null,
+  isDay: true,
+  raining: false
+};
+
+const PORTAL_POPUP_DONE_KEY = "bogordex_portal_popup_done_v47";
 function loadPortalPopupDone(){
   try{
     const raw = localStorage.getItem(PORTAL_POPUP_DONE_KEY);
@@ -105,251 +103,18 @@ loadPortalPopupDone();
 
 const statusEl = () => document.getElementById("statusText");
 const sheetEl = () => document.getElementById("bottomSheet");
-const miniBtn = () => document.getElementById("sheetMiniBtn");
 const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
-
-function chatDock(){ return document.getElementById("animeChatDock"); }
-function openChatDock(){ chatDock()?.classList.remove("collapsed"); }
-function closeChatDock(){ chatDock()?.classList.add("collapsed"); }
-
-const environment = {
-  timezone: "Asia/Jakarta",
-  temperature: null,
-  description: "Memuat cuaca",
-  icon: "⛅",
-  isDay: true,
-  raining: false,
-  lastFetchAt: 0,
-  lastCoords: null
+const PLAYER_PROFILE = {
+  name: "Ranger Panji",
+  gender: "Laki-laki",
+  status: "BogorDex Ranger",
+  mode: "Road Patrol",
+  level: 10,
+  summary: "Karakter utama eksplorasi BogorDex. Fokus patroli jalan, portal event, dan penelusuran titik kota."
 };
-
-
-const REMOTE_ROAD_API = {
-  enabled: true,
-  url: window.BOGORDEX_OSRM_URL || 'https://router.project-osrm.org',
-  profile: window.BOGORDEX_OSRM_PROFILE || 'driving',
-  timeoutMs: 2200,
-  minIntervalMs: 1200,
-  traceMaxPoints: 6,
-  manualSnapIntervalMs: 320,
-  manualSnapDistanceMeters: 8
-};
-
-
-function buildOsrmCoordString(coords){
-  return (coords || []).map(c => `${Number(c[0]).toFixed(6)},${Number(c[1]).toFixed(6)}`).join(';');
-}
-function fetchJsonWithTimeout(url, timeoutMs=2200){
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { signal: controller.signal, cache:'no-store' })
-    .then(res => {
-      clearTimeout(timer);
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .catch(err => {
-      clearTimeout(timer);
-      throw err;
-    });
-}
-function pushGpsTrace(coord, accuracyMeters=20){
-  const now = Date.now();
-  if(!coord) return;
-  const buf = state.gpsTraceBuffer || (state.gpsTraceBuffer = []);
-  const prev = buf.length ? buf[buf.length - 1] : null;
-  const moved = prev ? haversineMeters(prev.coord, coord) : Infinity;
-  if(prev && moved < Math.max(1.6, Math.min(7, (accuracyMeters || 20) * 0.12)) && (now - prev.at) < 900) return;
-  buf.push({ coord:[coord[0], coord[1]], accuracy: Math.max(5, Math.min(80, Number(accuracyMeters) || 20)), at: now });
-  while(buf.length > REMOTE_ROAD_API.traceMaxPoints) buf.shift();
-}
-function recentRemoteRoadCoord(){
-  const c = state.manualRoadCoord || state.remoteRoadCoord;
-  return Array.isArray(c) ? c : null;
-}
-async function fetchRemoteRouteAnchor(fromCoord, toCoord){
-  if(!REMOTE_ROAD_API.enabled || !fromCoord || !toCoord) return null;
-  const coordStr = buildOsrmCoordString([fromCoord, toCoord]);
-  const url = `${REMOTE_ROAD_API.url}/route/v1/${REMOTE_ROAD_API.profile}/${coordStr}?overview=full&geometries=geojson&steps=false`;
-  const data = await fetchJsonWithTimeout(url, Math.max(REMOTE_ROAD_API.timeoutMs, 2600));
-  const route = data && data.routes && data.routes[0];
-  const geom = route && route.geometry && route.geometry.coordinates;
-  if(Array.isArray(geom) && geom.length >= 2){
-    const first = geom[Math.min(1, geom.length-1)];
-    const last = geom[geom.length-1];
-    return {
-      coord:[last[0], last[1]],
-      next:[first[0], first[1]],
-      source:'osrm-route',
-      distance:Number(route.distance || 0),
-      duration:Number(route.duration || 0)
-    };
-  }
-  return null;
-}
-async function snapManualMovementToRoad(force=false){
-  if(!REMOTE_ROAD_API.enabled || state.manualRoadSnapPending || !state.playerWorld) return false;
-  const now = Date.now();
-  if(!force && (now - (state.manualRoadSnapAt || 0)) < Math.max(560, REMOTE_ROAD_API.manualSnapIntervalMs)) return false;
-  const current = state.playerWorld ? [state.playerWorld[0], state.playerWorld[1]] : null;
-  if(!current) return false;
-  const movedSinceTouch = now - (state.lastManualInputAt || 0);
-  if(!force && movedSinceTouch < 220) return false;
-  state.manualRoadSnapPending = true;
-  state.manualRoadSnapAt = now;
-  try{
-    let remote = await fetchRemoteNearestRoad(current);
-    if(!remote || !remote.coord) return false;
-    const snappedRaw = forceCoordToRoadNetwork(remote.coord, { radii:[90, 150, 240, 360], requireDrivable:true, preferLocked:true });
-    const snapped = pickSafeRoadCoord(current, snappedRaw, { currentCoord: state.playerWorld, maxSnapMeters: 16, allowFarIfBlocked: false });
-    if(!snapped) return false;
-    const drift = haversineMeters(current, snapped);
-    if(!force && drift < 1.5) return false;
-    state.manualRoadCoord = snapped;
-    state.remoteRoadCoord = snapped;
-    state.gpsBase = snapped;
-    state.gpsSmoothBase = snapped;
-    state.playerWorld = snapped;
-    state.offsetMeters.x = 0;
-    state.offsetMeters.y = 0;
-    updatePlayerMapMarker();
-    if(!state.browsing) followPlayerCamera({ duration:120 });
-    detectNearby();
-    return true;
-  }catch(err){
-    return false;
-  }finally{
-    state.manualRoadSnapPending = false;
-  }
-}
-function bearingBetween(a, b){
-  if(!a || !b) return null;
-  const dx = Number(b[0]) - Number(a[0]);
-  const dy = Number(b[1]) - Number(a[1]);
-  if(!Number.isFinite(dx) || !Number.isFinite(dy) || (Math.abs(dx) < 1e-12 && Math.abs(dy) < 1e-12)) return null;
-  return normalizeHeading(Math.atan2(dx, dy) * 180 / Math.PI);
-}
-
-async function fetchRemoteNearestRoad(coord){
-  if(!REMOTE_ROAD_API.enabled || !coord) return null;
-  const coordStr = buildOsrmCoordString([coord]);
-  const url = `${REMOTE_ROAD_API.url}/nearest/v1/${REMOTE_ROAD_API.profile}/${coordStr}?number=1`;
-  const data = await fetchJsonWithTimeout(url, REMOTE_ROAD_API.timeoutMs);
-  const wp = data && data.waypoints && data.waypoints[0];
-  if(!wp || !Array.isArray(wp.location)) return null;
-  return { coord:[wp.location[0], wp.location[1]], source:'osrm-nearest', distance: Number(wp.distance || 0) };
-}
-async function fetchRemoteMatchRoad(){
-  if(!REMOTE_ROAD_API.enabled) return null;
-  const buf = state.gpsTraceBuffer || [];
-  if(buf.length < 3) return null;
-  const coords = buf.map(p => p.coord);
-  const radiuses = buf.map(p => Math.max(5, Math.min(90, Math.round(p.accuracy || 20)))).join(';');
-  const timestamps = buf.map(p => Math.max(1, Math.round(p.at / 1000))).join(';');
-  const coordStr = buildOsrmCoordString(coords);
-  const url = `${REMOTE_ROAD_API.url}/match/v1/${REMOTE_ROAD_API.profile}/${coordStr}?overview=full&geometries=geojson&steps=false&tidy=true&gaps=ignore&radiuses=${radiuses}&timestamps=${timestamps}`;
-  const data = await fetchJsonWithTimeout(url, REMOTE_ROAD_API.timeoutMs);
-  if(!data || (data.code && data.code !== 'Ok')) return null;
-  const tracepoints = Array.isArray(data.tracepoints) ? data.tracepoints : [];
-  for(let i=tracepoints.length-1;i>=0;i--){
-    const tp = tracepoints[i];
-    if(tp && Array.isArray(tp.location)){
-      return { coord:[tp.location[0], tp.location[1]], source:'osrm-match', distance: Number(tp.distance || 0), name: tp.name || '' };
-    }
-  }
-  const matching = data.matchings && data.matchings[0];
-  const geometry = matching && matching.geometry && matching.geometry.coordinates;
-  if(Array.isArray(geometry) && geometry.length){
-    const c = geometry[geometry.length - 1];
-    return { coord:[c[0], c[1]], source:'osrm-match-geometry', distance: 0, name:'' };
-  }
-  return null;
-}
-async function refineGpsWithRemoteRoad(rawGps, accuracyMeters=20){
-  if(!REMOTE_ROAD_API.enabled || !rawGps || state.remoteRoadSnapPending) return false;
-  if(state.manualMoveBasisBearing !== null || (Date.now() - (state.lastManualInputAt || 0)) < 900) return false;
-  const now = Date.now();
-  if((now - (state.remoteRoadSnapAt || 0)) < REMOTE_ROAD_API.minIntervalMs) return false;
-  state.remoteRoadSnapPending = true;
-  state.remoteRoadSnapAt = now;
-  try{
-    pushGpsTrace(rawGps, accuracyMeters);
-    let remote = null;
-    const buf = state.gpsTraceBuffer || [];
-    const shouldUseMatch = buf.length >= 3 && (buf.length >= 4 || isCoordBlockedBySolidMap(rawGps) || accuracyMeters > 18);
-    if(shouldUseMatch){
-      remote = await fetchRemoteMatchRoad();
-    }
-    if(!remote) remote = await fetchRemoteNearestRoad(rawGps);
-    if(!remote || !remote.coord) return false;
-    const forcedRaw = forceCoordToRoadNetwork(remote.coord, { radii:[90, 150, 240, 360], requireDrivable:true, preferLocked:true });
-    const forced = pickSafeRoadCoord(rawGps, forcedRaw, { currentCoord: state.gpsBase || state.playerWorld, maxSnapMeters: Math.max(14, Math.min(34, (accuracyMeters || 20) * 0.95)), allowFarIfBlocked: true });
-    if(!forced) return false;
-    state.remoteRoadCoord = forced;
-    state.gpsBase = forced;
-    state.gpsSmoothBase = forced;
-    clampOffset();
-    recomputePlayerWorld();
-    updatePlayerMapMarker();
-    if(!state.browsing) followPlayerCamera({ duration:260 });
-    detectNearby();
-    state.remoteRoadSnapFailCount = 0;
-    return true;
-  }catch(err){
-    state.remoteRoadSnapFailCount = (state.remoteRoadSnapFailCount || 0) + 1;
-    return false;
-  }finally{
-    state.remoteRoadSnapPending = false;
-  }
-}
-
-function weatherCodeMeta(code){
-  const c = Number(code);
-  if(c === 0) return { text:'Cerah', icon:'☀️', rain:false };
-  if([1,2].includes(c)) return { text:'Cerah Berawan', icon:'⛅', rain:false };
-  if(c === 3) return { text:'Berawan', icon:'☁️', rain:false };
-  if([61,63,65,80,81,82].includes(c)) return { text:'Hujan', icon:'🌧️', rain:true };
-  return { text:'Cerah Berawan', icon:'⛅', rain:false };
-}
-function updateWeatherChip(){
-  const tempEl = document.getElementById("weatherTemp");
-  const descEl = document.getElementById("weatherDesc");
-  const iconEl = document.getElementById("weatherIcon");
-  const timeEl = document.getElementById("weatherLocTime");
-  if(tempEl) tempEl.textContent = Number.isFinite(environment.temperature) ? `${Math.round(environment.temperature)}°C` : '--°C';
-  if(descEl) descEl.textContent = environment.description || 'Cuaca';
-  if(iconEl) iconEl.textContent = environment.icon || '⛅';
-  if(timeEl){
-    const now = new Date();
-    const t = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit', timeZone: environment.timezone || 'Asia/Jakarta'});
-    const d = now.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short', timeZone: environment.timezone || 'Asia/Jakarta'});
-    timeEl.textContent = `${t} • ${d}`;
-  }
-  document.body.classList.toggle('weather-rain', !!environment.raining);
-  document.body.classList.toggle('is-night', environment.isDay === false);
-}
-async function refreshWeather(force=false){
-  try{
-    const now = Date.now();
-    const coords = state.gpsBase || state.playerWorld || [106.79884, -6.59725];
-    const [lng, lat] = coords;
-    if(!force && now - environment.lastFetchAt < 10*60*1000) return;
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,is_day,rain,showers&timezone=auto`, { cache:'no-store' });
-    if(!res.ok) return;
-    const data = await res.json();
-    const current = data.current || {};
-    const meta = weatherCodeMeta(current.weather_code);
-    environment.lastFetchAt = now;
-    environment.lastCoords = coords;
-    environment.timezone = data.timezone || "Asia/Jakarta";
-    environment.temperature = Number(current.temperature_2m);
-    environment.description = meta.text;
-    environment.icon = meta.icon;
-    environment.isDay = Number(current.is_day) === 1;
-    environment.raining = meta.rain && ((Number(current.rain||0) + Number(current.showers||0)) >= 1.0);
-    updateWeatherChip();
-  }catch(e){}
-}
+const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "31o6wgDj0WALXnVE0xNqd3M6gVki7A3e";
+const TOMTOM_TRAFFIC_ENDPOINT = window.BOGORDEX_TOMTOM_TRAFFIC_ENDPOINT || "";
+const REALTIME_EVENT_ENDPOINT = TOMTOM_TRAFFIC_ENDPOINT;
 
 function setStatus(text){
   statusEl().textContent = text;
@@ -362,6 +127,17 @@ function setStatus(text){
     else lamp.classList.add("lamp-green");
   }
 }
+function updatePlayerUiMeta(){
+  document.querySelectorAll('.trainer-name').forEach(el => el.textContent = PLAYER_PROFILE.status);
+  document.querySelectorAll('.trainer-level').forEach(el => el.textContent = `Lv ${PLAYER_PROFILE.level} Explorer`);
+  const ids = { profileName:PLAYER_PROFILE.name, profileName2:PLAYER_PROFILE.name, profileGender:PLAYER_PROFILE.gender, profileRole:PLAYER_PROFILE.status, profileMode:PLAYER_PROFILE.mode, profileLevel:String(PLAYER_PROFILE.level), profileStatus:PLAYER_PROFILE.status + ' • ' + PLAYER_PROFILE.mode, profileSummary:PLAYER_PROFILE.summary };
+  Object.entries(ids).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.textContent=val; });
+  const lbl = document.querySelector('.player-name-tag b');
+  if(lbl) lbl.textContent = PLAYER_PROFILE.name;
+}
+function chatDock(){ return document.getElementById('animeChatDock'); }
+function openChatDock(){ chatDock()?.classList.remove('collapsed'); }
+function closeChatDock(){ chatDock()?.classList.add('collapsed'); }
 
 function clearNPCMarkers(){
   if(!state.npcMarkers) state.npcMarkers = [];
@@ -380,12 +156,13 @@ function placeNPCsNearPortals(){
   // NPC dibuat tetap di titik map yang agak menyebar. Bukan overlay layar dan bukan nempel portal.
   const base = state.gpsBase || [106.79884, -6.59725];
   const offsets = [
-    [-420, 300], [390, 260], [-360, -310], [430, -250], [40, 430]
+    [-120, 90], [130, 78], [-96, -110], [110, -84], [0, 138]
   ];
   state.npcs.forEach((npc, i) => {
     const o = offsets[i] || [0, 0];
     const [dLng,dLat] = metersToLngLatOffset(o[0], o[1], base[1]);
-    npc.coords = [base[0] + dLng, base[1] + dLat];
+    const raw = [base[0] + dLng, base[1] + dLat];
+    npc.coords = snapCoordToNearestRoad(raw, 180) || raw;
   });
 }
 function npcElement(npc, idx){
@@ -476,15 +253,15 @@ function setPlayerAnim(mode, facing){
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
-  // Sprite utama 4x4: baris = arah, kolom = frame langkah.
-  // Ini sengaja dibuat pakai background-position manual supaya karakter tidak hilang
-  // dan tidak ikut muter saat map/kompas berputar.
-  const fw = 125;
-  const fh = 125;
+  const fw = 128;
+  const fh = 128;
   const facingRows = { down:0, left:1, right:2, up:3 };
   const facing = state.facing || "down";
   const row = facingRows[facing] ?? 0;
-  const col = (state.playerMode === "walk" || state.playerMode === "run") ? (state.playerStepFrame % 4) : 0;
+  const isMoving = state.playerMode === "walk" || state.playerMode === "run";
+  const movingFrames = [0, 1, 2, 3];
+  const idleFrame = { down:1, left:1, right:1, up:1 };
+  const col = isMoving ? movingFrames[state.playerStepFrame % movingFrames.length] : (idleFrame[facing] ?? 1);
   el.style.setProperty("--sprite-x", (-col * fw) + "px");
   el.style.setProperty("--sprite-y", (-row * fh) + "px");
 }
@@ -493,12 +270,12 @@ function createPlayerMapMarker(){
   if(state.playerMarker || !maplibregl || !map) return;
   const el = document.createElement("div");
   el.className = "player-map-marker";
-  el.innerHTML = `<div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-down"></div>`;
+  el.innerHTML = `<div class="player-name-tag"><span>⚡</span><b>${PLAYER_PROFILE.name}</b></div><div class="player-ring"></div><div class="player-shadow"></div><div id="playerSpriteMap" class="player-sprite idle face-up" aria-label="Karakter utama"></div>`;
   state.playerMarkerEl = el;
-  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 2], rotationAlignment: "viewport", pitchAlignment: "viewport" })
+  state.playerMarker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, 0], rotationAlignment: "viewport", pitchAlignment: "viewport" })
     .setLngLat(state.playerWorld)
     .addTo(map);
-  setPlayerAnim("idle", state.facing || "down");
+  setPlayerAnim("idle", state.facing || "up");
 }
 
 function updatePlayerMapMarker(){
@@ -516,11 +293,8 @@ function clampOffset(){
   state.offsetMeters.y *= r;
 }
 function recomputePlayerWorld(){
-  const base = recentRemoteRoadCoord() || state.gpsBase;
-  const [dLng, dLat] = metersToLngLatOffset(state.offsetMeters.x, state.offsetMeters.y, base[1]);
-  const raw = [base[0] + dLng, base[1] + dLat];
-  const snapped = forceCoordToRoadNetwork(raw, { radii:[80, 130, 200, 280], requireDrivable:true, preferLocked:true });
-  state.playerWorld = pickSafeRoadCoord(raw, snapped, { currentCoord: state.playerWorld, maxSnapMeters: 18, allowFarIfBlocked: true }) || raw;
+  const [dLng, dLat] = metersToLngLatOffset(state.offsetMeters.x, state.offsetMeters.y, state.gpsBase[1]);
+  state.playerWorld = [state.gpsBase[0] + dLng, state.gpsBase[1] + dLat];
   updatePlayerMapMarker();
 }
 function haversineMeters(a, b){
@@ -533,48 +307,116 @@ function haversineMeters(a, b){
   const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
-
-function clampCoordNearOrigin(origin, candidate, maxMeters=30){
-  if(!origin || !candidate) return candidate;
-  const d = haversineMeters(origin, candidate);
-  if(!Number.isFinite(d) || d <= maxMeters) return candidate;
-  const ratio = maxMeters / Math.max(d, 0.0001);
-  return [
-    origin[0] + (candidate[0] - origin[0]) * ratio,
-    origin[1] + (candidate[1] - origin[1]) * ratio
-  ];
-}
-function pickSafeRoadCoord(rawCoord, roadCoord, options={}){
-  const current = options.currentCoord || state.playerWorld || state.gpsBase || rawCoord;
-  const maxSnapMeters = Number.isFinite(options.maxSnapMeters) ? options.maxSnapMeters : 28;
-  const allowFarIfBlocked = options.allowFarIfBlocked !== false;
-  const rawBlocked = !!(rawCoord && isCoordBlockedBySolidMap(rawCoord));
-  const rawOnRoad = rawCoord ? isCoordOnRoad(rawCoord) : false;
-  let candidate = roadCoord;
-  if(!candidate) return rawBlocked ? (current || rawCoord) : rawCoord;
-  if(isCoordBlockedBySolidMap(candidate)) return rawBlocked ? (current || rawCoord) : rawCoord;
-  if(state.roadOnlyMode && !isCoordOnRoad(candidate)) return rawBlocked ? (current || rawCoord) : rawCoord;
-  const drift = rawCoord ? haversineMeters(rawCoord, candidate) : 0;
-  if(Number.isFinite(drift) && drift > maxSnapMeters){
-    if(rawBlocked && allowFarIfBlocked){
-      candidate = clampCoordNearOrigin(rawCoord, candidate, maxSnapMeters);
-      if(isCoordBlockedBySolidMap(candidate) || (state.roadOnlyMode && !isCoordOnRoad(candidate))){
-        return current || rawCoord;
-      }
-      return candidate;
-    }
-    if(rawOnRoad) return rawCoord;
-    return current || rawCoord;
-  }
-  return candidate;
-}
 function updateStatus(prefix){
   const d = Math.hypot(state.offsetMeters.x, state.offsetMeters.y).toFixed(1);
   setStatus(prefix ? `${prefix} • offset ${d} m` : `Offset manual ${d} / ${state.maxOffsetMeters} m`);
 }
-function syncMiniButton(){
-  miniBtn().classList.toggle("hidden", !(sheetEl().classList.contains("hidden-sheet") && !!state.lastPoi));
+
+const WEATHER_REFRESH_MS = 10 * 60 * 1000;
+const WEATHER_REFRESH_MOVE_METERS = 200;
+
+function weatherCodeMeta(code){
+  const c = Number(code);
+  if(c === 0) return { text:'Cerah', icon:'☀️', rain:false };
+  if([1,2].includes(c)) return { text:'Cerah Berawan', icon:'⛅', rain:false };
+  if(c === 3) return { text:'Berawan', icon:'☁️', rain:false };
+  // Jangan tampilkan kabut/hujan berlebihan. Banyak API cuaca suka salah baca gerimis ringan.
+  if([45,48].includes(c)) return { text:'Berawan', icon:'☁️', rain:false };
+  if([51,53,55,56,57].includes(c)) return { text:'Berawan', icon:'☁️', rain:false };
+  if([61,63,65,66,67,80,81,82].includes(c)) return { text:'Hujan', icon:'🌧️', rain:true };
+  if([95,96,99].includes(c)) return { text:'Badai', icon:'⛈️', rain:true };
+  return { text:'Cerah Berawan', icon:'⛅', rain:false };
 }
+
+function updateWeatherClock(){
+  const timeEl = document.getElementById('weatherLocTime');
+  if(!timeEl) return;
+  const tz = state.environment?.timezone || 'Asia/Jakarta';
+  const now = new Date();
+  const timeText = now.toLocaleTimeString('id-ID',{ hour:'2-digit', minute:'2-digit', timeZone:tz });
+  const dateText = now.toLocaleDateString('id-ID',{ weekday:'short', day:'numeric', month:'short', timeZone:tz });
+  timeEl.textContent = `${timeText} • ${dateText}`;
+}
+
+function updateWeatherChip(){
+  const tempEl = document.getElementById('weatherTemp');
+  const descEl = document.getElementById('weatherDesc');
+  const iconEl = document.getElementById('weatherIcon');
+  if(tempEl) tempEl.textContent = Number.isFinite(state.environment.temperature) ? `${Math.round(state.environment.temperature)}°C` : '--°C';
+  if(descEl) descEl.textContent = state.environment.description || 'Cuaca';
+  if(iconEl) iconEl.textContent = state.environment.icon || '⛅';
+  updateWeatherClock();
+}
+
+function applyEnvironmentClasses(){
+  const app = document.getElementById('app');
+  const raining = !!state.environment.raining;
+  const isNight = state.environment.isDay === false;
+  document.body.classList.toggle('weather-rain', raining);
+  document.body.classList.toggle('is-night', isNight);
+  if(app){
+    app.classList.toggle('weather-rain', raining);
+    app.classList.toggle('is-night', isNight);
+  }
+  updateWeatherChip();
+  applySceneTheme();
+}
+
+function applySceneTheme(){
+  if(!map || !map.getStyle || !map.isStyleLoaded()) return;
+  const isNight = document.body.classList.contains('is-night');
+  try{
+    if(map.getLayer('bdx-ghost-buildings')){
+      map.setPaintProperty('bdx-ghost-buildings', 'fill-extrusion-color', isNight ? '#7ea6ff' : '#87dcff');
+      map.setPaintProperty('bdx-ghost-buildings', 'fill-extrusion-opacity', isNight ? 0.28 : 0.34);
+    }
+  }catch(e){}
+  try{
+    if(typeof map.setLight === 'function'){
+      map.setLight({
+        anchor: 'viewport',
+        color: isNight ? '#bcd3ff' : '#fff4d2',
+        intensity: isNight ? 0.26 : 0.42,
+        position: [1.5, isNight ? 200 : 160, isNight ? 30 : 45]
+      });
+    }
+  }catch(e){}
+}
+
+async function refreshEnvironment(force=false){
+  try{
+    const [lng, lat] = state.gpsBase || state.playerWorld || [106.79884, -6.59725];
+    if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const now = Date.now();
+    const last = state.environment.lastFetchCoords;
+    const moved = last ? haversineMeters([last.lng, last.lat], [lng, lat]) : Infinity;
+    if(!force && (now - (state.environment.lastFetchAt || 0) < WEATHER_REFRESH_MS) && moved < WEATHER_REFRESH_MOVE_METERS) return;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,is_day,rain,showers,snowfall,cloud_cover&timezone=auto`;
+    const res = await fetch(url, { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const current = data.current || {};
+    const meta = weatherCodeMeta(current.weather_code);
+    const rainValue = Number(current.rain || 0) + Number(current.showers || 0);
+    const cloudCover = Number(current.cloud_cover || 0);
+    state.environment.lastFetchAt = now;
+    state.environment.lastFetchCoords = { lat, lng };
+    state.environment.timezone = data.timezone || 'Asia/Jakarta';
+    state.environment.temperature = Number(current.temperature_2m);
+    state.environment.description = rainValue > 0.12 ? "Hujan" : (cloudCover > 78 ? "Berawan" : "Cerah Berawan");
+    state.environment.icon = rainValue > 0.12 ? "🌧️" : (cloudCover > 78 ? "☁️" : "⛅");
+    state.environment.weatherCode = Number(current.weather_code);
+    state.environment.isDay = Number(current.is_day) === 1;
+    state.environment.raining = rainValue > 0.12;
+    applyEnvironmentClasses();
+  }catch(err){
+    console.warn('Weather fetch failed:', err);
+    updateWeatherChip();
+  }
+}
+
+setInterval(updateWeatherClock, 30000);
+function syncMiniButton(){}
 function openSheet(poi, mode="manual"){
   sheetEl().classList.remove("hidden-sheet");
   sheetEl().classList.remove("collapsed");
@@ -596,7 +438,12 @@ function openSheet(poi, mode="manual"){
       <span class="tag">${poi.group || "POI"}</span>
       ${poi.aktif ? '<span class="tag">Aktif</span>' : ""}
     </div>
+    ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">Arahkan</button>' : ''}
   `;
+  const routeBtn = document.getElementById("sheetRouteBtn");
+  if(routeBtn && Array.isArray(poi.coords)){
+    routeBtn.addEventListener("click", () => setNavigationTarget({ title:poi.name, coords:poi.coords }));
+  }
   syncMiniButton();
   updateStatus(poi.name);
 }
@@ -611,23 +458,7 @@ function closeSheet(resetStatus=true, fullyHide=true){
   if(resetStatus) updateStatus(state.hasRealGps ? "Lokasi aktif" : "Lokasi simulasi");
   syncMiniButton();
 }
-function renderDex(){
-  document.getElementById("dexFound").textContent = state.discovered.size;
-  document.getElementById("dexTotal").textContent = state.pois.length;
-  const grid = document.getElementById("dexGrid");
-  grid.innerHTML = "";
-  state.pois.forEach((poi) => {
-    const unlocked = state.discovered.has(poi.id);
-    const card = document.createElement("div");
-    card.className = "dex-card" + (unlocked ? "" : " locked");
-    card.innerHTML = `
-      <h4>${unlocked ? poi.name : "Belum ditemukan"}</h4>
-      <p>${unlocked ? (poi.fungsi || "Belum diisi.") : "Dekati titik ini di map untuk membuka entri BogorDex."}</p>
-      <div class="tag-row"><span class="tag">${unlocked ? (poi.group || "POI") : "Terkunci"}</span></div>
-    `;
-    grid.appendChild(card);
-  });
-}
+function renderDex(){ updatePlayerUiMeta(); }
 function normalizeGroup(group){
   const g = String(group || "").toUpperCase().trim();
   if(g.includes("HALTE")) return "halte";
@@ -741,14 +572,13 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 69;
-const CAMERA_ZOOM = 18.95;
-// V44 final: jarak kamera seperti referensi — karakter tetap terlihat besar,
-// tapi jalan di depan masih panjang. Jangan dibesarkan lagi nanti jadi drone view.
-const CAMERA_AHEAD_METERS = 56;
+const CAMERA_PITCH = 68;
+const CAMERA_ZOOM = 20.65;
+// Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
+const CAMERA_AHEAD_METERS = 14;
 const CAMERA_FOLLOW_MIN_MS = 210;
-const HEADING_DEADBAND_DEG = 7.5;
-const HEADING_SMOOTH_ALPHA = 0.045;
+const HEADING_DEADBAND_DEG = 12;
+const HEADING_SMOOTH_ALPHA = 0.03;
 function degToRad(d){ return d * Math.PI / 180; }
 function getCameraBearing(){
   if(state.deviceHeadingEnabled && typeof state.deviceHeadingBearing === "number") return state.deviceHeadingBearing;
@@ -785,8 +615,8 @@ function applyDeviceHeadingToCamera(heading, duration=240){
   const now = performance.now();
   if(now - (state.headingCameraLastAt || 0) < CAMERA_FOLLOW_MIN_MS) return;
   state.headingCameraLastAt = now;
-  if(map && !state.browsing){
-    followPlayerCamera({ bearing: state.deviceHeadingBearing, duration });
+  if(map && !state.browsing && (state.move.up || state.move.down || state.move.left || state.move.right)){
+    followPlayerCamera({ bearing: state.deviceHeadingBearing, duration: Math.max(duration, 520) });
   }
 }
 function cameraCenterAhead(bearing){
@@ -823,8 +653,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 18.25,
-  maxZoom: 19.4,
+  minZoom: 19.6,
+  maxZoom: 21.0,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -841,11 +671,24 @@ const map = new maplibregl.Map({
 try{ map.touchZoomRotate.enableRotation(); }catch(e){}
 try{ map.dragRotate.enable(); }catch(e){}
 
+(function applyLocalMapBounds(){
+  const [lng, lat] = state.gpsBase;
+  const [dxLng, dyLat] = metersToLngLatOffset(900, 900, lat);
+  try{
+    map.setMaxBounds([
+      [lng - Math.abs(dxLng), lat - Math.abs(dyLat)],
+      [lng + Math.abs(dxLng), lat + Math.abs(dyLat)]
+    ]);
+  }catch(e){}
+})();
+
 
 function setupMapLibre3D(){
   // V34: Pokemon GO/anime map mode. Gedung 3D disembunyikan supaya peta terasa lapang,
   // tapi layer collision transparan tetap ada agar karakter tidak gampang masuk area bangunan.
   setupAnimeMapMode();
+  applySceneTheme();
+  refreshEnvironment(true);
 }
 
 function getVectorBuildingSourceId(){
@@ -866,6 +709,12 @@ function setupAnimeMapMode(){
     const id = String(layer.id || '').toLowerCase();
     const sl = String(layer['source-layer'] || '').toLowerCase();
     if(id.includes('building') || sl.includes('building')){
+      try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
+      return;
+    }
+    // Hilangkan layer yang sering bikin garis/strip saat pitch tinggi.
+    const noisy = id.includes('hillshade') || id.includes('contour');
+    if(noisy){
       try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
     }
   });
@@ -1197,6 +1046,154 @@ function detectNearby(){
     updateStatus(state.hasRealGps ? "Lokasi aktif" : "Lokasi simulasi");
   }
 }
+
+function clearEventMarkers(){
+  (state.eventMarkers||[]).forEach(m => { try{m.remove();}catch(e){} });
+  state.eventMarkers=[];
+}
+function eventPortalElement(event){
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = 'event-portal-marker single-event ' + (event.kind || 'macet');
+  el.innerHTML = `
+    <span class="event-portal-core"></span>
+    <span class="event-portal-img"></span>
+    <span class="event-portal-label">${event.title}</span>
+  `;
+  el.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    openSheet({
+      id:event.id,
+      name:event.title,
+      desc:event.desc || 'Portal event kepadatan lalu lintas.',
+      fungsi:'Event kemacetan / aktivitas ramai',
+      tupoksi:(TOMTOM_API_KEY ? 'Sumber disiapkan dari TomTom Traffic API.' : 'Demo pajangan dulu. Isi window.BOGORDEX_TOMTOM_API_KEY untuk data TomTom realtime.'),
+      group:'EVENT PORTAL',
+      aktif:true,
+      coords:event.coords
+    }, 'manual');
+  });
+  return el;
+}
+function pickEventCoordinateFallback(){
+  const base = state.playerWorld || state.gpsBase || [106.79884,-6.59725];
+  const bearing = getCameraBearing();
+  const rad = degToRad(bearing);
+  const mx = Math.sin(rad) * 105;
+  const my = Math.cos(rad) * 105;
+  const [dLng,dLat] = metersToLngLatOffset(mx, my, base[1]);
+  const raw = [base[0] + dLng, base[1] + dLat];
+  return snapCoordToNearestRoad(raw, 220) || raw;
+}
+function eventFromTomTomIncident(incident){
+  try{
+    const coords = incident?.geometry?.coordinates;
+    let first = null;
+    if(Array.isArray(coords)){
+      if(typeof coords[0] === 'number') first = coords;
+      else if(Array.isArray(coords[0]) && typeof coords[0][0] === 'number') first = coords[0];
+      else if(Array.isArray(coords[0]) && Array.isArray(coords[0][0])) first = coords[0][0];
+    }
+    if(!first) return null;
+    const props = incident.properties || {};
+    const desc = props?.events?.[0]?.description || props?.from || 'Kepadatan lalu lintas terdeteksi.';
+    return {
+      id:'tomtom_' + (props.id || Date.now()),
+      title:'Portal Macet',
+      desc,
+      level:'Traffic realtime',
+      kind:'macet',
+      source:'TomTom Traffic',
+      coords:snapCoordToNearestRoad([Number(first[0]), Number(first[1])], 200) || [Number(first[0]), Number(first[1])]
+    };
+  }catch(e){ return null; }
+}
+async function loadRealtimeEventPortals(){
+  try{
+    let event = null;
+    if(TOMTOM_API_KEY){
+      const [lng, lat] = state.gpsBase || state.playerWorld || [106.79884,-6.59725];
+      const delta = 0.018;
+      const bbox = `${lng-delta},${lat-delta},${lng+delta},${lat+delta}`;
+      const fields = encodeURIComponent('{incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,events{description,code},from,to}}}');
+      const url = TOMTOM_TRAFFIC_ENDPOINT || `https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=${bbox}&fields=${fields}&language=id-ID&t=-1&key=${encodeURIComponent(TOMTOM_API_KEY)}`;
+      const res = await fetch(url, { cache:'no-store' });
+      if(res.ok){
+        const data = await res.json();
+        const incident = (data.incidents || [])[0];
+        event = eventFromTomTomIncident(incident);
+      }
+    }
+    if(!event){
+      event = {
+        id:'event_pajangan_macet',
+        title:'Portal Macet',
+        desc:'Pajangan event kemacetan. Nanti tinggal isi TomTom API key untuk data realtime.',
+        level:'Demo kepadatan',
+        kind:'macet',
+        source:'Demo local',
+        coords: pickEventCoordinateFallback()
+      };
+    }
+    state.eventPortals = [event]; // cuma 1 portal, bukan banyak
+    renderRealtimeEventPortals();
+  }catch(err){
+    console.warn('TomTom/event portal skipped', err);
+  }
+}
+function renderRealtimeEventPortals(){
+  if(!map || !maplibregl) return;
+  clearEventMarkers();
+  (state.eventPortals || []).slice(0,1).forEach((event) => {
+    const marker = new maplibregl.Marker({ element:eventPortalElement(event), anchor:'bottom', offset:[0,8], rotationAlignment:'viewport', pitchAlignment:'viewport' }).setLngLat(event.coords).addTo(map);
+    state.eventMarkers.push(marker);
+  });
+}
+function ensureRouteLayer(){
+  if(!map || !map.isStyleLoaded()) return;
+  if(!map.getSource('bdx-navigation-route')){
+    map.addSource('bdx-navigation-route', { type:'geojson', data:{type:'FeatureCollection',features:[]} });
+  }
+  if(!map.getLayer('bdx-navigation-route-glow')){
+    map.addLayer({ id:'bdx-navigation-route-glow', type:'line', source:'bdx-navigation-route', paint:{ 'line-color':'#48f4ff', 'line-width':10, 'line-opacity':0.28, 'line-blur':4 } });
+  }
+  if(!map.getLayer('bdx-navigation-route-line')){
+    map.addLayer({ id:'bdx-navigation-route-line', type:'line', source:'bdx-navigation-route', paint:{ 'line-color':'#00c8ff', 'line-width':4, 'line-opacity':0.92, 'line-dasharray':[1.2,1.1] } });
+  }
+}
+function buildSnappedRoutePoints(start, target){
+  const pts = [];
+  const startSnap = snapCoordToNearestRoad(start, 300) || start;
+  const targetSnap = snapCoordToNearestRoad(target, 300) || target;
+  pts.push(startSnap);
+  const steps = 16;
+  for(let i=1;i<steps;i++){
+    const t = i / steps;
+    const interp = [
+      startSnap[0] + (targetSnap[0] - startSnap[0]) * t,
+      startSnap[1] + (targetSnap[1] - startSnap[1]) * t
+    ];
+    const snapped = snapCoordToNearestRoad(interp, 240) || interp;
+    const prev = pts[pts.length - 1];
+    if(!prev || haversineMeters(prev, snapped) > 3) pts.push(snapped);
+  }
+  pts.push(targetSnap);
+  return pts;
+}
+function setNavigationTarget(target){
+  if(!target || !target.coords || !map) return;
+  ensureRouteLayer();
+  const routeCoords = buildSnappedRoutePoints(state.playerWorld, target.coords);
+  const src = map.getSource('bdx-navigation-route');
+  if(src){
+    src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: routeCoords } }] });
+  }
+  const bounds = routeCoords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(routeCoords[0], routeCoords[0]));
+  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:20.55, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
+  updateStatus('Arah menuju ' + (target.title || target.name || 'portal'));
+}
+
 async function loadSheetData(){
   try{
     updateStatus("Memuat data Google Sheet…");
@@ -1213,6 +1210,7 @@ async function loadSheetData(){
   updateNearestHighlight();
   renderDex();
   renderNPCs();
+  await loadRealtimeEventPortals();
   updateStatus(`Mode game aktif • ${state.pois.length} portal`);
 }
 function normalizeHeading(value){
@@ -1247,233 +1245,10 @@ async function requestDeviceCompass(){
     window.addEventListener("deviceorientationabsolute", handleDeviceOrientation, true);
     window.addEventListener("deviceorientation", handleDeviceOrientation, true);
     window.addEventListener("orientationchange", () => setTimeout(() => { if(state.deviceHeadingEnabled) followPlayerCamera({ duration:120 }); }, 180), true);
-    updateStatus("Kompas HP aktif • arah pandangan mengikuti HP");
+    updateStatus("Kompas HP aktif • mode halus");
   }catch(err){
     console.warn("Compass unavailable", err);
   }
-}
-
-function metersBetweenCoords(a, b){
-  if(!a || !b) return Infinity;
-  return haversineMeters(a, b);
-}
-function nearestPointOnScreenLine(point, coords){
-  if(!coords || coords.length < 2) return null;
-  const p = map.project(point);
-  let best = null;
-  let bestD2 = Infinity;
-  for(let i=0;i<coords.length-1;i++){
-    const aLngLat = coords[i];
-    const bLngLat = coords[i+1];
-    const a = map.project(aLngLat);
-    const b = map.project(bLngLat);
-    const vx = b.x - a.x, vy = b.y - a.y;
-    const wx = p.x - a.x, wy = p.y - a.y;
-    const len2 = vx*vx + vy*vy;
-    if(!len2) continue;
-    const t = Math.max(0, Math.min(1, (wx*vx + wy*vy) / len2));
-    const x = a.x + vx*t, y = a.y + vy*t;
-    const d2 = (p.x-x)*(p.x-x) + (p.y-y)*(p.y-y);
-    if(d2 < bestD2){
-      bestD2 = d2;
-      best = {
-        coord: map.unproject([x,y]).toArray(),
-        d2,
-        tangentPx: { x: vx, y: vy },
-        segmentCoords: [aLngLat, bLngLat],
-        t
-      };
-    }
-  }
-  return best;
-}
-function getLineCoordinatesFromFeature(feature){
-  const geom = feature && feature.geometry;
-  if(!geom) return [];
-  if(geom.type === 'LineString') return [geom.coordinates];
-  if(geom.type === 'MultiLineString') return geom.coordinates || [];
-  return [];
-}
-function roadFeatureMeta(feature){
-  const props = (feature && feature.properties) || {};
-  const cls = String(props.class || props.type || props.kind || props.subclass || '').toLowerCase();
-  const layer = String((feature && feature.layer && feature.layer.id) || '').toLowerCase();
-  const sourceLayer = String((feature && feature.sourceLayer) || (feature && feature.source && feature.source['source-layer']) || '').toLowerCase();
-  const label = [cls, layer, sourceLayer].join(' ');
-  const nonDrivable = /(footway|path|pedestrian|steps|stairs|cycleway|cycle lane|bridleway|track trail|sidewalk|corridor)/.test(label);
-  const stronglyDrivable = /(motorway|trunk|primary|secondary|tertiary|street|road|residential|service|living_street|unclassified|link|transportation)/.test(label);
-  return { cls, layer, sourceLayer, nonDrivable, stronglyDrivable };
-}
-function roadFeatureWeight(feature){
-  const meta = roadFeatureMeta(feature);
-  if(meta.nonDrivable) return 0.45;
-  if(meta.stronglyDrivable) return 1.25;
-  return 1.0;
-}
-function lockRoadFromProjection(hit){
-  if(!hit || !hit.segmentCoords || hit.segmentCoords.length < 2) return;
-  state.roadLock = {
-    segmentCoords: hit.segmentCoords.map(c => [c[0], c[1]]),
-    coord: hit.coord ? [hit.coord[0], hit.coord[1]] : null,
-    featureMeta: hit.feature ? roadFeatureMeta(hit.feature) : null,
-    layerId: hit.layerId || null
-  };
-  state.roadLockAt = Date.now();
-}
-function getProjectionOnLockedRoad(coord){
-  const lock = state.roadLock;
-  if(!lock || !lock.segmentCoords || lock.segmentCoords.length < 2 || !map || !map.loaded || !map.loaded()) return null;
-  const hit = nearestPointOnScreenLine(coord, lock.segmentCoords);
-  if(!hit) return null;
-  hit.feature = { properties: lock.featureMeta || {} };
-  hit.layerId = lock.layerId || null;
-  return hit;
-}
-function getNearestRoadProjection(coord, radiusPx=170, options={}){
-  if(!map || !map.loaded || !map.loaded()) return null;
-  const preferLocked = options.preferLocked !== false;
-  const includeNonDrivable = options.includeNonDrivable !== false;
-  if(preferLocked){
-    const locked = getProjectionOnLockedRoad(coord);
-    if(locked){
-      const dp = Math.sqrt(Math.max(0, locked.d2 || 0));
-      if(dp <= Math.max(18, radiusPx * 0.85)) return locked;
-    }
-  }
-  const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
-  if(!layers.length) return null;
-  const features = queryFeaturesAround(coord, layers, radiusPx);
-  if(!features.length) return null;
-  let best = null;
-  let bestScore = Infinity;
-  for(const f of features){
-    const meta = roadFeatureMeta(f);
-    if(!includeNonDrivable && meta.nonDrivable) continue;
-    const lines = getLineCoordinatesFromFeature(f);
-    for(const line of lines){
-      const hit = nearestPointOnScreenLine(coord, line);
-      if(!hit) continue;
-      const weight = roadFeatureWeight(f);
-      const score = hit.d2 / Math.max(0.15, weight);
-      if(score < bestScore){
-        bestScore = score;
-        best = { ...hit, feature: f, layerId: (f.layer && f.layer.id) || null };
-      }
-    }
-  }
-  return best;
-}
-function tangentToHeadingDeg(tangentPx){
-  if(!tangentPx) return null;
-  const dx = Number(tangentPx.x || 0);
-  const dy = Number(tangentPx.y || 0);
-  if(Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) return null;
-  return normalizeHeading(Math.atan2(dx, -dy) * 180 / Math.PI);
-}
-function setRoadHeadingFromProjection(hit){
-  const heading = tangentToHeadingDeg(hit && hit.tangentPx);
-  if(heading === null) return null;
-  state.roadHeadingDeg = heading;
-  state.roadHeadingLastAt = Date.now();
-  return heading;
-}
-function findBestRoadNetworkCoord(coord, options={}){
-  const radii = options.radii || [110, 170, 240, 320, 420];
-  const requireDrivable = options.requireDrivable !== false;
-  const preferLocked = options.preferLocked !== false;
-  for(const radiusPx of radii){
-    const hit = getNearestRoadProjection(coord, radiusPx, { preferLocked, includeNonDrivable: !requireDrivable });
-    if(hit && hit.coord){
-      lockRoadFromProjection(hit);
-      setRoadHeadingFromProjection(hit);
-      return hit;
-    }
-  }
-  if(requireDrivable){
-    for(const radiusPx of radii){
-      const hit = getNearestRoadProjection(coord, radiusPx, { preferLocked:false, includeNonDrivable:true });
-      if(hit && hit.coord){
-        lockRoadFromProjection(hit);
-        setRoadHeadingFromProjection(hit);
-        return hit;
-      }
-    }
-  }
-  return null;
-}
-function forceCoordToRoadNetwork(coord, options={}){
-  const hit = findBestRoadNetworkCoord(coord, options);
-  return hit && hit.coord ? hit.coord : coord;
-}
-function snapCoordToNearestRoad(coord, radiusPx=170){
-  const hit = findBestRoadNetworkCoord(coord, { radii:[Math.max(70, radiusPx*0.55), radiusPx, Math.round(radiusPx*1.45)], requireDrivable:true, preferLocked:true });
-  return hit && hit.coord ? hit.coord : coord;
-}
-function projectCoordAlongNearestRoad(currentCoord, desiredCoord, radiusPx=185){
-  const lockedHit = getProjectionOnLockedRoad(desiredCoord) || getProjectionOnLockedRoad(currentCoord);
-  const baseHit = lockedHit || getNearestRoadProjection(currentCoord, radiusPx, { preferLocked:true, includeNonDrivable:false }) || getNearestRoadProjection(desiredCoord, radiusPx, { preferLocked:true, includeNonDrivable:false });
-  if(!baseHit || !baseHit.coord || !baseHit.tangentPx) return forceCoordToRoadNetwork(desiredCoord, { radii:[radiusPx, Math.round(radiusPx*1.5), Math.round(radiusPx*2.2)] });
-  const tangent = baseHit.tangentPx;
-  const len = Math.hypot(tangent.x, tangent.y) || 1;
-  const tx = tangent.x / len;
-  const ty = tangent.y / len;
-  const a = map.project(currentCoord);
-  const b = map.project(desiredCoord);
-  const desiredDx = b.x - a.x;
-  const desiredDy = b.y - a.y;
-  const scalar = desiredDx * tx + desiredDy * ty;
-  const basePoint = map.project(baseHit.coord);
-  const px = basePoint.x + tx * scalar;
-  const py = basePoint.y + ty * scalar;
-  const projected = map.unproject([px, py]).toArray();
-  const snappedHit = findBestRoadNetworkCoord(projected, { radii:[Math.max(70, radiusPx*0.55), radiusPx, Math.round(radiusPx*1.4)], requireDrivable:true, preferLocked:true });
-  const snapped = snappedHit && snappedHit.coord ? snappedHit.coord : baseHit.coord;
-  if(snapped && !isCoordBlockedBySolidMap(snapped) && isCoordOnRoad(snapped)){
-    if(snappedHit) lockRoadFromProjection(snappedHit);
-    else lockRoadFromProjection(baseHit);
-    return snapped;
-  }
-  lockRoadFromProjection(baseHit);
-  return baseHit.coord;
-}
-function smoothGpsCoord(nextCoord, accuracyMeters=20){
-  const now = Date.now();
-  const rawBlocked = isCoordBlockedBySolidMap(nextCoord);
-  const snappedHit = findBestRoadNetworkCoord(nextCoord, {
-    radii: rawBlocked ? [150, 220, 300, 420, 560] : [100, 170, 240, 320],
-    requireDrivable: true,
-    preferLocked: true
-  });
-  const snappedRaw = snappedHit && snappedHit.coord ? snappedHit.coord : nextCoord;
-  const snapped = pickSafeRoadCoord(nextCoord, snappedRaw, { currentCoord: state.gpsSmoothBase || state.gpsBase, maxSnapMeters: Math.max(14, Math.min(32, (accuracyMeters || 20) * 0.9)), allowFarIfBlocked: true });
-  if(snappedHit){
-    setRoadHeadingFromProjection(snappedHit);
-    lockRoadFromProjection(snappedHit);
-  }
-  if(!state.gpsSmoothBase){
-    state.gpsSmoothBase = snapped;
-    state.gpsLastAcceptedAt = now;
-    state.gpsLastAccuracy = accuracyMeters;
-    return snapped;
-  }
-  const d = haversineMeters(state.gpsSmoothBase, snapped);
-  const jitterGate = Math.max(2.2, Math.min(9, (accuracyMeters || 20) * 0.18));
-  if(d < jitterGate) return state.gpsSmoothBase;
-  const dt = Math.max(0.016, Math.min(2.2, (now - (state.gpsLastAcceptedAt || now)) / 1000));
-  const hardJump = rawBlocked || d > Math.max(22, (accuracyMeters || 20) * 1.6);
-  if(hardJump){
-    state.gpsSmoothBase = pickSafeRoadCoord(snapped, forceCoordToRoadNetwork(snapped, { radii:[140, 220, 320, 460, 620], requireDrivable:true, preferLocked:true }), { currentCoord: state.gpsSmoothBase || state.gpsBase, maxSnapMeters: Math.max(18, Math.min(36, (accuracyMeters || 20) * 1.1)), allowFarIfBlocked: true });
-    state.gpsLastAcceptedAt = now;
-    state.gpsLastAccuracy = accuracyMeters;
-    return state.gpsSmoothBase;
-  }
-  const alpha = Math.max(0.055, Math.min(0.24, dt * (d > 14 ? 0.48 : 0.24)));
-  const lng = state.gpsSmoothBase[0] + (snapped[0] - state.gpsSmoothBase[0]) * alpha;
-  const lat = state.gpsSmoothBase[1] + (snapped[1] - state.gpsSmoothBase[1]) * alpha;
-  state.gpsSmoothBase = projectCoordAlongNearestRoad(state.gpsSmoothBase, [lng, lat], 190);
-  state.gpsLastAcceptedAt = now;
-  state.gpsLastAccuracy = accuracyMeters;
-  return state.gpsSmoothBase;
 }
 function startLocation(){
   requestDeviceCompass();
@@ -1483,31 +1258,32 @@ function startLocation(){
   state.geoWatch = navigator.geolocation.watchPosition(
     (pos) => {
       state.hasRealGps = true;
-      const rawGps = [pos.coords.longitude, pos.coords.latitude];
-      const accuracy = pos.coords && Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : 20;
-      const beforeWorld = state.playerWorld ? [state.playerWorld[0], state.playerWorld[1]] : null;
-      pushGpsTrace(rawGps, accuracy);
-      state.gpsBase = smoothGpsCoord(rawGps, accuracy);
+      const incomingGps = [pos.coords.longitude, pos.coords.latitude];
+      if(!state.gpsSmooth){
+        state.gpsSmooth = incomingGps;
+      }else{
+        const jump = haversineMeters(state.gpsSmooth, incomingGps);
+        const alpha = jump > 65 ? 0.18 : 0.08; // jangan terlalu sensitif, biar tidak belok-belok sendiri
+        state.gpsSmooth = [
+          state.gpsSmooth[0] + (incomingGps[0] - state.gpsSmooth[0]) * alpha,
+          state.gpsSmooth[1] + (incomingGps[1] - state.gpsSmooth[1]) * alpha
+        ];
+      }
+      state.gpsBase = state.gpsSmooth;
       clampOffset();
       recomputePlayerWorld();
-      const movedMeters = beforeWorld ? haversineMeters(beforeWorld, state.playerWorld) : Infinity;
+      snapPlayerToRoad(true);
+      updatePlayerMapMarker();
       if(pos.coords && Number.isFinite(pos.coords.heading)){
         // Fallback: kalau sensor kompas browser tidak aktif, pakai arah gerak GPS.
         if(!state.deviceHeadingEnabled && (pos.coords.speed || 0) > 0.6){
           applyDeviceHeadingToCamera(pos.coords.heading, 180);
         }
-      }else if(!state.deviceHeadingEnabled && typeof state.roadHeadingDeg === 'number' && state.manualMoveBasisBearing === null){
-        applyDeviceHeadingToCamera(state.roadHeadingDeg, 220);
       }
-      if(!state.browsing && movedMeters > 1.2) followPlayerCamera({ duration:420 });
+      if(!state.browsing) followPlayerCamera({ duration:250 });
       detectNearby();
       updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • kompas aktif" : "Lokasi aktif");
-      refineGpsWithRemoteRoad(rawGps, accuracy).then((refined) => {
-        if(refined){
-          updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • road lock server" : "Lokasi aktif • road lock server");
-        }
-      });
-      refreshWeather();
+      refreshEnvironment();
     },
     (err) => { state.hasRealGps = false; updateStatus("Lokasi gagal: " + err.message); },
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
@@ -1572,9 +1348,13 @@ function getRoadCollisionLayers(){
       layer.type === 'line' &&
       !id.includes('label') &&
       !id.includes('rail') &&
-      !id.includes('route') &&
       !id.includes('water') &&
-      (id.includes('road') || id.includes('street') || id.includes('path') || id.includes('highway') || sl.includes('transportation') || cls.includes('road') || cls.includes('street') || cls.includes('path'));
+      (
+        id.includes('road') || id.includes('street') || id.includes('path') || id.includes('highway') ||
+        id.includes('footway') || id.includes('service') || id.includes('track') ||
+        sl.includes('transportation') || cls.includes('road') || cls.includes('street') || cls.includes('path') ||
+        cls.includes('footway') || cls.includes('service') || cls.includes('track')
+      );
     if(looksRoad && !found.includes(layer.id)) found.push(layer.id);
   });
   return found;
@@ -1605,57 +1385,118 @@ function isCoordOnRoad(coord){
 }
 function canPlayerStandAt(coord){
   if(isCoordBlockedBySolidMap(coord)) return false;
-  if(state.roadOnlyMode && !isCoordOnRoad(coord)) return false;
+  if(!isCoordOnRoad(coord)) return false;
   return true;
 }
 function worldFromOffset(x, y){
   const [dLng, dLat] = metersToLngLatOffset(x, y, state.gpsBase[1]);
   return [state.gpsBase[0] + dLng, state.gpsBase[1] + dLat];
 }
-function tryMoveWithCollision(mx, my){
-  const currentWorld = state.playerWorld || state.gpsBase;
-  const base = recentRemoteRoadCoord() || state.gpsBase || currentWorld;
-  const [dLng, dLat] = metersToLngLatOffset(mx, my, currentWorld[1]);
-  const desiredCoord = [currentWorld[0] + dLng, currentWorld[1] + dLat];
-  let groundedCoord = pickSafeRoadCoord(desiredCoord,
-    forceCoordToRoadNetwork(desiredCoord, { radii:[70, 110, 160, 240], requireDrivable:true, preferLocked:true }),
-    { currentCoord: currentWorld, maxSnapMeters: 14, allowFarIfBlocked: false }
-  ) || desiredCoord;
-  if(!canPlayerStandAt(groundedCoord)){
-    groundedCoord = pickSafeRoadCoord(desiredCoord,
-      forceCoordToRoadNetwork(desiredCoord, { radii:[120, 180, 260, 360], requireDrivable:true, preferLocked:false }),
-      { currentCoord: currentWorld, maxSnapMeters: 18, allowFarIfBlocked: false }
-    ) || groundedCoord;
+function nearestPointOnSegmentPx(p, a, b){
+  const abx = b.x - a.x, aby = b.y - a.y;
+  const apx = p.x - a.x, apy = p.y - a.y;
+  const ab2 = abx*abx + aby*aby || 1;
+  const t = Math.max(0, Math.min(1, (apx*abx + apy*aby) / ab2));
+  return { x:a.x + abx*t, y:a.y + aby*t, t };
+}
+function snapCoordToNearestRoad(coord, maxRadiusPx = 120){
+  if(!map || !map.loaded || !map.loaded()) return null;
+  const layers = getRoadCollisionLayers().filter(id => map.getLayer(id));
+  if(!layers.length) return null;
+  const p = map.project(coord);
+  let best = null;
+  let bestDist = Infinity;
+  let feats = queryFeaturesAround(coord, layers, maxRadiusPx);
+  if(!feats.length) feats = queryFeaturesAround(coord, layers, Math.max(maxRadiusPx, 150));
+  if(!feats.length) feats = queryFeaturesAround(coord, layers, Math.max(maxRadiusPx, 210));
+  feats.forEach(feat => {
+    const geom = feat?.geometry;
+    if(!geom) return;
+    const lines = geom.type === 'LineString' ? [geom.coordinates] : (geom.type === 'MultiLineString' ? geom.coordinates : []);
+    lines.forEach(line => {
+      for(let i=0;i<line.length-1;i++){
+        const a = map.project(line[i]);
+        const b = map.project(line[i+1]);
+        const np = nearestPointOnSegmentPx(p, a, b);
+        const dx = np.x - p.x, dy = np.y - p.y;
+        const d = Math.hypot(dx, dy);
+        if(d < bestDist){ bestDist = d; best = map.unproject([np.x, np.y]); }
+      }
+    });
+  });
+  if(best && bestDist <= maxRadiusPx){
+    return [best.lng, best.lat];
   }
-  if(!canPlayerStandAt(groundedCoord)){
-    state.collisionCooldown = 12;
-    return false;
-  }
-  state.playerWorld = groundedCoord;
-  state.manualRoadCoord = groundedCoord;
-  state.offsetMeters.x = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, haversineMeters([base[0], base[1]], [groundedCoord[0], base[1]]) * (groundedCoord[0] >= base[0] ? 1 : -1)));
-  state.offsetMeters.y = Math.max(-state.maxOffsetMeters, Math.min(state.maxOffsetMeters, haversineMeters([base[0], base[1]], [base[0], groundedCoord[1]]) * (groundedCoord[1] >= base[1] ? 1 : -1)));
+  return null;
+}
+function applySnappedWorld(snapped){
+  if(!snapped) return false;
+  if(isCoordBlockedBySolidMap(snapped)) return false;
+  const [baseLng, baseLat] = state.gpsBase;
+  state.playerWorld = snapped;
+  state.offsetMeters.x = (snapped[0] - baseLng) * (111320 * Math.cos(baseLat * Math.PI/180));
+  state.offsetMeters.y = (snapped[1] - baseLat) * 110540;
+  updatePlayerMapMarker();
   return true;
+}
+function snapPlayerToRoad(force = false){
+  const current = state.playerWorld;
+  const snapped = snapCoordToNearestRoad(current, force ? 220 : 108);
+  if(!snapped) return;
+  const dist = haversineMeters(current, snapped);
+  if(!canPlayerStandAt(current)){
+    applySnappedWorld(snapped);
+    return;
+  }
+  if(dist > (force ? 0.35 : 0.18)){
+    applySnappedWorld(snapped);
+  }
+}
+function tryMoveWithCollision(mx, my){
+  const originalX = state.offsetMeters.x;
+  const originalY = state.offsetMeters.y;
+  const candidates = [
+    [originalX + mx, originalY + my],
+    [originalX + mx, originalY],
+    [originalX, originalY + my]
+  ];
+  for(const [nx, ny] of candidates){
+    const d = Math.hypot(nx, ny);
+    let tx = nx, ty = ny;
+    if(d > state.maxOffsetMeters){
+      const r = state.maxOffsetMeters / d;
+      tx *= r; ty *= r;
+    }
+    const nextCoord = worldFromOffset(tx, ty);
+    const snappedCoord = snapCoordToNearestRoad(nextCoord, 96) || nextCoord;
+    if(canPlayerStandAt(snappedCoord)){
+      return applySnappedWorld(snappedCoord);
+    }
+    if(canPlayerStandAt(nextCoord)){
+      state.offsetMeters.x = tx;
+      state.offsetMeters.y = ty;
+      state.playerWorld = nextCoord;
+      return true;
+    }
+  }
+  state.collisionCooldown = 12;
+  snapPlayerToRoad(true);
+  return false;
 }
 
 function updateMovement(dt=1/60){
   const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
   const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
   if(!forwardInput && !strafeInput){
-    if(state.manualMoveBasisBearing !== null){
-      state.lastManualInputAt = Date.now();
-      snapManualMovementToRoad(true);
-      state.manualMoveBasisBearing = null;
-    }
-    if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle");
+    snapPlayerToRoad(false);
+    if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle", state.facing || "down");
     return;
   }
 
-  if(state.manualMoveBasisBearing === null) state.manualMoveBasisBearing = getCameraBearing();
-  state.manualMoveLastAt = Date.now();
-  state.lastManualInputAt = Date.now();
-  const step = state.moveSpeedMeters * Math.min(0.03, Math.max(0.008, dt));
-  const bearingRad = degToRad(state.manualMoveBasisBearing);
+  // V38: gerak karakter mengikuti arah kamera, bukan utara/selatan absolut.
+  // Jadi saat map di-rotate kiri/kanan, tombol atas tetap berarti maju ke depan layar.
+  const step = state.moveSpeedMeters * Math.min(0.033, Math.max(0.008, dt));
+  const bearingRad = degToRad(getCameraBearing());
   const forwardX = Math.sin(bearingRad);
   const forwardY = Math.cos(bearingRad);
   const rightX = Math.cos(bearingRad);
@@ -1665,15 +1506,8 @@ function updateMovement(dt=1/60){
   if(forwardInput && strafeInput){ mx *= 0.7071; my *= 0.7071; }
 
   let facing = state.facing || "down";
-  const roadHeading = (typeof state.roadHeadingDeg === 'number' && (Date.now() - (state.roadHeadingLastAt || 0) < 1800)) ? state.roadHeadingDeg : null;
-  if(roadHeading !== null){
-    const rel = normalizeHeading(roadHeading - getCameraBearing());
-    if(rel >= 315 || rel < 45) facing = "up";
-    else if(rel < 135) facing = "right";
-    else if(rel < 225) facing = "down";
-    else facing = "left";
-  }else if(Math.abs(strafeInput) > Math.abs(forwardInput)) facing = strafeInput < 0 ? "left" : "right";
-  else if(forwardInput) facing = forwardInput > 0 ? "up" : "down";
+  if(Math.abs(forwardInput) >= Math.abs(strafeInput) && forwardInput) facing = forwardInput > 0 ? "up" : "down";
+  else if(strafeInput) facing = strafeInput < 0 ? "left" : "right";
 
   const moved = tryMoveWithCollision(mx, my);
   state.playerFrameTick += dt;
@@ -1684,8 +1518,9 @@ function updateMovement(dt=1/60){
   }
   if(!playerSprite().classList.contains("walk") || state.facing !== facing) setPlayerAnim("walk", facing);
   if(moved){
+    snapPlayerToRoad();
     updatePlayerMapMarker();
-    if(!state.browsing){ followPlayerCamera({ duration: 90 }); }
+    if(!state.browsing){ followPlayerCamera({ duration: 120 }); }
     detectNearby();
   }else{
     updateStatus("Jalur tertutup • karakter hanya bisa jalan di lintasan");
@@ -1700,12 +1535,6 @@ function bindMoveButton(btn){
   btn.addEventListener("mouseleave", up);
   btn.addEventListener("touchstart", (e) => { e.preventDefault(); down(); }, { passive:false });
   btn.addEventListener("touchend", up);
-}
-
-function updateZoomFog(){
-  const app = document.getElementById("app");
-  if(!app || !map) return;
-  app.classList.toggle("app-max-zoom", map.getZoom() >= 18.55);
 }
 
 map.on("load", () => {
@@ -1731,31 +1560,28 @@ map.on("load", () => {
     }
   });
   recomputePlayerWorld();
+  snapPlayerToRoad(true);
   createPlayerMapMarker();
   followPlayerCamera({ zoom: CAMERA_ZOOM });
   lockPitchOnly();
   document.getElementById("sheetContent").innerHTML = `
-    <h3>BogorDex GO v47 OSRM Ground Lock</h3>
+    <h3>BogorDex GO v42 Smooth Compass</h3>
     <p>MapLibre street-anime mode: kamera lebih rendah seperti berdiri di jalan, rotate kiri-kanan aktif, pitch atas-bawah dikunci, gedung transparan, dan karakter tetap road-only.</p>
     <div class="section"><div class="section-title">Fix Inti</div><p>Basis MapLibre tetap dipakai tanpa kartu kredit Mapbox. Nuansa dibuat lebih game HP/Pokemon GO: gedung ghost transparan, kamera dari belakang karakter, MapDex phone aktif, dan laporan titik tetap jalan.</p></div>
   `;
-  state.lastPoi = {id:"intro",name:"BogorDex GO v47 OSRM Ground Lock",desc:"Mode street-anime MapDex dengan OSRM ground lock yang lebih stabil, snap server ke jalan mobil, dan fallback lokal saat jaringan gagal.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
+  state.lastPoi = {id:"intro",name:"BogorDex GO v42 Smooth Compass",desc:"Mode street-anime MapDex road-only dengan kamera lebih luas ke depan.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
   syncMiniButton();
   loadUserReports();
   renderUserReports();
   renderNPCs();
   loadSheetData();
-  updateZoomFog();
-  updateWeatherChip();
-  setTimeout(() => refreshWeather(true), 900);
   requestAnimationFrame(loop);
 });
 
 map.on("dragstart", startBrowse);
 map.on("dragend", stopBrowse);
 map.on("zoomstart", startBrowse);
-map.on("zoom", updateZoomFog);
-map.on("zoomend", () => { updateZoomFog(); stopBrowse(); });
+map.on("zoomend", stopBrowse);
 map.on("rotatestart", startBrowse);
 map.on("rotateend", stopBrowse);
 map.on("pitchstart", () => { startBrowse(); setTimeout(lockPitchOnly, 30); });
@@ -1781,6 +1607,11 @@ function loop(now){
   lastFrameTime = now;
   if(state.collisionCooldown > 0) state.collisionCooldown -= 1;
   updateMovement(dt);
+  state.__snapTicker = (state.__snapTicker || 0) + 1;
+  if(!state.move.up && !state.move.down && !state.move.left && !state.move.right && state.__snapTicker % 12 === 0){
+    snapPlayerToRoad(true);
+    updatePlayerMapMarker();
+  }
   animatePortalRings();
   updateNpcNearState();
   // Kamera kompas sudah di-throttle di applyDeviceHeadingToCamera.
@@ -1855,7 +1686,7 @@ function scanNearestFromMenu(){
   state.discovered.add(hit.poi.id);
   markPortalPopupDone(hit.poi.id);
   renderDex();
-  map.easeTo({center: hit.poi.coords, zoom: 18.95, pitch: CAMERA_PITCH, bearing: getCameraBearing(), duration: 450});
+  map.easeTo({center: hit.poi.coords, zoom: 19.45, pitch: CAMERA_PITCH, bearing: getCameraBearing(), duration: 450});
   openSheet(hit.poi, 'manual');
   updateStatus('Scan menemukan: ' + hit.poi.name);
 }
@@ -1876,7 +1707,7 @@ function getMapDexItems(){
 }
 function focusMapDexItem(item){
   closeMapDex();
-  map.easeTo({ center:item.coords, zoom:18.95, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
+  map.easeTo({ center:item.coords, zoom:19.45, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
   if(item.type === "portal" && item.ref){ markPortalPopupDone(item.ref.id); openSheet(item.ref, "manual"); }
   if(item.type === "npc" && item.ref) openNpcDialog(item.ref.id);
   if(item.type === "report" && item.ref){
@@ -1933,7 +1764,7 @@ document.getElementById("closeMainMenuBtn").addEventListener("click", closeMainM
 document.querySelector("#mainMenuModal .game-menu-backdrop").addEventListener("click", closeMainMenu);
 document.getElementById("menuExploreBtn").addEventListener("click", () => { closeMainMenu(); updateStatus("Mode jelajah portal aktif"); });
 document.getElementById("menuScanBtn").addEventListener("click", () => { closeMainMenu(); scanNearestFromMenu(); });
-document.getElementById("menuDexBtn").addEventListener("click", () => { closeMainMenu(); renderDex(); document.getElementById("dexModal").classList.remove("hidden"); });
+document.getElementById("menuDexBtn").addEventListener("click", () => { closeMainMenu(); openCharacterProfile(); });
 document.getElementById("menuResetBtn").addEventListener("click", () => { closeMainMenu(); resetGameCamera(); });
 document.getElementById("menuReportBtn").addEventListener("click", () => { closeMainMenu(); openReportModal(); });
 document.getElementById("reportCloseBtn").addEventListener("click", closeReportModal);
@@ -1947,15 +1778,20 @@ document.getElementById("npcDialogQuestBtn").addEventListener("click", acceptNpc
 document.getElementById("npcDialog").addEventListener("click", (e) => { if(e.target.id === "npcDialog") closeNpcDialog(); });
 document.getElementById("questCloseBtn").addEventListener("click", dismissActiveQuestPopup);
 document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
-const __chatToggle=document.getElementById("chatToggleBtn"); if(__chatToggle){ __chatToggle.addEventListener("click", openChatDock); }
-const __chatClose=document.getElementById("chatCloseBtn"); if(__chatClose){ __chatClose.addEventListener("click", closeChatDock); }
+document.getElementById("chatToggleBtn").addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
+document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
 document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
 document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
 document.getElementById("dexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.remove("hidden"));
 document.getElementById("closeDexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.add("hidden"));
 document.getElementById("sheetHandle").addEventListener("click", () => { sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.toggle("collapsed"); syncMiniButton(); });
 document.getElementById("sheetCloseBtn").addEventListener("click", (e) => { e.stopPropagation(); closeSheet(true, true); });
-document.getElementById("sheetMiniBtn").addEventListener("click", () => { if(state.lastPoi) openSheet(state.lastPoi, state.activePoiMode || "manual"); });
+const __sheetMiniBtn = document.getElementById("sheetMiniBtn"); if(__sheetMiniBtn){ __sheetMiniBtn.addEventListener("click", () => { if(state.lastPoi) openSheet(state.lastPoi, state.activePoiMode || "manual"); }); }
 document.querySelectorAll(".move-btn").forEach(bindMoveButton);
 document.addEventListener("keydown", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=true; if(k==="s"||k==="arrowdown") state.move.down=true; if(k==="a"||k==="arrowleft") state.move.left=true; if(k==="d"||k==="arrowright") state.move.right=true; });
 document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=false; if(k==="s"||k==="arrowdown") state.move.down=false; if(k==="a"||k==="arrowleft") state.move.left=false; if(k==="d"||k==="arrowright") state.move.right=false; });
+
+
+updateWeatherChip();
+updatePlayerUiMeta();
+setTimeout(() => refreshEnvironment(true), 900);
