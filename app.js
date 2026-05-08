@@ -55,6 +55,11 @@ const state = {
   npcMarkers: [],
   eventMarkers: [],
   eventPortals: [],
+  navigationTarget: null,
+  osrmNearestPending: false,
+  osrmLastNearestAt: 0,
+  osrmLastNearestCoord: null,
+  osrmRouteRequestAt: 0,
   npcs: [
     { id:"npc_explorer", name:"Pak Ranger", role:"Penjaga Portal", asset:"assets/npc/npc-explorer.png", bubble:"Ranger, portal biru itu jalur transportasi. Coba dekati sampai quest aktif.", quest:"Misi: cari portal transportasi/BisKita terdekat lalu buka Dex-nya." },
     { id:"npc_nenek", name:"Nenek Data", role:"Warga Senior", asset:"assets/npc/npc-nenek.png", bubble:"Nak, jangan cuma lihat peta. Dengarkan warga, baru pilih lokasi yang tepat.", quest:"Misi: temui satu titik layanan publik dan baca fungsi/tupoksinya." },
@@ -118,6 +123,9 @@ const PLAYER_PROFILE = {
 const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "31o6wgDj0WALXnVE0xNqd3M6gVki7A3e";
 const TOMTOM_TRAFFIC_ENDPOINT = window.BOGORDEX_TOMTOM_TRAFFIC_ENDPOINT || "";
 const REALTIME_EVENT_ENDPOINT = TOMTOM_TRAFFIC_ENDPOINT;
+const OSRM_BASE_URL = window.BOGORDEX_OSRM_BASE_URL || "https://router.project-osrm.org";
+const OSRM_PROFILE = window.BOGORDEX_OSRM_PROFILE || "driving";
+const OSRM_NEAREST_MIN_INTERVAL_MS = 2400;
 
 function setStatus(text){
   statusEl().textContent = text;
@@ -281,6 +289,10 @@ function createPlayerMapMarker(){
 
 function updatePlayerMapMarker(){
   if(state.playerMarker) state.playerMarker.setLngLat(state.playerWorld);
+  if(state.playerMarkerEl){
+    state.playerMarkerEl.classList.toggle("is-routing", !!state.navigationTarget);
+    state.playerMarkerEl.classList.toggle("is-moving", !!(state.move.up || state.move.down || state.move.left || state.move.right));
+  }
 }
 function metersToLngLatOffset(mx, my, latDeg){
   const latRad = latDeg * Math.PI / 180;
@@ -423,7 +435,7 @@ function openSheet(poi, mode="manual"){
       <span class="tag">${poi.group || "POI"}</span>
       ${poi.aktif ? '<span class="tag">Aktif</span>' : ""}
     </div>
-    ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">Arahkan</button>' : ''}
+    ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">✦ Arahkan</button>' : ''}
   `;
   const routeBtn = document.getElementById("sheetRouteBtn");
   if(routeBtn && Array.isArray(poi.coords)){
@@ -1138,6 +1150,73 @@ function renderRealtimeEventPortals(){
     state.eventMarkers.push(marker);
   });
 }
+
+async function fetchOsrmRoute(start, target){
+  try{
+    const coords = `${start[0]},${start[1]};${target[0]},${target[1]}`;
+    const url = `${OSRM_BASE_URL}/route/v1/${OSRM_PROFILE}/${coords}?overview=full&geometries=geojson&steps=false&continue_straight=true`;
+    const res = await fetch(url, { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const route = data && data.routes && data.routes[0];
+    const coordsOut = route && route.geometry && route.geometry.coordinates;
+    if(Array.isArray(coordsOut) && coordsOut.length >= 2) return coordsOut;
+  }catch(err){
+    console.warn('OSRM route failed', err);
+  }
+  return null;
+}
+
+async function fetchOsrmNearest(coord){
+  try{
+    const url = `${OSRM_BASE_URL}/nearest/v1/${OSRM_PROFILE}/${coord[0]},${coord[1]}?number=1`;
+    const res = await fetch(url, { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const wp = data && data.waypoints && data.waypoints[0];
+    if(wp && Array.isArray(wp.location) && wp.location.length === 2) return [Number(wp.location[0]), Number(wp.location[1])];
+  }catch(err){
+    console.warn('OSRM nearest failed', err);
+  }
+  return null;
+}
+
+async function tryOsrmNearestSnap(coord, opts={}){
+  const now = Date.now();
+  if(state.osrmNearestPending) return null;
+  if(!opts.force && (now - (state.osrmLastNearestAt || 0)) < OSRM_NEAREST_MIN_INTERVAL_MS) return null;
+  state.osrmNearestPending = true;
+  state.osrmLastNearestAt = now;
+  state.osrmLastNearestCoord = coord;
+  try{
+    const snapped = await fetchOsrmNearest(coord);
+    if(!snapped) return null;
+    if(haversineMeters(coord, snapped) > (opts.maxDistanceMeters || 45)) return null;
+    if(opts.apply !== false){
+      state.playerWorld = snapped;
+      const [baseLng, baseLat] = state.gpsBase;
+      state.offsetMeters.x = (snapped[0] - baseLng) * (111320 * Math.cos(baseLat * Math.PI/180));
+      state.offsetMeters.y = (snapped[1] - baseLat) * 110540;
+      updatePlayerMapMarker();
+    }
+    return snapped;
+  } finally {
+    state.osrmNearestPending = false;
+  }
+}
+
+function renderNavigationRoute(routeCoords, fit=true){
+  if(!routeCoords || routeCoords.length < 2 || !map) return;
+  const src = map.getSource('bdx-navigation-route');
+  if(src){
+    src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: routeCoords } }] });
+  }
+  if(fit){
+    const bounds = routeCoords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(routeCoords[0], routeCoords[0]));
+    try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:20.25, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
+  }
+}
+
 function ensureRouteLayer(){
   if(!map || !map.isStyleLoaded()) return;
   if(!map.getSource('bdx-navigation-route')){
@@ -1169,18 +1248,29 @@ function buildSnappedRoutePoints(start, target){
   pts.push(targetSnap);
   return pts;
 }
-function setNavigationTarget(target){
+async function setNavigationTarget(target){
   if(!target || !target.coords || !map) return;
   ensureRouteLayer();
-  const routeCoords = buildSnappedRoutePoints(state.playerWorld, target.coords);
-  const src = map.getSource('bdx-navigation-route');
-  if(src){
-    src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: routeCoords } }] });
+  state.navigationTarget = target;
+  updateStatus('Mengambil jalur OSRM…');
+  let routeCoords = null;
+  try{
+    state.osrmRouteRequestAt = Date.now();
+    const startSnap = await tryOsrmNearestSnap(state.playerWorld, { force:true, apply:false, maxDistanceMeters:60 }) || snapCoordToNearestRoad(state.playerWorld, 300) || state.playerWorld;
+    const targetSnap = await fetchOsrmNearest(target.coords) || snapCoordToNearestRoad(target.coords, 300) || target.coords;
+    routeCoords = await fetchOsrmRoute(startSnap, targetSnap);
+  }catch(err){
+    console.warn('Navigation OSRM error', err);
   }
-  const bounds = routeCoords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(routeCoords[0], routeCoords[0]));
-  try{ map.fitBounds(bounds, { padding:{top:120,bottom:190,left:120,right:220}, maxZoom:20.25, pitch:CAMERA_PITCH, duration:700 }); }catch(e){}
-  updateStatus('Arah menuju ' + (target.title || target.name || 'portal'));
+  if(!routeCoords || routeCoords.length < 2){
+    routeCoords = buildSnappedRoutePoints(state.playerWorld, target.coords);
+    updateStatus('Arah aktif • fallback lokal ke ' + (target.title || target.name || 'portal'));
+  }else{
+    updateStatus('Arah OSRM aktif ke ' + (target.title || target.name || 'portal'));
+  }
+  renderNavigationRoute(routeCoords, true);
 }
+
 
 async function loadSheetData(){
   try{
@@ -1444,6 +1534,9 @@ function snapPlayerToRoad(force = false){
     state.offsetMeters.x = dx;
     state.offsetMeters.y = dy;
     updatePlayerMapMarker();
+  }
+  if((force || state.hasRealGps) && !state.move.up && !state.move.down && !state.move.left && !state.move.right){
+    tryOsrmNearestSnap(state.playerWorld, { force:false, maxDistanceMeters:34 });
   }
 }
 function tryMoveWithCollision(mx, my){
