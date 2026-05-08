@@ -83,6 +83,14 @@ const state = {
   eventMarkers: [],
   eventPortals: [],
   navigationTarget: null,
+  navigationStatus: "idle",
+  routeCoords: [],
+  routeSteps: [],
+  currentStepIndex: 0,
+  hasArrived: false,
+  lastRerouteAt: 0,
+  lastNavInstruction: "",
+  arrivalPopupShownFor: null,
   osrmNearestPending: false,
   osrmLastNearestAt: 0,
   osrmLastNearestCoord: null,
@@ -476,6 +484,13 @@ function showRewardBanner(kicker, title, subtitle='', timeout=2400){
 function hideNavBanner(){ navBannerEl()?.classList.add('hidden'); }
 function clearNavigationTarget(silent=false){
   state.navigationTarget = null;
+  state.navigationStatus = 'cancelled';
+  state.routeCoords = [];
+  state.routeSteps = [];
+  state.currentStepIndex = 0;
+  state.hasArrived = false;
+  state.lastNavInstruction = '';
+  closeArrivalPopup();
   if(map && map.getSource && map.getSource('bdx-navigation-route')){
     try{ map.getSource('bdx-navigation-route').setData({type:'FeatureCollection',features:[]}); }catch(e){}
   }
@@ -489,10 +504,30 @@ function updateNavigationUi(){
     box.classList.add('hidden');
     return;
   }
-  const dist = Math.max(1, Math.round(haversineMeters(state.playerWorld, state.navigationTarget.coords)));
-  document.getElementById('navCenterTitle').textContent = state.navigationTarget.title || state.navigationTarget.name || 'Tujuan';
-  document.getElementById('navCenterMeta').textContent = `Sisa jarak ${dist} m • ikuti jalur biru`;
+  const nav = currentNavigationInstruction();
+  const title = state.navigationTarget.title || state.navigationTarget.name || 'Tujuan';
+  const iconEl = document.getElementById('navDirectionIcon');
+  const instrEl = document.getElementById('navInstructionText');
+  const titleEl = document.getElementById('navCenterTitle');
+  const metaEl = document.getElementById('navCenterMeta');
+  const distEl = document.getElementById('navDistanceText');
+  if(iconEl) iconEl.textContent = nav.icon || '↑';
+  if(instrEl) instrEl.textContent = nav.text || 'Ikuti jalur biru';
+  if(titleEl) titleEl.textContent = title;
+  if(metaEl) metaEl.textContent = nav.sub || 'Ikuti jalur biru';
+  if(distEl) distEl.textContent = formatDistance(nav.destDist || 0);
   box.classList.remove('hidden');
+  if(nav.destDist <= 18){
+    showArrivalPopup();
+  }else{
+    checkOffRouteAndReroute();
+  }
+  if(nav.text && nav.text !== state.lastNavInstruction){
+    state.lastNavInstruction = nav.text;
+    if(nav.text.includes('Belok') || nav.text.includes('Tujuan') || nav.text.includes('sampai')){
+      showAnimeToast('event', nav.text, title, [nav.sub]);
+    }
+  }
 }
 function showNavigationBanner(target, subtitle='Rute aktif'){
   if(!target) return;
@@ -502,6 +537,142 @@ function showNavigationBanner(target, subtitle='Rute aktif'){
 }
 function flashEventNotice(title, subtitle=''){
   showRewardBanner('Event Kota', title, subtitle || 'Ada aktivitas baru di sekitar kamu', 2600);
+}
+function formatDistance(m){
+  const n = Math.max(0, Number(m || 0));
+  if(n >= 1000) return (n/1000).toFixed(n >= 10000 ? 0 : 1).replace('.0','') + ' km';
+  return Math.round(n) + ' m';
+}
+function instructionIcon(text){
+  const t = String(text || '').toLowerCase();
+  if(t.includes('kiri')) return '↰';
+  if(t.includes('kanan')) return '↱';
+  if(t.includes('putar')) return '⤴';
+  if(t.includes('sampai') || t.includes('tujuan')) return '✓';
+  return '↑';
+}
+function instructionFromManeuver(step){
+  const m = step && step.maneuver ? step.maneuver : {};
+  const type = String(m.type || '').toLowerCase();
+  const mod = String(m.modifier || '').toLowerCase();
+  if(type.includes('arrive')) return 'Kamu sudah sampai';
+  if(type.includes('depart')) return 'Mulai perjalanan';
+  if(type.includes('roundabout')) return 'Masuk bundaran';
+  if(type.includes('merge')) return 'Ikuti jalan utama';
+  if(mod.includes('uturn')) return 'Putar balik jika memungkinkan';
+  if(mod.includes('slight left')) return 'Belok agak kiri';
+  if(mod.includes('slight right')) return 'Belok agak kanan';
+  if(mod.includes('left')) return 'Belok kiri';
+  if(mod.includes('right')) return 'Belok kanan';
+  if(mod.includes('straight')) return 'Lurus terus';
+  if(type.includes('turn')) return 'Belok di depan';
+  if(type.includes('continue')) return 'Lurus terus';
+  return 'Ikuti jalur biru';
+}
+function normalizeRouteSteps(route){
+  const out = [];
+  try{
+    const steps = route?.legs?.flatMap(l => l.steps || []) || [];
+    steps.forEach((step, idx) => {
+      const loc = step?.maneuver?.location;
+      if(!Array.isArray(loc) || loc.length < 2) return;
+      out.push({
+        index: idx,
+        coords: [Number(loc[0]), Number(loc[1])],
+        distance: Number(step.distance || 0),
+        duration: Number(step.duration || 0),
+        name: step.name || '',
+        instruction: instructionFromManeuver(step),
+        maneuver: step.maneuver || {}
+      });
+    });
+  }catch(e){}
+  return out;
+}
+function distanceToRouteMeters(point, coords){
+  if(!point || !Array.isArray(coords) || coords.length < 2) return Infinity;
+  let best = Infinity;
+  const maxCheck = Math.min(coords.length - 1, 240);
+  const stride = Math.max(1, Math.floor((coords.length - 1) / maxCheck));
+  for(let i=0;i<coords.length;i+=stride){
+    const d = haversineMeters(point, coords[i]);
+    if(d < best) best = d;
+  }
+  return best;
+}
+function nearestRouteStepIndex(){
+  if(!state.routeSteps || !state.routeSteps.length) return 0;
+  let bestIdx = state.currentStepIndex || 0;
+  let best = Infinity;
+  for(let i=Math.max(0,(state.currentStepIndex||0)-1); i<state.routeSteps.length; i++){
+    const d = haversineMeters(state.playerWorld, state.routeSteps[i].coords);
+    if(d < best){ best = d; bestIdx = i; }
+  }
+  return bestIdx;
+}
+function currentNavigationInstruction(){
+  const dest = state.navigationTarget;
+  if(!dest || !dest.coords) return {text:'', sub:'', icon:'↑', dist:0, destDist:0};
+  const destDist = haversineMeters(state.playerWorld, dest.coords);
+  if(destDist <= 18) return { text:'Kamu sudah sampai', sub:'Tujuan ada di sekitar kamu', icon:'✓', dist:destDist, destDist };
+  if(destDist <= 45) return { text:'Tujuan sudah dekat', sub:`${formatDistance(destDist)} lagi`, icon:'✓', dist:destDist, destDist };
+  if(!state.routeSteps || !state.routeSteps.length){
+    return { text:'Ikuti jalur biru', sub:`Sisa ${formatDistance(destDist)}`, icon:'↑', dist:destDist, destDist };
+  }
+  const nextIdx = Math.max(state.currentStepIndex || 0, nearestRouteStepIndex());
+  const step = state.routeSteps[Math.min(nextIdx, state.routeSteps.length-1)];
+  const stepDist = step ? haversineMeters(state.playerWorld, step.coords) : destDist;
+  if(step && stepDist < 12 && nextIdx < state.routeSteps.length - 1){
+    state.currentStepIndex = nextIdx + 1;
+  }else{
+    state.currentStepIndex = nextIdx;
+  }
+  const active = state.routeSteps[Math.min(state.currentStepIndex || 0, state.routeSteps.length-1)] || step;
+  let text = active ? active.instruction : 'Ikuti jalur biru';
+  let dist = active ? haversineMeters(state.playerWorld, active.coords) : destDist;
+  if(dist > 40 && !String(text).toLowerCase().includes('lurus') && !String(text).toLowerCase().includes('ikuti')){
+    text = `Siap-siap ${text.toLowerCase()}`;
+  }else if(dist <= 16 && (text.includes('Belok') || text.includes('Putar') || text.includes('Masuk'))){
+    text = text + ' sekarang';
+  }else if(dist > 50 && (text === 'Mulai perjalanan' || text === 'Ikuti jalur biru')){
+    text = 'Lurus terus';
+  }
+  return { text, sub:`${formatDistance(dist)} • sisa ${formatDistance(destDist)}`, icon:instructionIcon(text), dist, destDist };
+}
+function showArrivalPopup(){
+  const target = state.navigationTarget;
+  if(!target || state.arrivalPopupShownFor === (target.id || target.title)) return;
+  state.arrivalPopupShownFor = target.id || target.title;
+  state.navigationStatus = 'arrived';
+  state.hasArrived = true;
+  const pop = document.getElementById('arrivalPopup');
+  if(!pop) return;
+  document.getElementById('arrivalTitle').textContent = 'Kamu sudah sampai!';
+  document.getElementById('arrivalSub').textContent = target.title || target.name || 'Tujuan berhasil ditemukan.';
+  pop.classList.remove('hidden');
+  state.playerMarkerEl?.classList.add('is-arrived');
+  setPlayerAnim('celebrate', state.facing || 'up');
+  showAnimeToast('quest','Kamu sudah sampai', target.title || target.name || 'Tujuan', ['Check-in tersedia','Reward lokasi aktif']);
+  showRewardBanner('Arrived', 'Kamu sudah sampai!', target.title || target.name || '', 3000);
+  if(target.poi) markPoiDiscovered(target.poi);
+}
+function closeArrivalPopup(){
+  document.getElementById('arrivalPopup')?.classList.add('hidden');
+  state.playerMarkerEl?.classList.remove('is-arrived');
+  if(Date.now() > (state.gpsMovingUntil || 0)) setPlayerAnim('idle', state.facing || 'up');
+}
+function checkOffRouteAndReroute(){
+  if(!state.navigationTarget || state.navigationStatus !== 'navigating') return;
+  if(!state.routeCoords || state.routeCoords.length < 2) return;
+  const d = distanceToRouteMeters(state.playerWorld, state.routeCoords);
+  if(d <= 38) return;
+  const now = Date.now();
+  if(now - (state.lastRerouteAt || 0) < 8000) return;
+  state.lastRerouteAt = now;
+  showAnimeToast('event','Keluar jalur', 'Menghitung ulang rute...', [`melenceng ${formatDistance(d)}`]);
+  updateStatus('Keluar jalur • menghitung ulang rute');
+  const target = state.navigationTarget;
+  setNavigationTarget(target, {silent:true, reroute:true});
 }
 
 const PLAYER_PROFILE = {
@@ -657,8 +828,8 @@ function setPlayerAnim(mode, facing){
   if(!el) return;
   if(facing) state.facing = facing;
   state.playerMode = mode || "idle";
-  el.classList.remove("idle","walk","run","face-down","face-up","face-left","face-right");
-  el.classList.add(state.playerMode);
+  el.classList.remove("idle","walk","run","celebrate","face-down","face-up","face-left","face-right");
+  el.classList.add(state.playerMode === "celebrate" ? "idle" : state.playerMode);
   el.classList.add("face-" + (state.facing || "up"));
   applyPlayerSpriteFrame();
 }
@@ -694,7 +865,7 @@ function updatePlayerMapMarker(){
   if(state.playerMarker) state.playerMarker.setLngLat(state.playerWorld);
   if(state.playerMarkerEl){
     state.playerMarkerEl.classList.toggle("is-routing", !!state.navigationTarget);
-    state.playerMarkerEl.classList.toggle("is-moving", !!(state.move.up || state.move.down || state.move.left || state.move.right));
+    state.playerMarkerEl.classList.toggle("is-moving", !!(state.move.up || state.move.down || state.move.left || state.move.right) || Date.now() < (state.gpsMovingUntil || 0));
   }
 }
 function metersToLngLatOffset(mx, my, latDeg){
@@ -849,7 +1020,7 @@ function openSheet(poi, mode="manual"){
   `;
   const routeBtn = document.getElementById("sheetRouteBtn");
   if(routeBtn && Array.isArray(poi.coords)){
-    routeBtn.addEventListener("click", () => setNavigationTarget({ title:poi.name, coords:poi.coords }));
+    routeBtn.addEventListener("click", () => setNavigationTarget({ id:poi.id, title:poi.name, name:poi.name, coords:poi.coords, poi }));
   }
   syncMiniButton();
   updateStatus(poi.name);
@@ -1771,20 +1942,26 @@ function checkEventNearby(){
   }
 }
 
-async function fetchOsrmRoute(start, target){
+async function fetchOsrmRouteDetailed(start, target){
   try{
     const coords = `${start[0]},${start[1]};${target[0]},${target[1]}`;
-    const url = `${OSRM_BASE_URL}/route/v1/${OSRM_PROFILE}/${coords}?overview=full&geometries=geojson&steps=false&continue_straight=true`;
+    const url = `${OSRM_BASE_URL}/route/v1/${OSRM_PROFILE}/${coords}?overview=full&geometries=geojson&steps=true&continue_straight=true`;
     const res = await fetch(url, { cache:'no-store' });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const route = data && data.routes && data.routes[0];
     const coordsOut = route && route.geometry && route.geometry.coordinates;
-    if(Array.isArray(coordsOut) && coordsOut.length >= 2) return coordsOut;
+    if(Array.isArray(coordsOut) && coordsOut.length >= 2){
+      return { coords: coordsOut, steps: normalizeRouteSteps(route), distance: route.distance || 0, duration: route.duration || 0, raw: route };
+    }
   }catch(err){
     console.warn('OSRM route failed', err);
   }
   return null;
+}
+async function fetchOsrmRoute(start, target){
+  const route = await fetchOsrmRouteDetailed(start, target);
+  return route ? route.coords : null;
 }
 
 async function fetchOsrmNearest(coord){
@@ -1868,30 +2045,40 @@ function buildSnappedRoutePoints(start, target){
   pts.push(targetSnap);
   return pts;
 }
-async function setNavigationTarget(target){
+async function setNavigationTarget(target, opts={}){
   if(!target || !target.coords || !map) return;
   ensureRouteLayer();
   state.navigationTarget = target;
-  showNavigationBanner(target, 'Menghitung rute terbaik...');
-  showAnimeToast('event', 'Direction aktif', target.title || target.name || 'Tujuan dipilih', ['Rute biru aktif', 'Bisa dibatalkan dari panel tengah']);
-  updateStatus('Mengambil jalur OSRM…');
-  let routeCoords = null;
+  state.navigationStatus = opts.reroute ? 'offroute' : 'routing';
+  state.hasArrived = false;
+  if(!opts.silent){
+    showNavigationBanner(target, 'Menghitung rute terbaik...');
+    showAnimeToast('event', 'Direction aktif', target.title || target.name || 'Tujuan dipilih', ['Rute jalan aktif', 'Bisa dibatalkan']);
+  }
+  updateStatus(opts.reroute ? 'Menghitung ulang rute…' : 'Mengambil jalur OSRM…');
+  let route = null;
   try{
     state.osrmRouteRequestAt = Date.now();
-    const startSnap = await tryOsrmNearestSnap(state.playerWorld, { force:true, apply:false, maxDistanceMeters:60 }) || snapCoordToNearestRoad(state.playerWorld, 300) || state.playerWorld;
+    const startSnap = await tryOsrmNearestSnap(state.playerWorld, { force:true, apply:false, maxDistanceMeters:90 }) || snapCoordToNearestRoad(state.playerWorld, 300) || state.playerWorld;
     const targetSnap = await fetchOsrmNearest(target.coords) || snapCoordToNearestRoad(target.coords, 300) || target.coords;
-    routeCoords = await fetchOsrmRoute(startSnap, targetSnap);
+    route = await fetchOsrmRouteDetailed(startSnap, targetSnap);
   }catch(err){
     console.warn('Navigation OSRM error', err);
   }
+  let routeCoords = route && route.coords;
   if(!routeCoords || routeCoords.length < 2){
     routeCoords = buildSnappedRoutePoints(state.playerWorld, target.coords);
+    state.routeSteps = [];
     updateStatus('Arah aktif • fallback lokal ke ' + (target.title || target.name || 'portal'));
     showNavigationBanner(target, 'Rute lokal aktif • ikuti jalur biru');
   }else{
-    updateStatus('Arah OSRM aktif ke ' + (target.title || target.name || 'portal'));
-    showNavigationBanner(target, 'Arah aktif • OSRM + road snap');
+    state.routeSteps = route.steps || [];
+    updateStatus('Arah aktif ke ' + (target.title || target.name || 'portal'));
+    showNavigationBanner(target, opts.reroute ? 'Rute diperbarui • ikuti jalur biru' : 'Rute berhasil dibuat • ikuti jalur biru');
   }
+  state.routeCoords = routeCoords;
+  state.currentStepIndex = 0;
+  state.navigationStatus = 'navigating';
   renderNavigationRoute(routeCoords, true);
   updateNavigationUi();
 }
@@ -2536,6 +2723,9 @@ document.getElementById("npcDialogQuestBtn").addEventListener("click", acceptNpc
 document.getElementById("npcDialog").addEventListener("click", (e) => { if(e.target.id === "npcDialog") closeNpcDialog(); });
 document.getElementById("questCloseBtn").addEventListener("click", dismissActiveQuestPopup);
 const __navCancelBtn = document.getElementById("navCancelBtn"); if(__navCancelBtn){ __navCancelBtn.addEventListener("click", () => clearNavigationTarget()); }
+const __arrivalCloseBtn = document.getElementById("arrivalCloseBtn"); if(__arrivalCloseBtn){ __arrivalCloseBtn.addEventListener("click", closeArrivalPopup); }
+const __arrivalCheckinBtn = document.getElementById("arrivalCheckinBtn"); if(__arrivalCheckinBtn){ __arrivalCheckinBtn.addEventListener("click", () => { showAnimeToast('reward','Check-in berhasil', state.navigationTarget?.title || 'Lokasi', ['+10 EXP bonus']); state.playerProgress.exp += 10; syncPlayerProfileFromProgress(); savePlayerProgress(); syncPlayerProgressToGas(); closeArrivalPopup(); clearNavigationTarget(true); updatePlayerUiMeta(); }); }
+const __arrivalInfoBtn = document.getElementById("arrivalInfoBtn"); if(__arrivalInfoBtn){ __arrivalInfoBtn.addEventListener("click", () => { const p = state.navigationTarget?.poi; closeArrivalPopup(); if(p) openSheet(p,'manual'); }); }
 document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
 document.getElementById("chatToggleBtn").addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
 document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
