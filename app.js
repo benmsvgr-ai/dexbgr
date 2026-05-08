@@ -29,11 +29,6 @@ const state = {
   moveSpeedMeters: 28.0,
   gpsAcceptedAt: 0,
   gpsLastAccepted: null,
-  gpsPrevWorld: null,
-  gpsMoveBearing: null,
-  gpsLastMoveAt: 0,
-  gpsWalkingMode: true,
-  gpsLastAccuracy: null,
   cameraFollowLastAt: 0,
   playerMarker: null,
   playerMarkerEl: null,
@@ -45,6 +40,10 @@ const state = {
   collisionRadiusPx: 36,
   collisionCooldown: 0,
   maxOffsetMeters: 1800,
+  renderRadiusMeters: 820,
+  renderBoundsCenter: null,
+  gpsPrevWorld: null,
+  gpsMovingUntil: 0,
   facing: "down",
   pois: [],
   quests: [],
@@ -1092,17 +1091,15 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 56;
-const CAMERA_ZOOM = 20.62;
+const CAMERA_PITCH = 74;
+const CAMERA_ZOOM = 20.55;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 0.8;
-const CAMERA_FOLLOW_MIN_MS = 220;
-const CAMERA_MOVE_DEADBAND_METERS = 1.8;
-const CAMERA_FOLLOW_MOVE_MIN_MS = 420;
-const GPS_POSITION_DEADBAND_METERS = 1.35;
-const GPS_JUMP_HARD_LIMIT_METERS = 55;
-const MAP_RENDER_RADIUS_METERS = 680;
-const MAP_RENDER_RADIUS_MIN_UPDATE_METERS = 120;
+const CAMERA_AHEAD_METERS = 8.0;
+const CAMERA_FOLLOW_MIN_MS = 360;
+const CAMERA_MOVE_DEADBAND_METERS = 6;
+const CAMERA_FOLLOW_MOVE_MIN_MS = 1100;
+const GPS_POSITION_DEADBAND_METERS = 4.5;
+const GPS_JUMP_HARD_LIMIT_METERS = 38;
 const HEADING_DEADBAND_DEG = 14;
 const HEADING_SMOOTH_ALPHA = 0.055;
 function degToRad(d){ return d * Math.PI / 180; }
@@ -1120,67 +1117,6 @@ function getScreenOrientationAngle(){
 function shortestHeadingDiff(target, current){
   return ((target - current + 540) % 360) - 180;
 }
-
-function lngLatBoundsAround(center, radiusMeters=MAP_RENDER_RADIUS_METERS){
-  const lng = Number(center?.[0] ?? state.playerWorld?.[0] ?? 106.79884);
-  const lat = Number(center?.[1] ?? state.playerWorld?.[1] ?? -6.59725);
-  const latDelta = radiusMeters / 110540;
-  const lngDelta = radiusMeters / (111320 * Math.cos(lat * Math.PI / 180));
-  return [[lng - lngDelta, lat - latDelta], [lng + lngDelta, lat + latDelta]];
-}
-function applyRenderRadius(center, force=false){
-  if(!map || !center) return;
-  const last = state.__renderBoundsCenter;
-  if(!force && last && haversineMeters(last, center) < MAP_RENDER_RADIUS_MIN_UPDATE_METERS) return;
-  state.__renderBoundsCenter = [center[0], center[1]];
-  try{ map.setMaxBounds(lngLatBoundsAround(center)); }catch(e){}
-}
-
-function bearingBetweenCoords(from, to){
-  if(!from || !to) return null;
-  const lon1 = degToRad(from[0]);
-  const lat1 = degToRad(from[1]);
-  const lon2 = degToRad(to[0]);
-  const lat2 = degToRad(to[1]);
-  const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
-  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
-  const brng = Math.atan2(y, x) * 180 / Math.PI;
-  return normalizeHeading(brng);
-}
-function facingFromBearingOnScreen(worldBearing){
-  const camera = getCameraBearing();
-  const rel = normalizeHeading(worldBearing - camera);
-  if(rel >= 315 || rel < 45) return "up";
-  if(rel >= 45 && rel < 135) return "right";
-  if(rel >= 135 && rel < 225) return "down";
-  return "left";
-}
-function applyGpsWalkingVisual(prevCoord, nextCoord, gpsHeading, speed=0){
-  const moved = prevCoord && nextCoord ? haversineMeters(prevCoord, nextCoord) : 0;
-  let bearing = null;
-  if(Number.isFinite(gpsHeading) && speed > 0.45){
-    bearing = normalizeHeading(gpsHeading);
-  }
-  if(bearing === null && moved >= 0.75){
-    bearing = bearingBetweenCoords(prevCoord, nextCoord);
-  }
-  if(bearing !== null){
-    state.gpsMoveBearing = bearing;
-    state.gpsLastMoveAt = Date.now();
-    // Dalam mode jalan kaki, kamera diarahkan ke arah berjalan agar "maju" selalu terasa ke atas layar.
-    state.deviceHeadingEnabled = true;
-    state.deviceHeadingBearing = bearing;
-    state.deviceHeadingSmooth = bearing;
-    setPlayerAnim("walk", "up");
-    followPlayerCamera({ bearing, zoom: CAMERA_ZOOM, duration: 520, force:true });
-  }else if(Date.now() - (state.gpsLastMoveAt || 0) > 2600){
-    setPlayerAnim("idle", "up");
-  }
-}
-function setGpsWalkingClass(active){
-  document.getElementById("app")?.classList.toggle("app-gps-walking", !!active);
-}
-
 function applyDeviceHeadingToCamera(heading, duration=240){
   heading = normalizeHeading(heading);
   if(heading === null) return;
@@ -1241,7 +1177,63 @@ function lockPitchOnly(){
   }
 }
 
-const MAPLIBRE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const MAPLIBRE_STYLE_URL = window.BOGORDEX_MAP_STYLE || "https://tiles.openfreemap.org/styles/liberty";
+
+function makeLngLatBounds(center, radiusMeters){
+  const lng = Number(center && center[0]);
+  const lat = Number(center && center[1]);
+  const r = Number(radiusMeters || 820);
+  if(!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+  const dLat = r / 110540;
+  const dLng = r / (111320 * Math.cos(lat * Math.PI/180) || 1);
+  return [[lng - dLng, lat - dLat], [lng + dLng, lat + dLat]];
+}
+function updateRenderBounds(force=false){
+  if(!map || !state.playerWorld) return;
+  const center = state.playerWorld;
+  const last = state.renderBoundsCenter;
+  if(!force && last && haversineMeters(last, center) < Math.max(120, state.renderRadiusMeters * 0.28)) return;
+  const bounds = makeLngLatBounds(center, state.renderRadiusMeters);
+  if(!bounds) return;
+  state.renderBoundsCenter = [center[0], center[1]];
+  try{ map.setMaxBounds(bounds); }catch(e){ console.warn('render bounds skip', e); }
+}
+function clearRenderBounds(){ try{ if(map) map.setMaxBounds(null); }catch(e){} }
+function bearingBetweenCoords(a, b){
+  if(!a || !b) return null;
+  const lon1 = degToRad(a[0]);
+  const lon2 = degToRad(b[0]);
+  const lat1 = degToRad(a[1]);
+  const lat2 = degToRad(b[1]);
+  const y = Math.sin(lon2-lon1) * Math.cos(lat2);
+  const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(lon2-lon1);
+  return normalizeHeading(Math.atan2(y,x) * 180 / Math.PI);
+}
+function facingFromMovementBearing(moveBearing){
+  if(typeof moveBearing !== 'number' || !Number.isFinite(moveBearing)) return state.facing || 'up';
+  const cam = getCameraBearing();
+  const rel = normalizeHeading(moveBearing - cam);
+  if(rel >= 315 || rel < 45) return 'up';
+  if(rel >= 45 && rel < 135) return 'right';
+  if(rel >= 135 && rel < 225) return 'down';
+  return 'left';
+}
+function applyGpsWalkAnimation(prevCoord, nextCoord, pos){
+  const dist = prevCoord ? haversineMeters(prevCoord, nextCoord) : 0;
+  let moveBearing = null;
+  if(pos && pos.coords && Number.isFinite(pos.coords.heading) && Number(pos.coords.speed || 0) > 0.45){
+    moveBearing = normalizeHeading(pos.coords.heading);
+  }else if(dist > 0.65){
+    moveBearing = bearingBetweenCoords(prevCoord, nextCoord);
+  }
+  if(dist > 0.75){
+    const facing = facingFromMovementBearing(moveBearing);
+    state.gpsMovingUntil = Date.now() + 1700;
+    if(!playerSprite().classList.contains('walk') || state.facing !== facing) setPlayerAnim('walk', facing);
+  }else if(Date.now() > (state.gpsMovingUntil || 0)){
+    if(!playerSprite().classList.contains('idle')) setPlayerAnim('idle', state.facing || 'up');
+  }
+}
 
 if (!window.maplibregl) {
   const el = document.getElementById("statusText");
@@ -1254,8 +1246,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 19.55,
-  maxZoom: 21.15,
+  minZoom: 19.6,
+  maxZoom: 21.0,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -1271,13 +1263,13 @@ const map = new maplibregl.Map({
 });
 try{ map.touchZoomRotate.enableRotation(); }catch(e){}
 try{ map.dragRotate.enable(); }catch(e){}
-applyRenderRadius(state.playerWorld, true);
 
 
 function setupMapLibre3D(){
   // V34: Pokemon GO/anime map mode. Gedung 3D disembunyikan supaya peta terasa lapang,
   // tapi layer collision transparan tetap ada agar karakter tidak gampang masuk area bangunan.
   setupAnimeMapMode();
+  tuneMapLibreTone();
   enhanceRoadVisibility();
   applySceneTheme();
   refreshEnvironment(true);
@@ -1320,10 +1312,10 @@ function setupAnimeMapMode(){
         type:'fill-extrusion',
         minzoom:15,
         paint:{
-          'fill-extrusion-color':'#78ddff',
+          'fill-extrusion-color':'#82dce9',
           'fill-extrusion-height':['interpolate',['linear'],['zoom'],15,2,18,['coalesce',['get','render_height'],['get','height'],18]],
           'fill-extrusion-base':['coalesce',['get','render_min_height'],['get','min_height'],0],
-          'fill-extrusion-opacity':0.22,
+          'fill-extrusion-opacity':0.18,
           'fill-extrusion-vertical-gradient':true
         }
       }, beforeId);
@@ -1346,6 +1338,26 @@ function setupAnimeMapMode(){
   }
 }
 
+
+
+function tuneMapLibreTone(){
+  if(!map || !map.getStyle) return;
+  const style = map.getStyle();
+  const layers = style.layers || [];
+  layers.forEach(layer => {
+    const id = String(layer.id || '').toLowerCase();
+    try{
+      if(layer.type === 'background') map.setPaintProperty(layer.id, 'background-color', '#dff8ec');
+      if(layer.type === 'fill'){
+        if(id.includes('water')) map.setPaintProperty(layer.id, 'fill-color', '#9fdfff');
+        if(id.includes('park') || id.includes('grass') || id.includes('landuse') || id.includes('wood')) map.setPaintProperty(layer.id, 'fill-opacity', 0.78);
+      }
+      if(layer.type === 'line' && (id.includes('road') || id.includes('street') || id.includes('transportation'))){
+        try{ map.setPaintProperty(layer.id, 'line-opacity', 0.92); }catch(e){}
+      }
+    }catch(e){}
+  });
+}
 
 function enhanceRoadVisibility(){
   // v61 plain road rendering from base style
@@ -1970,69 +1982,60 @@ async function requestDeviceCompass(){
 function startLocation(){
   requestDeviceCompass();
   if(!navigator.geolocation){ updateStatus("Browser tidak mendukung lokasi"); return; }
-  updateStatus("Mengambil lokasi GPS real…");
-  setGpsWalkingClass(true);
+  updateStatus("Mengambil lokasi…");
   if(state.geoWatch !== null) navigator.geolocation.clearWatch(state.geoWatch);
   state.geoWatch = navigator.geolocation.watchPosition(
     (pos) => {
       state.hasRealGps = true;
-      const acc = Number(pos.coords.accuracy || 999);
-      state.gpsLastAccuracy = acc;
       const incomingGps = [pos.coords.longitude, pos.coords.latitude];
       const nowMs = Date.now();
-
-      // Kalau akurasi kelewat liar, jangan langsung loncat. Tetap kasih status agar user tahu.
-      if(acc > 95 && state.gpsSmooth){
-        updateStatus("GPS kurang akurat • cari area terbuka");
-        return;
-      }
-
-      const prevWorld = state.playerWorld ? [state.playerWorld[0], state.playerWorld[1]] : null;
       if(!state.gpsSmooth){
         state.gpsSmooth = incomingGps;
         state.gpsLastAccepted = incomingGps;
         state.gpsAcceptedAt = nowMs;
       }else{
         const jumpRaw = haversineMeters(state.gpsSmooth, incomingGps);
-        const elapsed = nowMs - (state.gpsAcceptedAt || 0);
-        if(jumpRaw < GPS_POSITION_DEADBAND_METERS && elapsed < 1200){
-          if(Date.now() - (state.gpsLastMoveAt || 0) > 2200) setPlayerAnim("idle", "up");
+        if(jumpRaw < GPS_POSITION_DEADBAND_METERS && (nowMs - (state.gpsAcceptedAt || 0)) < 1400){
           return;
         }
-        const alpha = jumpRaw > GPS_JUMP_HARD_LIMIT_METERS ? 0.18 : (jumpRaw > 12 ? 0.32 : 0.42);
-        state.gpsSmooth = [
+        const alpha = jumpRaw > GPS_JUMP_HARD_LIMIT_METERS ? 0.12 : (jumpRaw > 14 ? 0.09 : 0.045);
+        const nextSmooth = [
           state.gpsSmooth[0] + (incomingGps[0] - state.gpsSmooth[0]) * alpha,
           state.gpsSmooth[1] + (incomingGps[1] - state.gpsSmooth[1]) * alpha
         ];
-        state.gpsLastAccepted = state.gpsSmooth;
+        if(state.gpsLastAccepted){
+          const acceptedJump = haversineMeters(state.gpsLastAccepted, nextSmooth);
+          if(acceptedJump < GPS_POSITION_DEADBAND_METERS && (nowMs - (state.gpsAcceptedAt || 0)) < 1200){
+            return;
+          }
+        }
+        state.gpsSmooth = nextSmooth;
+        state.gpsLastAccepted = nextSmooth;
         state.gpsAcceptedAt = nowMs;
       }
-
-      let nextWorld = state.gpsSmooth;
-      const snapped = snapCoordToNearestRoad(nextWorld, 420);
-      if(snapped) nextWorld = snapped;
-
-      // GPS real jadi sumber utama. Offset manual direset supaya karakter tidak melenceng dari posisi jalan kaki.
-      state.gpsBase = nextWorld;
+      const prevWorld = state.playerWorld ? [state.playerWorld[0], state.playerWorld[1]] : null;
+      state.gpsBase = state.gpsSmooth;
       state.offsetMeters.x = 0;
       state.offsetMeters.y = 0;
-      state.playerWorld = nextWorld;
-      state.gpsPrevWorld = prevWorld;
-      applyRenderRadius(nextWorld);
-
+      state.playerWorld = [state.gpsSmooth[0], state.gpsSmooth[1]];
+      snapPlayerToRoad(true);
+      applyGpsWalkAnimation(prevWorld, state.playerWorld, pos);
       updatePlayerMapMarker();
-      const spd = Number(pos.coords.speed || 0);
-      const gpsHeading = Number(pos.coords.heading);
-      applyGpsWalkingVisual(prevWorld, nextWorld, Number.isFinite(gpsHeading) ? gpsHeading : null, spd);
-      if(!state.browsing){
-        followPlayerCamera({ bearing: state.gpsMoveBearing ?? getCameraBearing(), zoom: CAMERA_ZOOM, duration:360, force:true });
+      updateRenderBounds();
+      if(pos.coords && Number.isFinite(pos.coords.heading)){
+        if(!state.deviceHeadingEnabled && (pos.coords.speed || 0) > 0.55){
+          applyDeviceHeadingToCamera(pos.coords.heading, 220);
+        }
+      }
+      if(!state.browsing && !state.move.up && !state.move.down && !state.move.left && !state.move.right){
+        followPlayerCamera({ duration:420, force:true });
       }
       detectNearby();
-      updateStatus(`Lokasi aktif • GPS walking${acc ? " • ±" + Math.round(acc) + "m" : ""}`);
+      updateStatus(state.deviceHeadingEnabled ? "Lokasi aktif • GPS walking • kompas aktif" : "Lokasi aktif • GPS walking");
       refreshEnvironment();
     },
-    (err) => { state.hasRealGps = false; setGpsWalkingClass(false); updateStatus("Lokasi gagal: " + err.message); },
-    { enableHighAccuracy: true, maximumAge: 1200, timeout: 15000 }
+    (err) => { state.hasRealGps = false; updateStatus("Lokasi gagal: " + err.message); },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
   );
 }
 function startBrowse(){
@@ -2221,13 +2224,12 @@ function tryMoveWithCollision(mx, my){
 }
 
 function updateMovement(dt=1/60){
-  const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
-  const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
-  // Kalau GPS real aktif, karakter tidak digerakkan tombol. Dia hanya mengikuti perpindahan GPS.
-  if(state.hasRealGps && state.gpsWalkingMode){
-    if(Date.now() - (state.gpsLastMoveAt || 0) > 2600 && !playerSprite().classList.contains("idle")) setPlayerAnim("idle", "up");
+  if(state.hasRealGps && state.geoWatch !== null){
+    if(Date.now() > (state.gpsMovingUntil || 0) && !playerSprite().classList.contains('idle')) setPlayerAnim('idle', state.facing || 'up');
     return;
   }
+  const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
+  const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
   if(!forwardInput && !strafeInput){
     if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle");
     return;
@@ -2260,6 +2262,7 @@ function updateMovement(dt=1/60){
   if(moved){
     snapPlayerToRoad();
     updatePlayerMapMarker();
+    updateRenderBounds();
     if(!state.browsing){ followPlayerCamera({ duration: 220 }); }
     detectNearby();
   }else{
@@ -2279,6 +2282,7 @@ function bindMoveButton(btn){
 
 map.on("load", () => {
   setupMapLibre3D();
+  updateRenderBounds(true);
   map.addSource("route-k5",{type:"geojson",data:routeFeatures.k5});
   map.addSource("route-k6",{type:"geojson",data:routeFeatures.k6});
   map.addSource("route-run",{type:"geojson",data:routeFeatures.run});
@@ -2303,17 +2307,16 @@ map.on("load", () => {
     }
   });
   recomputePlayerWorld();
-  applyRenderRadius(state.playerWorld, true);
   snapPlayerToRoad(true);
   createPlayerMapMarker();
   followPlayerCamera({ zoom: CAMERA_ZOOM, force:true });
   lockPitchOnly();
   document.getElementById("sheetContent").innerHTML = `
-    <h3>BogorDex GO v71 GPS Walking</h3>
-    <p>Mode HP sekarang fokus jalan kaki real: karakter mengikuti GPS, kamera lebih dekat, dan arah jalan dibuat terasa maju ke atas layar.</p>
-    <div class="section"><div class="section-title">Mode Utama</div><p>Tekan GPS lalu berjalan. Tombol arah hanya fallback saat GPS belum aktif.</p></div>
+    <h3>BogorDex GO v55 Camera Smooth</h3>
+    <p>MapLibre street-anime mode: kamera lebih rendah seperti berdiri di jalan, rotate kiri-kanan aktif, pitch atas-bawah dikunci, gedung transparan, dan karakter tetap road-only.</p>
+    <div class="section"><div class="section-title">Fix Inti</div><p>Basis MapLibre tetap dipakai tanpa kartu kredit Mapbox. Nuansa dibuat lebih game HP/Pokemon GO: gedung ghost transparan, kamera dari belakang karakter, MapDex phone aktif, dan laporan titik tetap jalan.</p></div>
   `;
-  state.lastPoi = {id:"intro",name:"BogorDex GO v71 GPS Walking",desc:"Mode third-person street view yang lebih stabil, terang, dan tidak terlalu sensitif ke GPS.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
+  state.lastPoi = {id:"intro",name:"BogorDex GO v55 Camera Smooth",desc:"Mode third-person street view yang lebih stabil, terang, dan tidak terlalu sensitif ke GPS.",fungsi:"Dekati portal/NPC untuk quest, rotate/tilt map, atau tambah laporan titik dari menu utama.",tupoksi:"Laporan user tersimpan lokal dulu dan siap disambungkan ke Firebase/GAS pada versi berikutnya.",group:"SISTEM",aktif:true};
   syncMiniButton();
   loadUserReports();
   renderUserReports();
@@ -2352,7 +2355,7 @@ function loop(now){
   if(state.collisionCooldown > 0) state.collisionCooldown -= 1;
   updateMovement(dt);
   state.__snapTicker = (state.__snapTicker || 0) + 1;
-  if(!state.hasRealGps && !state.move.up && !state.move.down && !state.move.left && !state.move.right && state.__snapTicker % 12 === 0){
+  if(!state.move.up && !state.move.down && !state.move.left && !state.move.right && state.__snapTicker % 12 === 0){
     snapPlayerToRoad(true);
     updatePlayerMapMarker();
   }
@@ -2449,7 +2452,7 @@ function resetGameCamera(){
   requestDeviceCompass();
   state.browsing = false;
   if(state.snapTimer) clearTimeout(state.snapTimer);
-  state.browsing = false; document.getElementById("app")?.classList.remove("app-browsing"); followPlayerCamera({ zoom: CAMERA_ZOOM, duration: 320 });
+  state.browsing = false; document.getElementById("app")?.classList.remove("app-browsing"); updateRenderBounds(true); followPlayerCamera({ zoom: CAMERA_ZOOM, duration: 320, force:true });
 }
 
 
@@ -2462,8 +2465,7 @@ function getMapDexItems(){
 }
 function focusMapDexItem(item){
   closeMapDex();
-  applyRenderRadius(item.coords, true);
-  map.easeTo({ center:item.coords, zoom:CAMERA_ZOOM, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
+  map.easeTo({ center:item.coords, zoom:19.45, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
   if(item.type === "portal" && item.ref){ markPortalPopupDone(item.ref.id); openSheet(item.ref, "manual"); }
   if(item.type === "npc" && item.ref) openNpcDialog(item.ref.id);
   if(item.type === "report" && item.ref){
