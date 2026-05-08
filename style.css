@@ -1984,3 +1984,16 @@ html,body,#app{
   .nav-center-meta{font-size:12px}
   .nav-cancel-btn{padding:9px 12px;font-size:12px}
 }
+
+
+/* ===== v71 GPS walking focus ===== */
+.app-gps-walking .move-pad{opacity:.34;transform:scale(.82);filter:saturate(.75);transition:opacity .25s ease,transform .25s ease}
+.app-gps-walking .move-pad::after{content:'GPS';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-weight:1000;font-size:13px;color:#17406f;text-shadow:0 1px 0 rgba(255,255,255,.9);letter-spacing:.08em;pointer-events:none}
+@media (max-width: 768px){
+  .top-status.compact-status{transform:scale(.92);transform-origin:top left;max-width:176px}
+  .weather-chip{transform:translateX(-50%) scale(.88);transform-origin:top center}
+  .fab-locate{right:18px!important;bottom:238px!important}
+  .mapdex-action{right:18px!important;bottom:132px!important}
+  .dex-action{right:18px!important;bottom:34px!important}
+  .player-map-marker .player-sprite,.player-sprite-image{image-rendering:auto}
+}
