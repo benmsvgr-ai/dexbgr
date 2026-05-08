@@ -122,6 +122,15 @@
       </div>
     </aside>
 
+    <aside id="ruboAssistant" class="rubo-assistant" aria-live="polite">
+      <button id="ruboAssistantClose" class="rubo-assistant-close" type="button" title="Sembunyikan RUBO">×</button>
+      <img id="ruboFace" src="assets/rubo/SERIUS-RUBO.png" alt="RUBO Mascot">
+      <div class="rubo-speech">
+        <b id="ruboTitle">RUBO siap bantu!</b>
+        <small id="ruboText">Jelajahi Bogor, cek portal, dan bantu warga lewat laporan titik.</small>
+      </div>
+    </aside>
+
 
     <div class="reference-checklist" aria-hidden="true">
       <div class="ref-card"><b>✔ KAMERA & ZOOM SEPERTI GAMBAR REFERENSI</b><span>• Jarak kamera pas<br>• Fokus area dekat karakter</span></div>
@@ -185,7 +194,8 @@
     <div id="reportModal" class="report-modal hidden">
       <div class="report-card report-card-v77">
         <button id="reportCloseBtn" class="report-close" title="Tutup">×</button>
-        <div class="report-mascot" aria-hidden="true">
+        <div class="report-mascot report-mascot-rubo" aria-hidden="true">
+          <img id="reportMascotImg" src="assets/rubo/SERIUS-RUBO.png" alt="RUBO">
           <div class="mascot-bubble">✨</div>
           <div class="mascot-pin">📍</div>
         </div>
@@ -249,7 +259,7 @@
         </div>
         <div class="mapdex-list-head"><b>⌖ Temuan Terdekat</b><span id="mapDexFoundCount">0 ditemukan</span></div>
         <div id="mapDexList" class="mapdex-list mapdex-list-v77"></div>
-        <div class="mapdex-tip">✨ Tip: Dekatkan dirimu untuk melihat detail lokasi.</div>
+        <div class="mapdex-tip mapdex-tip-rubo"><img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"> <span>✨ Tip: Dekatkan dirimu untuk melihat detail lokasi.</span></div>
       </div>
     </div>
 
@@ -293,6 +303,7 @@
     <div id="myReportModal" class="my-report-modal hidden">
       <div class="my-report-card">
         <button id="myReportCloseBtn" class="report-close" title="Tutup">×</button>
+        <div class="my-report-mascot"><img id="myReportMascotImg" src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"></div>
         <div class="my-report-kicker">BOGORDEX</div>
         <h3>Info Titik Saya</h3>
         <p>Kelola informasi yang kamu buat di BogorDex.</p>
@@ -314,7 +325,7 @@
           <div class="history-row"><span></span><div><strong>Dibuat</strong><small id="myReportCreatedAt">-</small></div><em>Oleh Kamu</em></div>
           <div class="history-row purple"><span></span><div><strong>Terakhir Diperbarui</strong><small id="myReportUpdatedAt">-</small></div><em>Oleh Kamu</em></div>
         </div>
-        <div class="my-report-tip">✨ Info Anda membantu Bogor jadi lebih baik!</div>
+        <div class="my-report-tip my-report-tip-rubo"><img src="assets/rubo/KAGET-RUBO.png" alt="RUBO"><span>✨ Info Anda membantu Bogor jadi lebih baik!</span></div>
       </div>
     </div>
 
@@ -324,7 +335,7 @@
       <div class="arrival-card">
         <div class="arrival-glow"></div>
         <button id="arrivalCloseBtn" class="arrival-close" type="button">×</button>
-        <div class="arrival-icon">✓</div>
+        <div class="arrival-icon arrival-icon-rubo"><img id="arrivalRuboImg" src="assets/rubo/KAGET-RUBO.png" alt="RUBO"></div>
         <div class="arrival-kicker">Tujuan tercapai</div>
         <h2 id="arrivalTitle">Kamu sudah sampai!</h2>
         <p id="arrivalSub">Lokasi tujuan berhasil ditemukan.</p>
@@ -393,7 +404,7 @@
       }
       function loadApp(){
         const s = document.createElement("script");
-        s.src = "app.js?v=81";
+        s.src = "app.js?v=82";
         s.onerror = function(){ setStatus("Gagal memuat app.js"); };
         document.body.appendChild(s);
       }
