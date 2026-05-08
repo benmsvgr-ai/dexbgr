@@ -451,6 +451,46 @@ const statusEl = () => document.getElementById("statusText");
 const sheetEl = () => document.getElementById("bottomSheet");
 const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
 
+const RUBO = {
+  kaget: "assets/rubo/KAGET-RUBO.png",
+  kecewa: "assets/rubo/KECEWA-RUBO.png",
+  marah: "assets/rubo/MARAH-RUBO.png",
+  ngambek: "assets/rubo/NGAMBEK-RUBO.png",
+  sedih: "assets/rubo/SEDIH-RUBO.png",
+  serius: "assets/rubo/SERIUS-RUBO.png"
+};
+function ruboImg(name){ return RUBO[name] || RUBO.serius; }
+function setRuboEmotion(emotion="serius", title="RUBO siap bantu!", text="Jelajahi Bogor dan bantu warga lewat laporan titik.", opts={}){
+  const img = document.getElementById("ruboFace");
+  const titleEl = document.getElementById("ruboTitle");
+  const textEl = document.getElementById("ruboText");
+  const box = document.getElementById("ruboAssistant");
+  if(img) img.src = ruboImg(emotion);
+  if(titleEl) titleEl.textContent = title;
+  if(textEl) textEl.textContent = text;
+  if(box && !opts.silent){
+    box.classList.remove("hidden");
+    box.classList.add("pulse");
+    clearTimeout(setRuboEmotion._pulse);
+    setRuboEmotion._pulse = setTimeout(()=>box.classList.remove("pulse"), 900);
+  }
+  const reportMascot = document.getElementById("reportMascotImg"); if(reportMascot) reportMascot.src = ruboImg(emotion);
+  const arrivalRubo = document.getElementById("arrivalRuboImg"); if(arrivalRubo) arrivalRubo.src = ruboImg(emotion === "serius" ? "kaget" : emotion);
+  const myReportMascot = document.getElementById("myReportMascotImg"); if(myReportMascot) myReportMascot.src = ruboImg(emotion);
+}
+function hideRuboAssistant(){ document.getElementById("ruboAssistant")?.classList.add("hidden"); }
+function relativeTimeFromIso(iso){
+  const t = new Date(iso || Date.now()).getTime();
+  const diff = Math.max(0, Date.now() - t);
+  const min = Math.floor(diff / 60000);
+  if(min < 1) return "baru saja";
+  if(min < 60) return `${min} menit lalu`;
+  const hour = Math.floor(min / 60);
+  if(hour < 24) return `${hour} jam lalu`;
+  const day = Math.floor(hour / 24);
+  return `${day} hari lalu`;
+}
+
 function toastStackEl(){ return document.getElementById("animeToastStack"); }
 function rewardBannerEl(){ return document.getElementById("rewardBanner"); }
 function navBannerEl(){ return document.getElementById("navCenterBanner"); }
@@ -640,6 +680,7 @@ function currentNavigationInstruction(){
   return { text, sub:`${formatDistance(dist)} • sisa ${formatDistance(destDist)}`, icon:instructionIcon(text), dist, destDist };
 }
 function showArrivalPopup(){
+  setRuboEmotion('kaget','Kamu sudah sampai!','Yuk cek info di titik ini.');
   const target = state.navigationTarget;
   if(!target || state.arrivalPopupShownFor === (target.id || target.title)) return;
   state.arrivalPopupShownFor = target.id || target.title;
@@ -669,6 +710,7 @@ function checkOffRouteAndReroute(){
   const now = Date.now();
   if(now - (state.lastRerouteAt || 0) < 8000) return;
   state.lastRerouteAt = now;
+  setRuboEmotion('kecewa','Waduh, keluar jalur','Aku hitung ulang rutenya ya.');
   showAnimeToast('event','Keluar jalur', 'Menghitung ulang rute...', [`melenceng ${formatDistance(d)}`]);
   updateStatus('Keluar jalur • menghitung ulang rute');
   const target = state.navigationTarget;
@@ -730,6 +772,27 @@ function updatePlayerUiMeta(){
   const lbl = document.querySelector('.player-name-tag b');
   if(lbl) lbl.textContent = PLAYER_PROFILE.name;
 }
+
+function renderCharacterBadges(){
+  const host = document.getElementById('characterBadgeGallery');
+  const count = document.getElementById('profileBadgeCount');
+  if(!host) return;
+  const badges = (state.badges && state.badges.length ? state.badges : [
+    {id:'BDG_EXPLORER',name:'Explorer',icon:'🧭',desc:'Lokasi pertama'},
+    {id:'BDG_ROAD',name:'Road Guardian',icon:'🛡️',desc:'Peduli jalan'},
+    {id:'BDG_COIN',name:'Coin Collector',icon:'🪙',desc:'Kumpul koin'},
+    {id:'BDG_HELPER',name:'Helper',icon:'🤝',desc:'Bantu warga'},
+    {id:'BDG_CAMERA',name:'Photogenic',icon:'📸',desc:'Foto lokasi'},
+    {id:'BDG_MAPDEX',name:'MapDex',icon:'🗺️',desc:'Isi dex'}
+  ]).slice(0,8);
+  const unlockedCount = Math.max(state.unlockedBadges.size || 0, Math.min(4, badges.length));
+  if(count) count.textContent = `${unlockedCount} / ${state.badges.length || badges.length}`;
+  host.innerHTML = badges.map((b, idx) => {
+    const unlocked = state.unlockedBadges.has(b.id) || idx < unlockedCount;
+    return `<div class="badge-card-v77 ${unlocked ? '' : 'locked'}"><span class="badge-icon">${b.icon || '🏅'}</span><b>${b.name || 'Badge'}</b><small>${unlocked ? (b.desc || 'Terbuka') : 'Terkunci'}</small></div>`;
+  }).join('');
+}
+
 function chatDock(){ return document.getElementById('animeChatDock'); }
 function openChatDock(){ chatDock()?.classList.remove('collapsed'); }
 function closeChatDock(){ chatDock()?.classList.add('collapsed'); }
@@ -2590,13 +2653,7 @@ function reportMarkerElement(report){
   el.innerHTML = `<span class="report-pin ${report.category}"><span>${reportEmoji(report.category)}</span></span>`;
   el.addEventListener("click", (ev) => {
     ev.preventDefault(); ev.stopPropagation();
-    openSheet({
-      id:report.id, name:"Info Warga: " + reportEmoji(report.category),
-      desc:report.note || "Catatan lapangan dari user.",
-      fungsi:"Laporan titik lapangan BogorDex.",
-      tupoksi:GAS_URL ? "Laporan otomatis dikirim ke Google Sheets/GAS dan tetap disimpan lokal di browser." : "Laporan tersimpan lokal. Isi GAS URL kalau mau otomatis masuk Google Sheets.",
-      group:"CITIZEN REPORT", aktif:true
-    }, "manual");
+    openMyReportModal(report);
   });
   return el;
 }
@@ -2610,6 +2667,7 @@ function renderUserReports(){
   });
 }
 function openReportModal(){
+  setRuboEmotion('serius','Tambah info titik','Pilih kategori dan tulis keterangan singkat.');
   const noteEl = document.getElementById("reportNote");
   if(noteEl) noteEl.value = "";
   const counter = document.getElementById('reportCounter'); if(counter) counter.textContent = '0/200';
@@ -2618,7 +2676,7 @@ function openReportModal(){
   const loc = document.getElementById('reportLocationText'); if(loc) loc.textContent = 'BogorDex Area';
   document.getElementById("reportModal").classList.remove("hidden");
 }
-function closeReportModal(){ document.getElementById("reportModal").classList.add("hidden"); }
+function closeReportModal(){ document.getElementById("reportModal").classList.add("hidden"); setRuboEmotion('serius','RUBO siap bantu!','Jelajahi Bogor dan bantu warga lewat laporan titik.', {silent:true}); }
 function saveCurrentPointReport(){
   const category = document.getElementById("reportCategory").value || "lainnya";
   const note = (document.getElementById("reportNote").value || "").trim();
@@ -2635,11 +2693,70 @@ function saveCurrentPointReport(){
   closeReportModal();
   syncReportToGas(report);
   syncPlayerProgressToGas();
+  setRuboEmotion('kaget','Makasih, laporan masuk!','Info kamu bantu Bogor jadi lebih baik.');
   showAnimeToast('reward', 'Laporan warga tersimpan', note || 'Info lapangan baru berhasil dipasang', [`+${Number(report.reward_exp || 0)} EXP`, `+${Number(report.reward_coin || 0)} Coin`, reportEmoji(category) + ' ' + category]);
   showRewardBanner('Citizen Report', 'Info warga berhasil dipasang', 'Titik baru muncul di map dan masuk progres karakter', 2300);
   updateStatus(GAS_URL ? "Info warga dipasang dan dikirim ke Google Sheets" : "Info warga dipasang di map • isi GAS URL untuk kirim ke Google Sheets");
 }
 
+
+function reportTitle(category){
+  return { lobang:"Lubang Jalan", pohon:"Pohon Tumbang", pembangunan:"Pembangunan", macet:"Macet", lainnya:"Info Warga" }[category] || "Info Warga";
+}
+function reportStatusLabel(status){
+  return status === "benar" ? "Sudah benar" : status === "salah" ? "Perlu dicek lagi" : "Menunggu verifikasi";
+}
+function getActiveMyReport(){
+  if(!state.activeMyReportId) return null;
+  return (state.userReports || []).find(r => r.id === state.activeMyReportId) || null;
+}
+function openMyReportModal(report){
+  if(!report) return;
+  state.activeMyReportId = report.id;
+  setRuboEmotion(report.status === 'benar' ? 'kaget' : 'serius', 'Kelola laporanmu', 'Kamu bisa update, tandai benar, atau hapus laporan.');
+  const modal = document.getElementById('myReportModal');
+  if(!modal) return;
+  const title = reportTitle(report.category);
+  const st = report.status || 'pending';
+  document.getElementById('myReportTitle').textContent = title;
+  document.getElementById('myReportNote').textContent = report.note || 'Info titik dari user.';
+  document.getElementById('myReportArea').textContent = report.address || 'BogorDex Area';
+  document.getElementById('myReportAgo').textContent = relativeTimeFromIso(report.updatedAt || report.createdAt);
+  document.getElementById('myReportCreatedAt').textContent = new Date(report.createdAt || Date.now()).toLocaleString('id-ID');
+  document.getElementById('myReportUpdatedAt').textContent = new Date(report.updatedAt || report.createdAt || Date.now()).toLocaleString('id-ID');
+  const icon = document.getElementById('myReportIcon'); if(icon) icon.textContent = reportEmoji(report.category);
+  const status = document.getElementById('myReportStatus');
+  if(status){ status.textContent = reportStatusLabel(st); status.className = 'my-report-status ' + st; }
+  const mascot = document.getElementById('myReportMascotImg'); if(mascot) mascot.src = ruboImg(st === 'benar' ? 'kaget' : st === 'salah' ? 'kecewa' : 'serius');
+  modal.classList.remove('hidden');
+}
+function closeMyReportModal(){
+  document.getElementById('myReportModal')?.classList.add('hidden');
+}
+function updateActiveReportStatus(status='pending', note){
+  const r = getActiveMyReport(); if(!r) return;
+  r.status = status;
+  if(note) r.note = note;
+  r.updatedAt = new Date().toISOString();
+  saveUserReports();
+  renderUserReports();
+  renderMapDex();
+  openMyReportModal(r);
+  const emo = status === 'benar' ? 'kaget' : status === 'salah' ? 'kecewa' : 'serius';
+  setRuboEmotion(emo, status === 'benar' ? 'Sip, sudah benar!' : 'Status diperbarui', 'Riwayat laporan kamu sudah diperbarui.');
+  showAnimeToast('reward', 'Status laporan diperbarui', reportStatusLabel(status), [relativeTimeFromIso(r.updatedAt)]);
+}
+function deleteActiveReport(){
+  const r = getActiveMyReport(); if(!r) return;
+  if(!confirm('Hapus laporan ini dari BogorDex?')) return;
+  state.userReports = (state.userReports || []).filter(x => x.id !== r.id);
+  saveUserReports();
+  renderUserReports();
+  renderMapDex();
+  closeMyReportModal();
+  setRuboEmotion('ngambek','Laporan dihapus','Info titik ini sudah dihapus dari MapDex.');
+  showAnimeToast('event','Laporan dihapus','Info titik sudah tidak tampil di map.');
+}
 function openMainMenu(){ document.getElementById('mainMenuModal').classList.remove('hidden'); }
 function closeMainMenu(){ document.getElementById('mainMenuModal').classList.add('hidden'); }
 function scanNearestFromMenu(){
@@ -2662,6 +2779,7 @@ function resetGameCamera(){
 
 
 function openCharacterProfile(){
+  setRuboEmotion('serius','Profil Ranger','Lihat level, badge, dan progres eksplorasimu.');
   syncPlayerProfileFromProgress();
   updatePlayerUiMeta();
   const modal = document.getElementById('dexModal');
@@ -2729,6 +2847,7 @@ function focusMapDexItem(item){
   }
 }
 function openMapDex(){
+  setRuboEmotion('serius','MapDex Radar aktif','Aku bantu cari portal, NPC, dan laporan terdekat.');
   renderMapDex();
   document.getElementById("mapDexModal").classList.remove("hidden");
 }
@@ -2808,6 +2927,7 @@ const __navCancelBtn = document.getElementById("navCancelBtn"); if(__navCancelBt
 const __arrivalCloseBtn = document.getElementById("arrivalCloseBtn"); if(__arrivalCloseBtn){ __arrivalCloseBtn.addEventListener("click", closeArrivalPopup); }
 const __arrivalCheckinBtn = document.getElementById("arrivalCheckinBtn"); if(__arrivalCheckinBtn){ __arrivalCheckinBtn.addEventListener("click", () => { showAnimeToast('reward','Check-in berhasil', state.navigationTarget?.title || 'Lokasi', ['+10 EXP bonus']); state.playerProgress.exp += 10; syncPlayerProfileFromProgress(); savePlayerProgress(); syncPlayerProgressToGas(); closeArrivalPopup(); clearNavigationTarget(true); updatePlayerUiMeta(); }); }
 const __arrivalInfoBtn = document.getElementById("arrivalInfoBtn"); if(__arrivalInfoBtn){ __arrivalInfoBtn.addEventListener("click", () => { const p = state.navigationTarget?.poi; closeArrivalPopup(); if(p) openSheet(p,'manual'); }); }
+const __ruboClose = document.getElementById('ruboAssistantClose'); if(__ruboClose){ __ruboClose.addEventListener('click', hideRuboAssistant); }
 document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
 document.getElementById("chatToggleBtn").addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
 document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
@@ -2824,6 +2944,7 @@ document.addEventListener("keydown", (e) => { const k = e.key.toLowerCase(); if(
 document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=false; if(k==="s"||k==="arrowdown") state.move.down=false; if(k==="a"||k==="arrowleft") state.move.left=false; if(k==="d"||k==="arrowright") state.move.right=false; });
 setupTouchDragMovement();
 clearNavigationTarget(true);
+setTimeout(() => setRuboEmotion('serius','RUBO siap bantu!','Dekati portal, cek MapDex, atau laporkan info di titikmu.'), 800);
 
 updateWeatherChip();
 updatePlayerUiMeta();
