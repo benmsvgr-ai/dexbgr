@@ -1092,15 +1092,17 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 64;
-const CAMERA_ZOOM = 20.78;
+const CAMERA_PITCH = 56;
+const CAMERA_ZOOM = 20.62;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 2.4;
+const CAMERA_AHEAD_METERS = 0.8;
 const CAMERA_FOLLOW_MIN_MS = 220;
 const CAMERA_MOVE_DEADBAND_METERS = 1.8;
 const CAMERA_FOLLOW_MOVE_MIN_MS = 420;
 const GPS_POSITION_DEADBAND_METERS = 1.35;
 const GPS_JUMP_HARD_LIMIT_METERS = 55;
+const MAP_RENDER_RADIUS_METERS = 680;
+const MAP_RENDER_RADIUS_MIN_UPDATE_METERS = 120;
 const HEADING_DEADBAND_DEG = 14;
 const HEADING_SMOOTH_ALPHA = 0.055;
 function degToRad(d){ return d * Math.PI / 180; }
@@ -1117,6 +1119,21 @@ function getScreenOrientationAngle(){
 }
 function shortestHeadingDiff(target, current){
   return ((target - current + 540) % 360) - 180;
+}
+
+function lngLatBoundsAround(center, radiusMeters=MAP_RENDER_RADIUS_METERS){
+  const lng = Number(center?.[0] ?? state.playerWorld?.[0] ?? 106.79884);
+  const lat = Number(center?.[1] ?? state.playerWorld?.[1] ?? -6.59725);
+  const latDelta = radiusMeters / 110540;
+  const lngDelta = radiusMeters / (111320 * Math.cos(lat * Math.PI / 180));
+  return [[lng - lngDelta, lat - latDelta], [lng + lngDelta, lat + latDelta]];
+}
+function applyRenderRadius(center, force=false){
+  if(!map || !center) return;
+  const last = state.__renderBoundsCenter;
+  if(!force && last && haversineMeters(last, center) < MAP_RENDER_RADIUS_MIN_UPDATE_METERS) return;
+  state.__renderBoundsCenter = [center[0], center[1]];
+  try{ map.setMaxBounds(lngLatBoundsAround(center)); }catch(e){}
 }
 
 function bearingBetweenCoords(from, to){
@@ -1224,20 +1241,7 @@ function lockPitchOnly(){
   }
 }
 
-const MAPLIBRE_STYLE_URL = {
-  version: 8,
-  sources: {
-    osm: {
-      type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors"
-    }
-  },
-  layers: [
-    { id: "osm-base", type: "raster", source: "osm" }
-  ]
-};
+const MAPLIBRE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 if (!window.maplibregl) {
   const el = document.getElementById("statusText");
@@ -1250,8 +1254,8 @@ const map = new maplibregl.Map({
   style: MAPLIBRE_STYLE_URL,
   center: state.playerWorld,
   zoom: CAMERA_ZOOM,
-  minZoom: 20.05,
-  maxZoom: 21.35,
+  minZoom: 19.55,
+  maxZoom: 21.15,
   pitch: CAMERA_PITCH,
   minPitch: CAMERA_PITCH,
   maxPitch: CAMERA_PITCH,
@@ -1260,13 +1264,14 @@ const map = new maplibregl.Map({
   renderWorldCopies: false,
   refreshExpiredTiles: false,
   fadeDuration: 80,
-  maxTileCacheSize: 192,
+  maxTileCacheSize: 72,
   dragRotate: true,
   pitchWithRotate: false,
   touchPitch: false
 });
 try{ map.touchZoomRotate.enableRotation(); }catch(e){}
 try{ map.dragRotate.enable(); }catch(e){}
+applyRenderRadius(state.playerWorld, true);
 
 
 function setupMapLibre3D(){
@@ -2013,6 +2018,7 @@ function startLocation(){
       state.offsetMeters.y = 0;
       state.playerWorld = nextWorld;
       state.gpsPrevWorld = prevWorld;
+      applyRenderRadius(nextWorld);
 
       updatePlayerMapMarker();
       const spd = Number(pos.coords.speed || 0);
@@ -2297,6 +2303,7 @@ map.on("load", () => {
     }
   });
   recomputePlayerWorld();
+  applyRenderRadius(state.playerWorld, true);
   snapPlayerToRoad(true);
   createPlayerMapMarker();
   followPlayerCamera({ zoom: CAMERA_ZOOM, force:true });
@@ -2455,7 +2462,8 @@ function getMapDexItems(){
 }
 function focusMapDexItem(item){
   closeMapDex();
-  map.easeTo({ center:item.coords, zoom:19.45, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
+  applyRenderRadius(item.coords, true);
+  map.easeTo({ center:item.coords, zoom:CAMERA_ZOOM, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
   if(item.type === "portal" && item.ref){ markPortalPopupDone(item.ref.id); openSheet(item.ref, "manual"); }
   if(item.type === "npc" && item.ref) openNpcDialog(item.ref.id);
   if(item.type === "report" && item.ref){
