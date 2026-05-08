@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BogorDex v70 Anime Event UI</title>
+  <title>BogorDex v75 Turn Navigation</title>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -262,6 +262,22 @@
 
     <div id="animeToastStack" class="anime-toast-stack" aria-live="polite"></div>
 
+    <div id="arrivalPopup" class="arrival-popup hidden" aria-live="polite">
+      <div class="arrival-card">
+        <div class="arrival-glow"></div>
+        <button id="arrivalCloseBtn" class="arrival-close" type="button">×</button>
+        <div class="arrival-icon">✓</div>
+        <div class="arrival-kicker">Tujuan tercapai</div>
+        <h2 id="arrivalTitle">Kamu sudah sampai!</h2>
+        <p id="arrivalSub">Lokasi tujuan berhasil ditemukan.</p>
+        <div class="arrival-actions">
+          <button id="arrivalCheckinBtn" type="button">Check-in</button>
+          <button id="arrivalInfoBtn" type="button">Lihat Info</button>
+        </div>
+      </div>
+    </div>
+
+
     <div id="rewardBanner" class="reward-banner hidden" aria-live="polite">
       <div class="reward-banner-spark"></div>
       <div class="reward-banner-inner">
@@ -271,11 +287,18 @@
       </div>
     </div>
 
-    <div id="navCenterBanner" class="nav-center-banner hidden" aria-live="polite">
-      <div class="nav-center-kicker">Sedang menuju</div>
-      <div id="navCenterTitle" class="nav-center-title">Tujuan</div>
-      <div id="navCenterMeta" class="nav-center-meta">Menghitung rute...</div>
-      <button id="navCancelBtn" class="nav-cancel-btn" type="button">Batalkan</button>
+    <div id="navCenterBanner" class="nav-center-banner nav-v75 hidden" aria-live="polite">
+      <div id="navDirectionIcon" class="nav-direction-icon">↑</div>
+      <div class="nav-center-copy">
+        <div class="nav-center-kicker">Sedang menuju</div>
+        <div id="navCenterTitle" class="nav-center-title">Tujuan</div>
+        <div id="navInstructionText" class="nav-instruction-text">Ikuti jalur biru</div>
+        <div id="navCenterMeta" class="nav-center-meta">Menghitung rute...</div>
+      </div>
+      <div class="nav-right-box">
+        <div id="navDistanceText" class="nav-distance-text">-- m</div>
+        <button id="navCancelBtn" class="nav-cancel-btn" type="button">Batalkan</button>
+      </div>
     </div>
 
   </div>
