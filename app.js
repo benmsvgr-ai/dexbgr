@@ -364,24 +364,8 @@ function applyEnvironmentClasses(){
 }
 
 function applySceneTheme(){
-  if(!map || !map.getStyle || !map.isStyleLoaded()) return;
-  const isNight = false;
-  try{
-    if(map.getLayer('bdx-ghost-buildings')){
-      map.setPaintProperty('bdx-ghost-buildings', 'fill-extrusion-color', isNight ? '#7ea6ff' : '#87dcff');
-      map.setPaintProperty('bdx-ghost-buildings', 'fill-extrusion-opacity', isNight ? 0.28 : 0.34);
-    }
-  }catch(e){}
-  try{
-    if(typeof map.setLight === 'function'){
-      map.setLight({
-        anchor: 'viewport',
-        color: isNight ? '#bcd3ff' : '#fff4d2',
-        intensity: isNight ? 0.26 : 0.42,
-        position: [1.5, isNight ? 200 : 160, isNight ? 30 : 45]
-      });
-    }
-  }catch(e){}
+  // v61: no scene recolor patch
+  return;
 }
 
 async function refreshEnvironment(force=false){
@@ -703,89 +687,14 @@ function getVectorBuildingSourceId(){
 }
 
 function setupAnimeMapMode(){
-  if(!map || !map.getStyle) return;
-  const style = map.getStyle();
-  const layers = style.layers || [];
-
-  // Mode Pokemon GO: gedung tetap ada sebagai volume MapLibre, tapi transparan/tembus pandang.
-  layers.forEach(layer => {
-    const id = String(layer.id || '').toLowerCase();
-    const sl = String(layer['source-layer'] || '').toLowerCase();
-    if(id.includes('building') || sl.includes('building')){
-      try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
-      return;
-    }
-    // Hilangkan layer yang sering bikin garis/strip saat pitch tinggi.
-    const noisy = id.includes('hillshade') || id.includes('contour');
-    if(noisy){
-      try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
-    }
-  });
-
-  const vectorSourceId = getVectorBuildingSourceId();
-  if(!vectorSourceId) return;
-
-  try{
-    const labelLayer = layers.find(l => l.type === 'symbol' && l.layout && l.layout['text-field']);
-    const beforeId = labelLayer && labelLayer.id;
-    if(!map.getLayer('bdx-ghost-buildings')){
-      map.addLayer({
-        id:'bdx-ghost-buildings',
-        source:vectorSourceId,
-        'source-layer':'building',
-        type:'fill-extrusion',
-        minzoom:15,
-        paint:{
-          'fill-extrusion-color':'#78ddff',
-          'fill-extrusion-height':['interpolate',['linear'],['zoom'],15,2,18,['coalesce',['get','render_height'],['get','height'],18]],
-          'fill-extrusion-base':['coalesce',['get','render_min_height'],['get','min_height'],0],
-          'fill-extrusion-opacity':0.22,
-          'fill-extrusion-vertical-gradient':true
-        }
-      }, beforeId);
-    }
-    if(!map.getLayer('bdx-building-collision')){
-      map.addLayer({
-        id:'bdx-building-collision',
-        source:vectorSourceId,
-        'source-layer':'building',
-        type:'fill',
-        minzoom:15,
-        paint:{
-          'fill-color':'#6ee7ff',
-          'fill-opacity':0.001
-        }
-      }, beforeId);
-    }
-  }catch(err){
-    console.warn('Ghost building layer skipped:', err);
-  }
+  // v61 plain MapLibre mode: no extra hiding/ghost buildings/filter patches
+  return;
 }
 
 
 function enhanceRoadVisibility(){
-  if(!map || !map.getStyle) return;
-  const style = map.getStyle();
-  const layers = (style && style.layers) || [];
-  layers.forEach(layer => {
-    try{
-      const id = String(layer.id || '').toLowerCase();
-      const sl = String(layer['source-layer'] || '').toLowerCase();
-      const isRoad = layer.type === 'line' && (
-        id.includes('road') || id.includes('street') || id.includes('path') || id.includes('transport') ||
-        sl.includes('transportation') || sl.includes('road') || sl.includes('path')
-      );
-      if(!isRoad) return;
-      map.setPaintProperty(layer.id, 'line-opacity', 0.9);
-      if(id.includes('path') || sl.includes('path')){
-        map.setPaintProperty(layer.id, 'line-color', '#d8dde8');
-        map.setPaintProperty(layer.id, 'line-width', ['interpolate',['linear'],['zoom'],15,1.2,18,2.6,20,4.6]);
-      }else{
-        map.setPaintProperty(layer.id, 'line-color', '#c6ccd6');
-        map.setPaintProperty(layer.id, 'line-width', ['interpolate',['linear'],['zoom'],15,1.6,18,3.0,20,6.0]);
-      }
-    }catch(e){}
-  });
+  // v61 plain road rendering from base style
+  return;
 }
 
 const routeFeatures = {
