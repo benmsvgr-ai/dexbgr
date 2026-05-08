@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BogorDex v51 Road Focus Snap</title>
+  <title>BogorDex v70 Anime Event UI</title>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -258,6 +258,26 @@
         </div>
       </div>
     </div>
+  
+
+    <div id="animeToastStack" class="anime-toast-stack" aria-live="polite"></div>
+
+    <div id="rewardBanner" class="reward-banner hidden" aria-live="polite">
+      <div class="reward-banner-spark"></div>
+      <div class="reward-banner-inner">
+        <div id="rewardBannerKicker" class="reward-banner-kicker">Reward</div>
+        <div id="rewardBannerTitle" class="reward-banner-title">Badge terbuka!</div>
+        <div id="rewardBannerSub" class="reward-banner-sub">Koleksi baru berhasil dibuka</div>
+      </div>
+    </div>
+
+    <div id="navCenterBanner" class="nav-center-banner hidden" aria-live="polite">
+      <div class="nav-center-kicker">Sedang menuju</div>
+      <div id="navCenterTitle" class="nav-center-title">Tujuan</div>
+      <div id="navCenterMeta" class="nav-center-meta">Menghitung rute...</div>
+      <button id="navCancelBtn" class="nav-cancel-btn" type="button">Batalkan</button>
+    </div>
+
   </div>
   <script src="data.js"></script>
   <script>
@@ -292,7 +312,7 @@
       }
       function loadApp(){
         const s = document.createElement("script");
-        s.src = "app.js?v=71";
+        s.src = "app.js?v=74";
         s.onerror = function(){ setStatus("Gagal memuat app.js"); };
         document.body.appendChild(s);
       }
