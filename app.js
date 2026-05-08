@@ -1,6 +1,6 @@
 
 const SHEET_ID = window.BOGORDEX_MASTER_SHEET_ID || "1PcKcAJ0d8eco6gonlSxwffzmqEl-FjAsJ2tbxctzdnU";
-const GAS_URL = window.BOGORDEX_GAS_URL || "https://script.google.com/macros/s/AKfycby4M5zBlfdhqvpwQsTCjWkrhQISAMfU2KaexdJOUpH8-IsoWPrjYDR9rB_w53dYhOvx/exec";
+const GAS_URL = window.BOGORDEX_GAS_URL || "";
 const SHEETS = {
   lokasi: window.BOGORDEX_MASTER_SHEET_LOKASI || "MASTER_LOKASI",
   quest: window.BOGORDEX_MASTER_SHEET_QUEST || "MASTER_QUEST",
