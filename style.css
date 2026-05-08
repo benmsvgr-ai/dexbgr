@@ -1842,3 +1842,88 @@ html,body,#app{
   .fab-compass{right:96px !important;}
   .chat-toggle{right:10px !important;}
 }
+
+
+/* === v69 OSRM + anime ring upgrade === */
+.player-map-marker .player-ring{
+  overflow:visible !important;
+  border-color:rgba(104,240,255,.92) !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset,0 0 20px rgba(92,232,255,.28),0 0 42px rgba(120,188,255,.18) !important;
+  animation:ringPulseV69 2.1s ease-in-out infinite !important;
+}
+.player-map-marker .player-ring::before,
+.player-map-marker .player-ring::after{
+  content:"";
+  position:absolute;
+  inset:-8px;
+  border-radius:50%;
+  pointer-events:none;
+}
+.player-map-marker .player-ring::before{
+  border:2px solid rgba(145,241,255,.46);
+  opacity:.72;
+  animation:ringOuterV69 2.6s ease-out infinite;
+}
+.player-map-marker .player-ring::after{
+  inset:-3px;
+  background:conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(130,248,255,.0) 200deg, rgba(150,250,255,.9) 280deg, rgba(255,180,236,.9) 330deg, rgba(255,255,255,0) 360deg);
+  -webkit-mask:radial-gradient(circle, transparent 57%, #000 60%, #000 67%, transparent 70%);
+  mask:radial-gradient(circle, transparent 57%, #000 60%, #000 67%, transparent 70%);
+  animation:ringSpinV69 3.4s linear infinite;
+  filter:drop-shadow(0 0 10px rgba(116,239,255,.42));
+}
+.player-map-marker .player-shadow{
+  animation:shadowBreathV69 2.1s ease-in-out infinite !important;
+}
+.player-map-marker.is-moving .player-ring,
+.player-map-marker.is-routing .player-ring{
+  animation-duration:1.2s !important;
+}
+.player-map-marker.is-moving .player-ring::after,
+.player-map-marker.is-routing .player-ring::after{
+  animation-duration:1.4s !important;
+}
+.player-map-marker.is-routing .player-ring{
+  border-color:rgba(255,230,126,.95) !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18) inset,0 0 22px rgba(255,214,106,.26),0 0 46px rgba(104,240,255,.18) !important;
+}
+.player-map-marker.is-routing .player-ring::before{
+  border-color:rgba(255,225,132,.54);
+}
+.player-map-marker.is-routing .player-ring::after{
+  background:conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(255,255,255,0) 205deg, rgba(255,227,128,.92) 286deg, rgba(104,240,255,.95) 334deg, rgba(255,255,255,0) 360deg);
+}
+.player-map-marker::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:22px;
+  width:84px;
+  height:84px;
+  transform:translateX(-50%);
+  border-radius:50%;
+  pointer-events:none;
+  background:radial-gradient(circle, rgba(108,246,255,.16) 0%, rgba(108,246,255,.07) 38%, rgba(255,180,236,.05) 62%, transparent 74%);
+  filter:blur(8px);
+  animation:auraBreathV69 2.4s ease-in-out infinite;
+}
+@keyframes ringPulseV69{0%,100%{transform:translateX(-50%) scale(1);opacity:.95}50%{transform:translateX(-50%) scale(1.045);opacity:1}}
+@keyframes ringOuterV69{0%{transform:scale(.92);opacity:.0}28%{opacity:.65}100%{transform:scale(1.18);opacity:0}}
+@keyframes ringSpinV69{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes shadowBreathV69{0%,100%{transform:translateX(-50%) scale(1,.95);opacity:.24}50%{transform:translateX(-50%) scale(1.08,.84);opacity:.34}}
+@keyframes auraBreathV69{0%,100%{opacity:.58;transform:translateX(-50%) scale(.92)}50%{opacity:.92;transform:translateX(-50%) scale(1.08)}}
+
+.bdx-nav-pill{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.12);color:#eef9ff;font-weight:900;}
+.sheet-route-btn{
+  position:relative;
+  overflow:hidden;
+}
+.sheet-route-btn::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(120deg, transparent 0%, rgba(255,255,255,.0) 35%, rgba(255,255,255,.42) 50%, rgba(255,255,255,.0) 65%, transparent 100%);
+  transform:translateX(-120%);
+  animation:routeShineV69 2.4s ease-in-out infinite;
+}
+@keyframes routeShineV69{0%,70%,100%{transform:translateX(-120%)}35%{transform:translateX(120%)}}
