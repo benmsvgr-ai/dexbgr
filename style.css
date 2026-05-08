@@ -2430,3 +2430,31 @@ body.is-night, #app.is-night{
   transform:translateX(-50%) scale(.88) !important;
   transform-origin:50% 100% !important;
 }
+
+
+/* === v63 restore original maplibre buildings === */
+#map{ background:transparent !important; }
+.maplibregl-canvas{ filter:none !important; }
+#nightOverlay,.night-overlay,#rainFx,.rain-fx,.screen-vignette,.horizon-cloud-fx,.cloud-band,.cloud-band-b,.mist-layer,.mist-layer-b,.snow-dust,.map-wrap::before,.map-wrap::after{
+  display:none !important; opacity:0 !important; visibility:hidden !important; background:none !important; animation:none !important; content:none !important;
+}
+.player-map-marker .player-ring{ bottom:-6px !important; }
+.player-map-marker .player-shadow{ bottom:0px !important; }
+.player-map-marker .player-sprite,
+.player-map-marker .player-sprite.idle,
+.player-map-marker .player-sprite.walk,
+.player-map-marker .player-sprite.run,
+.player-map-marker .player-sprite.face-left,
+.player-map-marker .player-sprite.face-right,
+.player-map-marker .player-sprite.face-up,
+.player-map-marker .player-sprite.face-down{
+  bottom:-14px !important;
+  background-image:url("assets/sprout_character.png") !important;
+  background-repeat:no-repeat !important;
+  background-size:500px 500px !important;
+  background-position:var(--sprite-x,0px) var(--sprite-y,0px) !important;
+  width:125px !important;
+  height:125px !important;
+  transform:translateX(-50%) scale(.88) !important;
+  transform-origin:50% 100% !important;
+}
