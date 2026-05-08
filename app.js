@@ -303,7 +303,6 @@ function loadPlayerProgress(){
   }catch(e){}
   syncPlayerProfileFromProgress();
 }
-loadPlayerProgress();
 
 function rowToObject(cols, row){
   const obj = {};
@@ -437,6 +436,7 @@ const PLAYER_PROFILE = {
   level: 1,
   summary: "Karakter utama eksplorasi BogorDex. Fokus patroli jalan, portal event, dan penelusuran titik kota."
 };
+loadPlayerProgress();
 const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "31o6wgDj0WALXnVE0xNqd3M6gVki7A3e";
 const TOMTOM_TRAFFIC_ENDPOINT = window.BOGORDEX_TOMTOM_TRAFFIC_ENDPOINT || "";
 const REALTIME_EVENT_ENDPOINT = TOMTOM_TRAFFIC_ENDPOINT;
