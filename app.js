@@ -1169,42 +1169,10 @@ function buildSnappedRoutePoints(start, target){
   pts.push(targetSnap);
   return pts;
 }
-async function fetchRoadRoutePoints(start, target){
-  const startSnap = snapCoordToNearestRoad(start, 340) || start;
-  const targetSnap = snapCoordToNearestRoad(target, 340) || target;
-  const coordsPart = `${startSnap[0]},${startSnap[1]};${targetSnap[0]},${targetSnap[1]}`;
-  const urls = [
-    `https://router.project-osrm.org/route/v1/driving/${coordsPart}?overview=full&geometries=geojson&steps=false`,
-    `https://router.project-osrm.org/route/v1/foot/${coordsPart}?overview=full&geometries=geojson&steps=false`
-  ];
-  for(const url of urls){
-    try{
-      const res = await fetch(url, { cache:'no-store' });
-      if(!res.ok) continue;
-      const data = await res.json();
-      const coords = data && data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates;
-      if(Array.isArray(coords) && coords.length > 1){
-        const cleaned = [];
-        coords.forEach((c, idx) => {
-          if(!Array.isArray(c) || c.length < 2) return;
-          const snapped = snapCoordToNearestRoad([Number(c[0]), Number(c[1])], 160) || [Number(c[0]), Number(c[1])];
-          const prev = cleaned[cleaned.length - 1];
-          if(!prev || haversineMeters(prev, snapped) > 1.2 || idx === coords.length - 1) cleaned.push(snapped);
-        });
-        if(cleaned.length > 1) return cleaned;
-      }
-    }catch(err){}
-  }
-  return null;
-}
-async function setNavigationTarget(target){
+function setNavigationTarget(target){
   if(!target || !target.coords || !map) return;
   ensureRouteLayer();
-  updateStatus('Mencari jalur ke ' + (target.title || target.name || 'portal') + '…');
-  let routeCoords = await fetchRoadRoutePoints(state.playerWorld, target.coords);
-  if(!routeCoords || routeCoords.length < 2){
-    routeCoords = buildSnappedRoutePoints(state.playerWorld, target.coords);
-  }
+  const routeCoords = buildSnappedRoutePoints(state.playerWorld, target.coords);
   const src = map.getSource('bdx-navigation-route');
   if(src){
     src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: routeCoords } }] });
