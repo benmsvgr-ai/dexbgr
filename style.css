@@ -2306,3 +2306,84 @@ body.is-night .screen-vignette, body.is-night .night-overlay, body.is-night .hor
 .player-map-marker .player-name-tag{
   top:4px !important;
 }
+
+
+/* === v61 plain maplibre rollback === */
+#nightOverlay,.night-overlay,#rainFx,.rain-fx,
+.screen-vignette,.horizon-cloud-fx,.cloud-band,.cloud-band-b,.mist-layer,.mist-layer-b,.snow-dust,
+.map-wrap::before,.map-wrap::after{
+  display:none !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  background:none !important;
+  animation:none !important;
+  content:none !important;
+}
+#map{
+  background:transparent !important;
+}
+.maplibregl-canvas{
+  filter:none !important;
+}
+body.is-night, #app.is-night{
+  background:transparent !important;
+}
+/* plain player grounding only */
+.maplibregl-marker.player-map-marker,
+.player-map-marker{
+  position:relative !important;
+  width:126px !important;
+  height:154px !important;
+  overflow:visible !important;
+  z-index:95 !important;
+  pointer-events:none !important;
+  filter:none !important;
+}
+.player-map-marker .player-ring{
+  position:absolute !important;
+  left:50% !important;
+  bottom:-8px !important;
+  top:auto !important;
+  width:104px !important;
+  height:104px !important;
+  transform:translateX(-50%) !important;
+}
+.player-map-marker .player-shadow{
+  position:absolute !important;
+  left:50% !important;
+  bottom:-2px !important;
+  top:auto !important;
+  width:52px !important;
+  height:14px !important;
+  transform:translateX(-50%) !important;
+}
+.player-map-marker .player-sprite,
+.player-map-marker .player-sprite.idle,
+.player-map-marker .player-sprite.walk,
+.player-map-marker .player-sprite.run,
+.player-map-marker .player-sprite.face-left,
+.player-map-marker .player-sprite.face-right,
+.player-map-marker .player-sprite.face-up,
+.player-map-marker .player-sprite.face-down,
+.player-map-marker .player-sprite.player-sprite-image{
+  position:absolute !important;
+  left:50% !important;
+  top:auto !important;
+  bottom:-18px !important;
+  width:125px !important;
+  height:125px !important;
+  background-image:url("assets/sprout_character.png") !important;
+  background-repeat:no-repeat !important;
+  background-size:500px 500px !important;
+  background-position:var(--sprite-x,0px) var(--sprite-y,0px) !important;
+  transform:translateX(-50%) scale(.88) !important;
+  transform-origin:50% 100% !important;
+  image-rendering:auto !important;
+  opacity:1 !important;
+  visibility:visible !important;
+  filter:none !important;
+  animation:none !important;
+}
+.player-map-marker .player-name-tag{
+  top:4px !important;
+}
