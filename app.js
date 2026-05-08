@@ -1,11 +1,18 @@
 
 const SHEET_ID = window.BOGORDEX_MASTER_SHEET_ID || "1PcKcAJ0d8eco6gonlSxwffzmqEl-FjAsJ2tbxctzdnU";
-const GAS_URL = window.BOGORDEX_GAS_URL || "";
+const GAS_URL = window.BOGORDEX_GAS_URL || "https://script.google.com/macros/s/AKfycby4M5zBlfdhqvpwQsTCjWkrhQISAMfU2KaexdJOUpH8-IsoWPrjYDR9rB_w53dYhOvx/exec";
 const SHEETS = {
   lokasi: window.BOGORDEX_MASTER_SHEET_LOKASI || "MASTER_LOKASI",
   quest: window.BOGORDEX_MASTER_SHEET_QUEST || "MASTER_QUEST",
   badge: window.BOGORDEX_MASTER_SHEET_BADGE || "MASTER_BADGE"
 };
+window.addEventListener("error", (ev) => {
+  try {
+    const el = document.getElementById("statusText");
+    if (el && ev && ev.message) el.textContent = "Error: " + ev.message;
+  } catch(_){}
+});
+
 function sheetUrl(sheetName){
   return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(sheetName)}&tqx=out:json`;
 }
@@ -1104,6 +1111,12 @@ const MAPLIBRE_STYLE_URL = {
     { id: "osm-base", type: "raster", source: "osm" }
   ]
 };
+
+if (!window.maplibregl) {
+  const el = document.getElementById("statusText");
+  if (el) el.textContent = "Engine peta belum termuat";
+  throw new Error("maplibregl gagal dimuat");
+}
 
 const map = new maplibregl.Map({
   container: "map",
