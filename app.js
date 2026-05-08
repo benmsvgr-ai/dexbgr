@@ -364,6 +364,10 @@ function unlockBadge(id){
   savePlayerProgress();
   syncBadgeToGas(id);
   syncPlayerProgressToGas();
+  if(badge){
+    showAnimeToast('badge', `Badge terbuka: ${badge.icon || '🏅'} ${badge.name}`, badge.desc || 'Badge baru berhasil didapat', [badge.rarity || 'umum', Number(badge.bonusExp || 0) > 0 ? `+${Number(badge.bonusExp || 0)} EXP Bonus` : 'Koleksi baru']);
+    showRewardBanner('Badge Baru', `${badge.icon || '🏅'} ${badge.name}`, badge.desc || 'Selamat, badge kamu bertambah!', 2800);
+  }
   return true;
 }
 function countDiscoveredByFilter(quest){
@@ -388,6 +392,8 @@ function maybeCompleteQuest(quest){
   syncPlayerProfileFromProgress();
   savePlayerProgress();
   syncPlayerProgressToGas();
+  showAnimeToast('quest', `Quest selesai: ${quest.name}`, quest.desc || 'Misi berhasil diselesaikan', [Number(quest.rewardExp || 0) > 0 ? `+${Number(quest.rewardExp || 0)} EXP` : '', Number(quest.rewardCoin || 0) > 0 ? `+${Number(quest.rewardCoin || 0)} Coin` : '', quest.rewardBadgeId ? badgeLabel(quest.rewardBadgeId) : ''].filter(Boolean));
+  showRewardBanner('Quest Clear', quest.name, 'Reward quest sudah masuk ke karakter kamu', 2700);
   return true;
 }
 function evaluateQuestProgressForPoi(poi){
@@ -416,11 +422,15 @@ function markPoiDiscovered(poi){
   syncDiscoveryToGas(poi);
   syncPlayerProgressToGas();
   renderDex();
-  const summary = [
-    `+${Number(poi.rewardExp || 0)} EXP`,
-    Number(poi.rewardCoin || 0) > 0 ? `+${Number(poi.rewardCoin || 0)} Coin` : "",
-    completed.length ? `Quest selesai: ${completed.map(q => q.name).join(", ")}` : ""
-  ].filter(Boolean).join(" • ");
+  const rewardLines = [
+    Number(poi.rewardExp || 0) > 0 ? `+${Number(poi.rewardExp || 0)} EXP` : '',
+    Number(poi.rewardCoin || 0) > 0 ? `+${Number(poi.rewardCoin || 0)} Coin` : '',
+    poi.rewardBadgeId ? badgeLabel(poi.rewardBadgeId) : '',
+    completed.length ? `Quest: ${completed.map(q => q.name).join(', ')}` : ''
+  ].filter(Boolean);
+  showAnimeToast('reward', `Lokasi baru: ${poi.name}`, poi.group || poi.subkategori || 'Lokasi BogorDex', rewardLines);
+  showRewardBanner('Lokasi Terbuka', poi.name, rewardLines[0] || 'Dex bertambah!', 2200);
+  const summary = rewardLines.join(' • ');
   updateStatus(`${poi.name} ditemukan${summary ? " • " + summary : ""}`);
   return true;
 }
@@ -428,6 +438,68 @@ function markPoiDiscovered(poi){
 const statusEl = () => document.getElementById("statusText");
 const sheetEl = () => document.getElementById("bottomSheet");
 const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
+
+function toastStackEl(){ return document.getElementById("animeToastStack"); }
+function rewardBannerEl(){ return document.getElementById("rewardBanner"); }
+function navBannerEl(){ return document.getElementById("navCenterBanner"); }
+function showAnimeToast(kind, title, subtitle="", lines=[]){
+  const host = toastStackEl();
+  if(!host) return;
+  const el = document.createElement('div');
+  el.className = 'anime-toast ' + (kind || 'reward');
+  el.innerHTML = `
+    <div class="toast-kicker">${kind === 'badge' ? 'Badge Baru' : kind === 'quest' ? 'Quest Selesai' : kind === 'event' ? 'Event Kota' : 'Reward'}</div>
+    <div class="toast-title">${title || 'Notifikasi'}</div>
+    ${subtitle ? `<div class="toast-sub">${subtitle}</div>` : ''}
+    ${Array.isArray(lines) && lines.length ? `<div class="toast-lines">${lines.filter(Boolean).map(v => `<span class="toast-pill">${v}</span>`).join('')}</div>` : ''}
+  `;
+  host.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 320);
+  }, 3200);
+}
+function showRewardBanner(kicker, title, subtitle='', timeout=2400){
+  const el = rewardBannerEl();
+  if(!el) return;
+  document.getElementById('rewardBannerKicker').textContent = kicker || 'Reward';
+  document.getElementById('rewardBannerTitle').textContent = title || 'Reward';
+  document.getElementById('rewardBannerSub').textContent = subtitle || '';
+  el.classList.remove('hidden');
+  clearTimeout(showRewardBanner._timer);
+  showRewardBanner._timer = setTimeout(() => el.classList.add('hidden'), timeout);
+}
+function hideNavBanner(){ navBannerEl()?.classList.add('hidden'); }
+function clearNavigationTarget(silent=false){
+  state.navigationTarget = null;
+  if(map && map.getSource && map.getSource('bdx-navigation-route')){
+    try{ map.getSource('bdx-navigation-route').setData({type:'FeatureCollection',features:[]}); }catch(e){}
+  }
+  hideNavBanner();
+  if(!silent) updateStatus('Arah dibatalkan');
+}
+function updateNavigationUi(){
+  const box = navBannerEl();
+  if(!box) return;
+  if(!state.navigationTarget || !state.navigationTarget.coords){
+    box.classList.add('hidden');
+    return;
+  }
+  const dist = Math.max(1, Math.round(haversineMeters(state.playerWorld, state.navigationTarget.coords)));
+  document.getElementById('navCenterTitle').textContent = state.navigationTarget.title || state.navigationTarget.name || 'Tujuan';
+  document.getElementById('navCenterMeta').textContent = `Sisa jarak ${dist} m • ikuti jalur biru`;
+  box.classList.remove('hidden');
+}
+function showNavigationBanner(target, subtitle='Rute aktif'){
+  if(!target) return;
+  document.getElementById('navCenterTitle').textContent = target.title || target.name || 'Tujuan';
+  document.getElementById('navCenterMeta').textContent = subtitle;
+  navBannerEl()?.classList.remove('hidden');
+}
+function flashEventNotice(title, subtitle=''){
+  showRewardBanner('Event Kota', title, subtitle || 'Ada aktivitas baru di sekitar kamu', 2600);
+}
+
 const PLAYER_PROFILE = {
   name: "Ranger Panji",
   gender: "Laki-laki",
@@ -846,7 +918,9 @@ function normalizeRows(rows, plain, cols=[]){
         rewardExp: Number(r.reward_exp || 0),
         rewardCoin: Number(r.reward_coin || 0),
         rewardBadgeId: r.reward_badge_id || r.reward_badge || "",
-        questId: r.quest_id || ""
+        questId: r.quest_id || "",
+        showOnMap: parseTruthy(r.muncul_di_map ?? "YA"),
+        showOnMapDex: parseTruthy(r.muncul_di_mapdex ?? "YA")
       };
     }
     const r = rowToObject(cols, row);
@@ -875,7 +949,9 @@ function normalizeRows(rows, plain, cols=[]){
         rewardExp: Number(r.reward_exp || 0),
         rewardCoin: Number(r.reward_coin || 0),
         rewardBadgeId: String(r.reward_badge_id || r.reward_badge || ""),
-        questId: String(r.quest_id || "")
+        questId: String(r.quest_id || ""),
+        showOnMap: parseTruthy(r.muncul_di_map ?? "YA"),
+        showOnMapDex: parseTruthy(r.muncul_di_mapdex ?? "YA")
       };
     }
     const getVal = i => row[i];
@@ -889,7 +965,7 @@ function normalizeRows(rows, plain, cols=[]){
     const aktif = String(getVal(8) ?? "TRUE").toUpperCase() !== "FALSE";
     const coords = parseLocation(location);
     const category = normalizeGroup(group);
-    return { id:`poi_${idx}`, group, subkategori:"", name, fungsi, tupoksi, desc:deskripsi, warna, aktif, coords, category, address:"", radius:30, rewardExp:0, rewardCoin:0, rewardBadgeId:"", questId:"" };
+    return { id:`poi_${idx}`, group, subkategori:"", name, fungsi, tupoksi, desc:deskripsi, warna, aktif, coords, category, address:"", radius:30, rewardExp:0, rewardCoin:0, rewardBadgeId:"", questId:"", showOnMap:true, showOnMapDex:true };
   }).filter(p => p.coords && p.aktif);
 }
 
@@ -1097,7 +1173,20 @@ function lockPitchOnly(){
   }
 }
 
-const MAPLIBRE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const MAPLIBRE_STYLE_URL = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors"
+    }
+  },
+  layers: [
+    { id: "osm-base", type: "raster", source: "osm" }
+  ]
+};
 
 if (!window.maplibregl) {
   const el = document.getElementById("statusText");
@@ -1409,7 +1498,10 @@ function setupPoiLayers(){
 function refreshPoiSource(){
   const source = map.getSource("pois");
   if(!source) return;
-  source.setData({ type:"FeatureCollection", features: state.pois.map(toFeature) });
+  const visible = state.pois.filter(p => p && p.coords && p.aktif !== false && p.showOnMap !== false).map(toFeature);
+  source.setData({ type:"FeatureCollection", features: visible });
+  state.__visiblePoiCount = visible.length;
+  return visible.length;
 }
 function applyLayerFilters(){
   const f = ["any"];
@@ -1481,6 +1573,7 @@ function updateNearestHighlight(){
 }
 function detectNearby(){
   updateNearestHighlight();
+  checkEventNearby();
   const hit = nearestPoiWithin(state.playerWorld, state.portalNoticeRadiusMeters);
   if(hit){
     markPoiDiscovered(hit.poi);
@@ -1596,6 +1689,19 @@ function renderRealtimeEventPortals(){
     state.eventMarkers.push(marker);
   });
 }
+function checkEventNearby(){
+  const event = (state.eventPortals || [])[0];
+  if(!event || !event.coords) return;
+  const dist = haversineMeters(state.playerWorld, event.coords);
+  if(dist <= 80 && state.__lastEventNearbyId !== event.id){
+    state.__lastEventNearbyId = event.id;
+    flashEventNotice(event.title || 'Event kota', event.desc || event.level || 'Ada aktivitas dekat karakter');
+    showAnimeToast('event', event.title || 'Event kota', event.desc || 'Event terdeteksi di sekitar kamu', [event.source || 'Realtime / Demo', `${Math.round(dist)} m`]);
+  }
+  if(dist > 120 && state.__lastEventNearbyId === event.id){
+    state.__lastEventNearbyId = null;
+  }
+}
 
 async function fetchOsrmRoute(start, target){
   try{
@@ -1698,6 +1804,8 @@ async function setNavigationTarget(target){
   if(!target || !target.coords || !map) return;
   ensureRouteLayer();
   state.navigationTarget = target;
+  showNavigationBanner(target, 'Menghitung rute terbaik...');
+  showAnimeToast('event', 'Direction aktif', target.title || target.name || 'Tujuan dipilih', ['Rute biru aktif', 'Bisa dibatalkan dari panel tengah']);
   updateStatus('Mengambil jalur OSRM…');
   let routeCoords = null;
   try{
@@ -1711,10 +1819,13 @@ async function setNavigationTarget(target){
   if(!routeCoords || routeCoords.length < 2){
     routeCoords = buildSnappedRoutePoints(state.playerWorld, target.coords);
     updateStatus('Arah aktif • fallback lokal ke ' + (target.title || target.name || 'portal'));
+    showNavigationBanner(target, 'Rute lokal aktif • ikuti jalur biru');
   }else{
     updateStatus('Arah OSRM aktif ke ' + (target.title || target.name || 'portal'));
+    showNavigationBanner(target, 'Arah aktif • OSRM + road snap');
   }
   renderNavigationRoute(routeCoords, true);
+  updateNavigationUi();
 }
 
 
@@ -1758,7 +1869,10 @@ async function loadSheetData(){
   renderNPCs();
   await loadRealtimeEventPortals();
   flushGasQueue();
-  updateStatus(`Mode game aktif • ${state.pois.length} lokasi • ${state.quests.length} quest • ${state.badges.length} badge`);
+  const visibleCount = refreshPoiSource() || 0;
+  setTimeout(() => { try{ refreshPoiSource(); updateNearestHighlight(); }catch(e){} }, 300);
+  setTimeout(() => { try{ refreshPoiSource(); updateNearestHighlight(); }catch(e){} }, 1400);
+  updateStatus(`Mode game aktif • ${state.pois.length} lokasi dimuat • ${visibleCount} tampil di map • ${state.quests.length} quest • ${state.badges.length} badge`);
 }
 function normalizeHeading(value){
   let n = Number(value);
@@ -2169,6 +2283,8 @@ function loop(now){
   }
   animatePortalRings();
   updateNpcNearState();
+  updateNavigationUi();
+  if((state.__eventLoopTick = (state.__eventLoopTick || 0) + 1) % 18 === 0) checkEventNearby();
   // Kamera kompas sudah di-throttle di applyDeviceHeadingToCamera.
   // Jangan follow tiap frame, karena itu bikin pandangan geter-geter.
   if(!state.browsing && !state.move.up && !state.move.down && !state.move.left && !state.move.right){
@@ -2237,6 +2353,8 @@ function saveCurrentPointReport(){
   closeReportModal();
   syncReportToGas(report);
   syncPlayerProgressToGas();
+  showAnimeToast('reward', 'Laporan warga tersimpan', note || 'Info lapangan baru berhasil dipasang', [`+${Number(report.reward_exp || 0)} EXP`, `+${Number(report.reward_coin || 0)} Coin`, reportEmoji(category) + ' ' + category]);
+  showRewardBanner('Citizen Report', 'Info warga berhasil dipasang', 'Titik baru muncul di map dan masuk progres karakter', 2300);
   updateStatus(GAS_URL ? "Info warga dipasang dan dikirim ke Google Sheets" : "Info warga dipasang di map • isi GAS URL untuk kirim ke Google Sheets");
 }
 
@@ -2339,6 +2457,7 @@ document.getElementById("npcDialogLaterBtn").addEventListener("click", closeNpcD
 document.getElementById("npcDialogQuestBtn").addEventListener("click", acceptNpcQuest);
 document.getElementById("npcDialog").addEventListener("click", (e) => { if(e.target.id === "npcDialog") closeNpcDialog(); });
 document.getElementById("questCloseBtn").addEventListener("click", dismissActiveQuestPopup);
+const __navCancelBtn = document.getElementById("navCancelBtn"); if(__navCancelBtn){ __navCancelBtn.addEventListener("click", () => clearNavigationTarget()); }
 document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
 document.getElementById("chatToggleBtn").addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
 document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
