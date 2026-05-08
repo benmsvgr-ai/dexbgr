@@ -4,14 +4,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BogorDex GO v42 Smooth Compass</title>
+  <title>BogorDex v51 Road Focus Snap</title>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="app">
     <div id="map"></div>
-    <div class="screen-vignette"></div>
+<div class="rain-layer rain-front"></div></div>
+<div class="cloud-band cloud-band-b"></div>
+      <div class="mist-layer mist-layer-a"></div>
+      <div class="mist-layer mist-layer-b"></div>
+      <div class="snow-dust"></div>
+    </div>
     <div id="npcLayer" class="npc-layer" aria-label="NPC BogorDex"></div>
 
     <div class="top-status compact-status">
@@ -24,6 +29,16 @@
       <button id="toggleGovBtn" class="pill active">Instansi</button>
       <button id="toggleHealthBtn" class="pill active">Kesehatan</button>
       <button id="toggleUmkmBtn" class="pill active">UMKM</button>
+    </div>
+
+    <div id="weatherChip" class="weather-chip" aria-live="polite">
+      <div class="weather-main">
+        <span id="weatherIcon" class="weather-icon">⛅</span>
+        <div class="weather-info">
+          <div><b id="weatherTemp">--°C</b> <span id="weatherDesc">Memuat cuaca</span></div>
+          <small id="weatherLocTime">--:-- • --</small>
+        </div>
+      </div>
     </div>
 
     <button id="locateBtn" class="fab fab-locate" title="Ambil lokasi"><span>GPS</span></button>
@@ -90,12 +105,33 @@
       <button class="move-btn down" data-dir="down">▼</button>
     </div>
 
-    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="phone-icon">▣</span><small>MapDex</small></button>
-    <button id="dexBtn" class="dex-action" title="Buka BogorDex"><span class="dex-icon">Dex</span></button>
+    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="mapdex-asset"></span><small>MapDex</small></button>
+    <button id="chatToggleBtn" class="chat-toggle" title="Buka chat">Chat</button>
+    <button id="dexBtn" class="dex-action" title="Info Karakter"><span class="dex-icon">Karakter</span></button>
 
-    <button id="sheetMiniBtn" class="sheet-mini-btn hidden" title="Buka info">Info</button>
+    <aside id="animeChatDock" class="anime-chat-dock collapsed" aria-label="Chat karakter">
+      <div class="chat-dock-head">
+        <div>
+          <b>Chat Ranger</b>
+          <small>Firebase belum dihubungkan</small>
+        </div>
+        <button id="chatCloseBtn" class="chat-close-btn" title="Tutup">×</button>
+      </div>
+      <div class="chat-dock-body">
+        <div class="chat-placeholder-orb"></div>
+        <p>Kolom chat transparan anime sudah siap. Nanti tinggal sambungkan ke Firebase realtime chat.</p>
+      </div>
+    </aside>
 
-    <div id="bottomSheet" class="bottom-sheet collapsed">
+
+    <div class="reference-checklist" aria-hidden="true">
+      <div class="ref-card"><b>✔ KAMERA & ZOOM SEPERTI GAMBAR REFERENSI</b><span>• Jarak kamera pas<br>• Fokus area dekat karakter</span></div>
+      <div class="ref-card"><b>✔ KARAKTER SELALU DI JALAN</b><span>• Auto nempel ke jalan terdekat<br>• Tidak bisa masuk gedung / tembus</span></div>
+      <div class="ref-card"><b>✔ EFEK BERAWAN & EMBUN</b><span>• Awan tebal di horizon<br>• Kabut / embun halus di kejauhan</span></div>
+      <div class="ref-card"><b>✔ SMOOTH & STABIL</b><span>• Gerakan halus tanpa jitter<br>• GPS filter + road snap</span></div>
+    </div>
+
+    <div id="bottomSheet" class="bottom-sheet collapsed hidden-sheet">
       <div id="sheetHandle" class="sheet-handle"></div>
       <button id="sheetCloseBtn" class="sheet-close-btn" title="Tutup">×</button>
       <div class="sheet-content" id="sheetContent">
@@ -126,8 +162,8 @@
           </button>
           <button id="menuDexBtn" class="game-menu-item">
             <span class="menu-emoji">📘</span>
-            <strong>Buka Dex</strong>
-            <small>Lihat koleksi lokasi yang sudah ditemukan.</small>
+            <strong>Info Karakter</strong>
+            <small>Lihat profil Ranger, status, dan mode karakter.</small>
           </button>
           <button id="menuResetBtn" class="game-menu-item">
             <span class="menu-emoji">🎯</span>
@@ -194,16 +230,33 @@
     </div>
 
     <div id="dexModal" class="modal hidden">
-      <div class="modal-card">
+      <div class="modal-card character-modal-card">
         <div class="modal-head">
-          <h3>BogorDex</h3>
+          <h3>Info Karakter</h3>
           <button id="closeDexBtn" class="close-btn">×</button>
         </div>
-        <div class="dex-summary">
-          <div class="dex-stat"><strong id="dexFound">0</strong><span>Ditemukan</span></div>
-          <div class="dex-stat"><strong id="dexTotal">0</strong><span>Total Titik</span></div>
+        <div class="character-profile-hero">
+          <div class="character-avatar-big"></div>
+          <div class="character-hero-meta">
+            <h4 id="profileName">Ranger Panji</h4>
+            <div class="profile-badges">
+              <span class="tag">Explorer</span>
+              <span class="tag">Road Guardian</span>
+              <span class="tag">Lv <b id="profileLevel">10</b></span>
+            </div>
+            <p id="profileStatus">Sedang patroli di jalan BogorDex.</p>
+          </div>
         </div>
-        <div id="dexGrid" class="dex-grid"></div>
+        <div class="character-stat-grid">
+          <div class="character-stat"><span>Nama</span><strong id="profileName2">Ranger Panji</strong></div>
+          <div class="character-stat"><span>Gender</span><strong id="profileGender">Laki-laki</strong></div>
+          <div class="character-stat"><span>Status</span><strong id="profileRole">BogorDex Ranger</strong></div>
+          <div class="character-stat"><span>Mode</span><strong id="profileMode">Road Patrol</strong></div>
+        </div>
+        <div class="character-profile-section">
+          <div class="section-title">Ringkasan</div>
+          <p id="profileSummary">Karakter utama eksplorasi BogorDex. Fokus pada patroli jalan, portal event, dan penelusuran titik kota.</p>
+        </div>
       </div>
     </div>
   </div>
