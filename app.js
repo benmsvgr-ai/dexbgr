@@ -1,5 +1,6 @@
 
-const SHEET_ID = window.BOGORDEX_MASTER_SHEET_ID || "";
+const SHEET_ID = window.BOGORDEX_MASTER_SHEET_ID || "1PcKcAJ0d8eco6gonlSxwffzmqEl-FjAsJ2tbxctzdnU";
+const GAS_URL = window.BOGORDEX_GAS_URL || "";
 const SHEETS = {
   lokasi: window.BOGORDEX_MASTER_SHEET_LOKASI || "MASTER_LOKASI",
   quest: window.BOGORDEX_MASTER_SHEET_QUEST || "MASTER_QUEST",
@@ -124,6 +125,130 @@ function markPortalPopupDone(id){
 }
 loadPortalPopupDone();
 
+
+const GAS_QUEUE_KEY = "bogordex_gas_queue_v1";
+function loadGasQueue(){
+  try{ return JSON.parse(localStorage.getItem(GAS_QUEUE_KEY) || "[]"); }catch(e){ return []; }
+}
+function saveGasQueue(items){
+  try{ localStorage.setItem(GAS_QUEUE_KEY, JSON.stringify((items || []).slice(-200))); }catch(e){}
+}
+function enqueueGas(action, payload){
+  const items = loadGasQueue();
+  items.push({ action, payload, at:new Date().toISOString() });
+  saveGasQueue(items);
+}
+async function postToGas(action, payload, keepQueue=true){
+  if(!GAS_URL) return false;
+  const body = JSON.stringify({ action, payload, sent_at:new Date().toISOString() });
+  try{
+    await fetch(GAS_URL, {
+      method:"POST",
+      mode:"no-cors",
+      cache:"no-store",
+      headers:{ "Content-Type":"text/plain;charset=utf-8" },
+      body
+    });
+    return true;
+  }catch(err){
+    if(keepQueue) enqueueGas(action, payload);
+    return false;
+  }
+}
+async function flushGasQueue(){
+  if(!GAS_URL) return;
+  const items = loadGasQueue();
+  if(!items.length) return;
+  const rest = [];
+  for(const item of items){
+    const ok = await postToGas(item.action, item.payload, false);
+    if(!ok) rest.push(item);
+  }
+  saveGasQueue(rest);
+}
+function currentPlayerId(){
+  let id = localStorage.getItem("bogordex_player_id");
+  if(!id){
+    id = "PLY-" + Math.random().toString(36).slice(2,10).toUpperCase();
+    localStorage.setItem("bogordex_player_id", id);
+  }
+  return id;
+}
+function currentPlayerName(){ return "BogorDex Ranger"; }
+async function syncPlayerProgressToGas(){
+  const payload = {
+    player_id: currentPlayerId(),
+    nama_player: currentPlayerName(),
+    level_player: Number(state.playerProgress?.level || 1),
+    total_exp: Number(state.playerProgress?.exp || 0),
+    total_coin: Number(state.playerProgress?.coin || 0),
+    total_badge: state.unlockedBadges.size,
+    total_lokasi_ditemukan: state.discovered.size,
+    total_quest_selesai: state.completedQuests.size,
+    total_laporan_dibuat: Array.isArray(state.userReports) ? state.userReports.length : 0,
+    last_latitude: Number(state.playerWorld?.[1] || 0),
+    last_longitude: Number(state.playerWorld?.[0] || 0),
+    last_login: new Date().toISOString(),
+    status_player: "aktif",
+    updated_at: new Date().toISOString()
+  };
+  return postToGas("upsert_player_progress", payload);
+}
+async function syncDiscoveryToGas(poi){
+  if(!poi) return false;
+  return postToGas("append_discovery", {
+    id_discovery: "DSC-" + Date.now(),
+    player_id: currentPlayerId(),
+    id_lokasi: poi.id || "",
+    nama_lokasi: poi.name || "",
+    kategori: poi.group || "",
+    waktu_ditemukan: new Date().toISOString(),
+    reward_exp: Number(poi.rewardExp || 0),
+    reward_coin: Number(poi.rewardCoin || 0),
+    status_discovery: "ditemukan",
+    catatan: "auto dari game"
+  });
+}
+async function syncBadgeToGas(badgeId){
+  const badge = getBadgeById(badgeId);
+  if(!badge) return false;
+  return postToGas("append_badge", {
+    id_player_badge: "PBD-" + Date.now(),
+    player_id: currentPlayerId(),
+    id_badge: badge.id,
+    nama_badge: badge.name,
+    waktu_didapat: new Date().toISOString(),
+    reward_exp_bonus: Number(badge.bonusExp || 0),
+    status_badge: "aktif",
+    catatan: "auto dari game"
+  });
+}
+async function syncReportToGas(report){
+  if(!report) return false;
+  return postToGas("append_report", {
+    id_report: report.id,
+    player_id: currentPlayerId(),
+    nama_player: currentPlayerName(),
+    waktu_lapor: report.createdAt || new Date().toISOString(),
+    kategori_laporan: String(report.category || "lainnya").toUpperCase(),
+    subkategori_laporan: String(report.category || "lainnya").toUpperCase(),
+    judul_laporan: "Laporan Warga BogorDex",
+    deskripsi_laporan: report.note || "Info titik dari user",
+    latitude: Number(report.coords?.[1] || 0),
+    longitude: Number(report.coords?.[0] || 0),
+    alamat: report.address || "",
+    status_laporan: "baru",
+    sumber_laporan: "game",
+    foto_url: "",
+    reward_exp: Number(report.reward_exp || 30),
+    reward_coin: Number(report.reward_coin || 5),
+    validasi_admin: "TIDAK",
+    catatan_admin: "",
+    ditampilkan_di_map: "YA",
+    updated_at: new Date().toISOString()
+  });
+}
+
 const PLAYER_PROGRESS_KEY = "bogordex_player_progress_v69";
 function levelFromExp(exp){
   const n = Number(exp || 0);
@@ -231,6 +356,8 @@ function unlockBadge(id){
   }
   syncPlayerProfileFromProgress();
   savePlayerProgress();
+  syncBadgeToGas(id);
+  syncPlayerProgressToGas();
   return true;
 }
 function countDiscoveredByFilter(quest){
@@ -254,6 +381,7 @@ function maybeCompleteQuest(quest){
   unlockBadge(quest.rewardBadgeId);
   syncPlayerProfileFromProgress();
   savePlayerProgress();
+  syncPlayerProgressToGas();
   return true;
 }
 function evaluateQuestProgressForPoi(poi){
@@ -279,6 +407,8 @@ function markPoiDiscovered(poi){
   const completed = evaluateQuestProgressForPoi(poi);
   syncPlayerProfileFromProgress();
   savePlayerProgress();
+  syncDiscoveryToGas(poi);
+  syncPlayerProgressToGas();
   renderDex();
   const summary = [
     `+${Number(poi.rewardExp || 0)} EXP`,
@@ -960,7 +1090,20 @@ function lockPitchOnly(){
   }
 }
 
-const MAPLIBRE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+const MAPLIBRE_STYLE_URL = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors"
+    }
+  },
+  layers: [
+    { id: "osm-base", type: "raster", source: "osm" }
+  ]
+};
 
 const map = new maplibregl.Map({
   container: "map",
@@ -1614,6 +1757,7 @@ async function loadSheetData(){
   renderDex();
   renderNPCs();
   await loadRealtimeEventPortals();
+  flushGasQueue();
   updateStatus(`Mode game aktif • ${state.pois.length} lokasi • ${state.quests.length} quest • ${state.badges.length} badge`);
 }
 function normalizeHeading(value){
@@ -2058,7 +2202,7 @@ function reportMarkerElement(report){
       id:report.id, name:"Info Warga: " + reportEmoji(report.category),
       desc:report.note || "Catatan lapangan dari user.",
       fungsi:"Laporan titik lapangan BogorDex.",
-      tupoksi:"Data tersimpan lokal di browser. Nanti bisa disambungkan ke Google Sheet/GAS agar laporan masuk dashboard admin.",
+      tupoksi:GAS_URL ? "Laporan otomatis dikirim ke Google Sheets/GAS dan tetap disimpan lokal di browser." : "Laporan tersimpan lokal. Isi GAS URL kalau mau otomatis masuk Google Sheets.",
       group:"CITIZEN REPORT", aktif:true
     }, "manual");
   });
@@ -2081,12 +2225,19 @@ function closeReportModal(){ document.getElementById("reportModal").classList.ad
 function saveCurrentPointReport(){
   const category = document.getElementById("reportCategory").value || "lainnya";
   const note = (document.getElementById("reportNote").value || "").trim();
-  const report = { id:"report_" + Date.now(), category, note: note || "Info titik dari user", coords:[state.playerWorld[0], state.playerWorld[1]], createdAt:new Date().toISOString() };
+  const report = { id:"RPT-" + Date.now(), category, note: note || "Info titik dari user", coords:[state.playerWorld[0], state.playerWorld[1]], createdAt:new Date().toISOString(), reward_exp:30, reward_coin:5 };
   state.userReports.push(report);
+  state.playerProgress.exp += Number(report.reward_exp || 0);
+  state.playerProgress.coin += Number(report.reward_coin || 0);
+  syncPlayerProfileFromProgress();
   saveUserReports();
+  savePlayerProgress();
   renderUserReports();
+  renderDex();
   closeReportModal();
-  updateStatus("Info warga dipasang di map");
+  syncReportToGas(report);
+  syncPlayerProgressToGas();
+  updateStatus(GAS_URL ? "Info warga dipasang dan dikirim ke Google Sheets" : "Info warga dipasang di map • isi GAS URL untuk kirim ke Google Sheets");
 }
 
 function openMainMenu(){ document.getElementById('mainMenuModal').classList.remove('hidden'); }
