@@ -706,6 +706,8 @@ function updatePlayerUiMeta(){
   syncPlayerProfileFromProgress();
   document.querySelectorAll('.trainer-name').forEach(el => el.textContent = PLAYER_PROFILE.status);
   document.querySelectorAll('.trainer-level').forEach(el => el.textContent = `Lv ${PLAYER_PROFILE.level} Explorer • EXP ${state.playerProgress.exp || 0}`);
+  const exp = Number(state.playerProgress.exp || 0);
+  const nextExp = Math.max(1200, PLAYER_PROFILE.level * 300);
   const ids = {
     profileName:PLAYER_PROFILE.name,
     profileName2:PLAYER_PROFILE.name,
@@ -713,10 +715,18 @@ function updatePlayerUiMeta(){
     profileRole:PLAYER_PROFILE.status,
     profileMode:PLAYER_PROFILE.mode,
     profileLevel:String(PLAYER_PROFILE.level),
+    profileLevel2:String(PLAYER_PROFILE.level),
+    profileExp:String(exp),
+    profileExpMax:'/ ' + nextExp.toLocaleString('id-ID'),
+    profileCoin:String(state.playerProgress.coin || 0),
+    profileLocationCount:String(state.discovered.size || 0),
     profileStatus:`${PLAYER_PROFILE.status} • Coin ${state.playerProgress.coin || 0} • Badge ${state.unlockedBadges.size}`,
     profileSummary:PLAYER_PROFILE.summary
   };
   Object.entries(ids).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.textContent=val; });
+  const expBar = document.getElementById('profileExpBar');
+  if(expBar) expBar.style.width = Math.max(8, Math.min(100, (exp / nextExp) * 100)) + '%';
+  renderCharacterBadges();
   const lbl = document.querySelector('.player-name-tag b');
   if(lbl) lbl.textContent = PLAYER_PROFILE.name;
 }
@@ -2563,6 +2573,7 @@ function reportEmoji(category){
 }
 function loadUserReports(){
   try{ state.userReports = JSON.parse(localStorage.getItem("bogordex_user_reports_v30") || "[]"); }catch(e){ state.userReports = []; }
+  state.userReports = (state.userReports || []).map(r => Object.assign({status:'pending', updatedAt:r.createdAt || new Date().toISOString()}, r));
 }
 function saveUserReports(){
   localStorage.setItem("bogordex_user_reports_v30", JSON.stringify(state.userReports.slice(-80)));
@@ -2599,14 +2610,20 @@ function renderUserReports(){
   });
 }
 function openReportModal(){
-  document.getElementById("reportNote").value = "";
+  const noteEl = document.getElementById("reportNote");
+  if(noteEl) noteEl.value = "";
+  const counter = document.getElementById('reportCounter'); if(counter) counter.textContent = '0/200';
+  const select = document.getElementById('reportCategory'); if(select) select.value = 'lobang';
+  document.querySelectorAll('.report-category-card').forEach(c => c.classList.toggle('active', c.dataset.category === 'lobang'));
+  const loc = document.getElementById('reportLocationText'); if(loc) loc.textContent = 'BogorDex Area';
   document.getElementById("reportModal").classList.remove("hidden");
 }
 function closeReportModal(){ document.getElementById("reportModal").classList.add("hidden"); }
 function saveCurrentPointReport(){
   const category = document.getElementById("reportCategory").value || "lainnya";
   const note = (document.getElementById("reportNote").value || "").trim();
-  const report = { id:"RPT-" + Date.now(), category, note: note || "Info titik dari user", coords:[state.playerWorld[0], state.playerWorld[1]], createdAt:new Date().toISOString(), reward_exp:30, reward_coin:5 };
+  const now = new Date().toISOString();
+  const report = { id:"RPT-" + Date.now(), category, note: note || "Info titik dari user", coords:[state.playerWorld[0], state.playerWorld[1]], createdAt:now, updatedAt:now, status:'pending', address:'BogorDex Area', reward_exp:30, reward_coin:5 };
   state.userReports.push(report);
   state.playerProgress.exp += Number(report.reward_exp || 0);
   state.playerProgress.coin += Number(report.reward_coin || 0);
@@ -2708,7 +2725,7 @@ function focusMapDexItem(item){
   if(item.type === "portal" && item.ref){ markPortalPopupDone(item.ref.id); openSheet(item.ref, "manual"); }
   if(item.type === "npc" && item.ref) openNpcDialog(item.ref.id);
   if(item.type === "report" && item.ref){
-    openSheet({id:item.ref.id,name:"Info Warga",desc:item.ref.note || "Info titik",fungsi:"Kategori: " + reportEmoji(item.ref.category),tupoksi:"Titik laporan dari user.",group:"CITIZEN REPORT",aktif:true}, "manual");
+    openMyReportModal(item.ref);
   }
 }
 function openMapDex(){
@@ -2723,6 +2740,7 @@ function renderMapDex(){
   canvas.querySelectorAll(".mapdex-pin").forEach(n => n.remove());
   list.innerHTML = "";
   const items = getMapDexItems();
+  const countEl = document.getElementById('mapDexFoundCount'); if(countEl) countEl.textContent = `${items.length} ditemukan`;
   const rectSize = 310;
   const radiusMeters = 900;
   items.slice(0,28).forEach((item, idx) => {
@@ -2743,7 +2761,8 @@ function renderMapDex(){
     const row = document.createElement("button");
     row.className = "mapdex-row";
     const label = item.type === "portal" ? "Portal" : item.type === "npc" ? "NPC" : "Laporan";
-    row.innerHTML = `<span><strong>${item.name}</strong><small>${label}</small></span><b>${Math.round(item.dist)} m</b>`;
+    const chip = item.type === 'npc' ? 'NPC' : item.type === 'report' ? 'Laporan' : 'Portal';
+    row.innerHTML = `<i class="row-icon ${item.type}">${item.emoji}</i><span><strong>${item.name}</strong><small><em>${chip}</em> ${label}</small></span><b>${formatDistance(item.dist)} ›</b>`;
     row.addEventListener("click", () => focusMapDexItem(item));
     list.appendChild(row);
   });
@@ -2768,6 +2787,17 @@ document.getElementById("reportCloseBtn").addEventListener("click", closeReportM
 document.getElementById("reportCancelBtn").addEventListener("click", closeReportModal);
 document.getElementById("reportSaveBtn").addEventListener("click", saveCurrentPointReport);
 document.getElementById("reportModal").addEventListener("click", (e) => { if(e.target.id === "reportModal") closeReportModal(); });
+bindReportCategoryCards();
+const __reportNote = document.getElementById('reportNote'); if(__reportNote){ __reportNote.addEventListener('input', () => { const c=document.getElementById('reportCounter'); if(c) c.textContent = `${__reportNote.value.length}/200`; }); }
+document.getElementById('myReportCloseBtn')?.addEventListener('click', closeMyReportModal);
+document.getElementById('myReportModal')?.addEventListener('click', (e) => { if(e.target.id === 'myReportModal') closeMyReportModal(); });
+document.getElementById('myReportUpdateBtn')?.addEventListener('click', () => {
+  const r = getActiveMyReport(); if(!r) return;
+  const txt = prompt('Tambahkan update singkat untuk info titik ini:', r.note || '');
+  if(txt !== null) updateActiveReportStatus('pending', (txt || r.note || '').trim());
+});
+document.getElementById('myReportCorrectBtn')?.addEventListener('click', () => updateActiveReportStatus('benar'));
+document.getElementById('myReportDeleteBtn')?.addEventListener('click', deleteActiveReport);
 document.getElementById("questStartBtn").addEventListener("click", startQuestFromPopup);
 document.getElementById("npcDialogClose").addEventListener("click", closeNpcDialog);
 document.getElementById("npcDialogLaterBtn").addEventListener("click", closeNpcDialog);
