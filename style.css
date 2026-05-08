@@ -1927,3 +1927,60 @@ html,body,#app{
   animation:routeShineV69 2.4s ease-in-out infinite;
 }
 @keyframes routeShineV69{0%,70%,100%{transform:translateX(-120%)}35%{transform:translateX(120%)}}
+
+
+/* ===== v70 Anime reward/event/navigation UI ===== */
+.anime-toast-stack{position:fixed;left:18px;right:18px;top:92px;z-index:1800;display:flex;flex-direction:column;gap:12px;pointer-events:none;align-items:flex-start}
+.anime-toast{position:relative;min-width:260px;max-width:min(420px,92vw);padding:14px 16px 14px 18px;border-radius:24px;border:1px solid rgba(255,255,255,.72);background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(230,240,255,.88));box-shadow:0 14px 40px rgba(32,55,110,.18), inset 0 1px 0 rgba(255,255,255,.95);overflow:hidden;backdrop-filter:blur(18px);transform:translateY(-10px) scale(.96);opacity:0;animation:animeToastIn .34s cubic-bezier(.2,.8,.2,1) forwards}
+.anime-toast::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(255,255,255,0) 42%,rgba(112,186,255,.16));pointer-events:none}
+.anime-toast.out{animation:animeToastOut .3s ease forwards}
+.anime-toast .toast-kicker{font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;opacity:.65;margin-bottom:4px}
+.anime-toast .toast-title{font-size:18px;font-weight:900;color:#233d70;line-height:1.1}
+.anime-toast .toast-sub{font-size:13px;color:#536888;margin-top:3px}
+.anime-toast .toast-lines{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.anime-toast .toast-pill{padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.78);border:1px solid rgba(104,126,192,.16);font-weight:800;font-size:12px;color:#264473;box-shadow:inset 0 1px 0 rgba(255,255,255,.92)}
+.anime-toast.reward{border-color:rgba(255,222,108,.78)}
+.anime-toast.reward .toast-kicker{color:#c78600}
+.anime-toast.badge{border-color:rgba(170,128,255,.78)}
+.anime-toast.badge .toast-kicker{color:#7d57da}
+.anime-toast.quest{border-color:rgba(92,214,255,.78)}
+.anime-toast.quest .toast-kicker{color:#1887a8}
+.anime-toast.event{border-color:rgba(255,127,170,.74)}
+.anime-toast.event .toast-kicker{color:#d84b83}
+@keyframes animeToastIn{from{opacity:0;transform:translateY(-10px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes animeToastOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-10px) scale(.96)}}
+.reward-banner,.nav-center-banner{position:fixed;left:50%;transform:translateX(-50%);z-index:1850;pointer-events:none}
+.reward-banner{top:120px;max-width:min(520px,92vw);padding:16px 18px;border-radius:26px;border:1px solid rgba(255,255,255,.82);background:linear-gradient(135deg,rgba(255,248,222,.95),rgba(254,232,255,.92) 60%,rgba(225,245,255,.9));box-shadow:0 18px 48px rgba(52,69,118,.22), inset 0 1px 0 rgba(255,255,255,.96);overflow:hidden;backdrop-filter:blur(18px);animation:rewardBannerIn .36s cubic-bezier(.22,.82,.2,1)}
+.reward-banner.hidden,.nav-center-banner.hidden{display:none}
+.reward-banner-spark{position:absolute;inset:-25% auto auto -15%;width:140%;height:140%;background:conic-gradient(from 90deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0) 30%,rgba(255,245,179,.45),rgba(255,255,255,0) 62%);animation:rewardShine 2.8s linear infinite;opacity:.75;pointer-events:none}
+.reward-banner-inner{position:relative;text-align:center}
+.reward-banner-kicker{font-size:12px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;color:#8b5b00;margin-bottom:3px}
+.reward-banner-title{font-size:24px;font-weight:1000;color:#24416f;line-height:1.05}
+.reward-banner-sub{font-size:14px;font-weight:700;color:#5c6e8f;margin-top:4px}
+@keyframes rewardBannerIn{from{opacity:0;transform:translateX(-50%) translateY(-12px) scale(.96)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+@keyframes rewardShine{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.nav-center-banner{top:96px;display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:24px;border:1px solid rgba(255,255,255,.78);background:linear-gradient(135deg,rgba(235,248,255,.96),rgba(255,255,255,.9) 55%,rgba(225,236,255,.94));box-shadow:0 16px 42px rgba(39,68,116,.2), inset 0 1px 0 rgba(255,255,255,.96);backdrop-filter:blur(18px);pointer-events:auto;min-width:min(540px,94vw);max-width:min(560px,94vw)}
+.nav-center-banner::before{content:'';width:52px;height:52px;border-radius:18px;background:radial-gradient(circle at 30% 30%,#fff,rgba(255,255,255,.4) 32%,transparent 35%), linear-gradient(135deg,#73d9ff,#6f84ff 60%,#f08fff);box-shadow:inset 0 1px 0 rgba(255,255,255,.94),0 10px 20px rgba(87,121,255,.28);flex:0 0 52px}
+.nav-center-kicker{font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:#5b7bc0}
+.nav-center-title{font-size:19px;font-weight:1000;color:#203967;line-height:1.05}
+.nav-center-meta{font-size:13px;color:#607191;font-weight:700;margin-top:3px}
+.nav-cancel-btn{margin-left:auto;pointer-events:auto;border:none;border-radius:999px;padding:10px 16px;font-weight:900;color:#24416f;background:linear-gradient(180deg,#fff,#e8f1ff);box-shadow:0 10px 18px rgba(53,77,131,.14), inset 0 1px 0 rgba(255,255,255,.96);cursor:pointer}
+.nav-cancel-btn:hover{transform:translateY(-1px)}
+.quest-card,.npc-dialog-card,.report-card,.mapdex-phone,.modal-card,.bottom-sheet,.game-menu-card{box-shadow:0 18px 52px rgba(37,63,109,.22),inset 0 1px 0 rgba(255,255,255,.96)!important;border:1px solid rgba(255,255,255,.78)!important;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(238,245,255,.91))!important;backdrop-filter:blur(20px)}
+.quest-card::before,.npc-dialog-card::before,.report-card::before,.mapdex-phone::before,.modal-card::before,.game-menu-card::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,rgba(255,255,255,.35),rgba(255,255,255,0) 35%,rgba(109,160,255,.12));pointer-events:none}
+.quest-main,.npc-dialog-head,.character-profile-hero,.mapdex-head,.modal-head{position:relative}
+.event-portal-marker.single-event{animation:eventPortalPulse 1.45s ease-in-out infinite alternate}
+.event-portal-marker .event-portal-label{background:rgba(255,255,255,.92)!important;border-radius:999px;padding:4px 10px!important;box-shadow:0 8px 16px rgba(53,77,131,.18)!important}
+@keyframes eventPortalPulse{from{transform:translateY(0) scale(1)}to{transform:translateY(-6px) scale(1.04)}}
+.user-report-marker .report-pin{box-shadow:0 12px 22px rgba(46,77,132,.22)!important}
+@media (max-width: 768px){
+  .anime-toast-stack{top:86px;left:12px;right:12px}
+  .anime-toast{max-width:100%;min-width:unset}
+  .reward-banner{top:104px;padding:14px 16px}
+  .reward-banner-title{font-size:21px}
+  .nav-center-banner{top:88px;min-width:calc(100vw - 20px);max-width:calc(100vw - 20px);padding:12px 14px;gap:10px}
+  .nav-center-banner::before{width:44px;height:44px;flex-basis:44px;border-radius:15px}
+  .nav-center-title{font-size:16px}
+  .nav-center-meta{font-size:12px}
+  .nav-cancel-btn{padding:9px 12px;font-size:12px}
+}
