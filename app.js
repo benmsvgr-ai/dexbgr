@@ -500,7 +500,7 @@ function clearNavigationTarget(silent=false){
 function updateNavigationUi(){
   const box = navBannerEl();
   if(!box) return;
-  if(!state.navigationTarget || !state.navigationTarget.coords){
+  if(!state.navigationTarget || !state.navigationTarget.coords || ['idle','cancelled'].includes(state.navigationStatus)){
     box.classList.add('hidden');
     return;
   }
@@ -2643,6 +2643,58 @@ function resetGameCamera(){
 }
 
 
+
+function openCharacterProfile(){
+  syncPlayerProfileFromProgress();
+  updatePlayerUiMeta();
+  const modal = document.getElementById('dexModal');
+  if(!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('show');
+}
+function closeCharacterProfile(){
+  const modal = document.getElementById('dexModal');
+  if(!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('show');
+}
+function setupTouchDragMovement(){
+  const area = document.getElementById('app');
+  if(!area) return;
+  const isInteractive = (target) => !!target.closest('button, a, input, textarea, select, .modal-card, .game-menu-card, .mapdex-phone, .bottom-sheet, .npc-dialog-card, .quest-card, .report-card, .sheet-content, .anime-chat-dock');
+  const clearMove = () => { state.move.up = false; state.move.down = false; state.move.left = false; state.move.right = false; state.touchDragMove = null; };
+  const applyFromDelta = (dx, dy) => {
+    clearMove();
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    if(Math.max(ax, ay) < 18) return;
+    if(ax > ay){
+      state.move.left = dx < 0;
+      state.move.right = dx > 0;
+      state.touchDragMove = dx < 0 ? 'left' : 'right';
+    }else{
+      state.move.up = dy < 0;
+      state.move.down = dy > 0;
+      state.touchDragMove = dy < 0 ? 'up' : 'down';
+    }
+  };
+  let startX = 0, startY = 0, active = false;
+  area.addEventListener('touchstart', (e) => {
+    if(!('ontouchstart' in window) || !e.touches || !e.touches[0]) return;
+    if(isInteractive(e.target)) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; active = true;
+  }, { passive:true });
+  area.addEventListener('touchmove', (e) => {
+    if(!active || !e.touches || !e.touches[0]) return;
+    if(isInteractive(e.target)) return;
+    const t = e.touches[0];
+    applyFromDelta(t.clientX - startX, t.clientY - startY);
+    if(state.touchDragMove) e.preventDefault();
+  }, { passive:false });
+  area.addEventListener('touchend', () => { active = false; clearMove(); }, { passive:true });
+  area.addEventListener('touchcancel', () => { active = false; clearMove(); }, { passive:true });
+}
+
 function getMapDexItems(){
   const items = [];
   (state.pois || []).forEach(p => { if(p.coords) items.push({type:"portal", name:p.name, coords:p.coords, emoji:"🌀", ref:p}); });
@@ -2731,15 +2783,17 @@ document.getElementById("chatToggleBtn").addEventListener("click", () => { chatD
 document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
 document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
 document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
-document.getElementById("dexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.remove("hidden"));
-document.getElementById("closeDexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.add("hidden"));
+document.getElementById("dexBtn").addEventListener("click", openCharacterProfile);
+document.getElementById("closeDexBtn").addEventListener("click", closeCharacterProfile);
+document.getElementById("dexModal").addEventListener("click", (e) => { if(e.target.id === "dexModal") closeCharacterProfile(); });
 document.getElementById("sheetHandle").addEventListener("click", () => { sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.toggle("collapsed"); syncMiniButton(); });
 document.getElementById("sheetCloseBtn").addEventListener("click", (e) => { e.stopPropagation(); closeSheet(true, true); });
 const __sheetMiniBtn = document.getElementById("sheetMiniBtn"); if(__sheetMiniBtn){ __sheetMiniBtn.addEventListener("click", () => { if(state.lastPoi) openSheet(state.lastPoi, state.activePoiMode || "manual"); }); }
 document.querySelectorAll(".move-btn").forEach(bindMoveButton);
 document.addEventListener("keydown", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=true; if(k==="s"||k==="arrowdown") state.move.down=true; if(k==="a"||k==="arrowleft") state.move.left=true; if(k==="d"||k==="arrowright") state.move.right=true; });
 document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=false; if(k==="s"||k==="arrowdown") state.move.down=false; if(k==="a"||k==="arrowleft") state.move.left=false; if(k==="d"||k==="arrowright") state.move.right=false; });
-
+setupTouchDragMovement();
+clearNavigationTarget(true);
 
 updateWeatherChip();
 updatePlayerUiMeta();
