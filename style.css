@@ -1698,3 +1698,147 @@ html,body,#app{
     width:min(92vw,330px) !important;
   }
 }
+
+
+/* === v68 top HUD/button match + fog higher + latest route button === */
+/* samakan top HUD seperti referensi: live map kiri, weather tengah, compass + chat kanan */
+.top-actions,
+.bottom-left-profile{
+  display:none !important;
+}
+.top-status.compact-status{
+  left:12px !important;
+  top:calc(env(safe-area-inset-top,0px) + 10px) !important;
+  width:150px !important;
+  min-width:150px !important;
+  max-width:150px !important;
+  padding:10px 12px !important;
+  border-radius:20px !important;
+  background:linear-gradient(180deg, rgba(72,99,158,.88), rgba(75,96,145,.82)) !important;
+  box-shadow:0 12px 26px rgba(43,64,113,.22) !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+  backdrop-filter:blur(12px) saturate(1.08) !important;
+  text-align:left !important;
+}
+.top-status .status-row{font-size:14px !important; gap:8px !important;}
+.top-status .status-sub{font-size:11px !important; color:rgba(239,246,255,.84) !important;}
+#weatherChip,
+.weather-chip{
+  position:absolute !important;
+  left:50% !important;
+  top:calc(env(safe-area-inset-top,0px) + 10px) !important;
+  transform:translateX(-50%) !important;
+  z-index:90 !important;
+  min-width:0 !important;
+  width:162px !important;
+  padding:10px 14px !important;
+  border-radius:22px !important;
+  background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(229,238,248,.86)) !important;
+  border:1px solid rgba(255,255,255,.7) !important;
+  box-shadow:0 14px 28px rgba(45,71,122,.16), inset 0 1px 0 rgba(255,255,255,.75) !important;
+  backdrop-filter:blur(14px) !important;
+}
+.weather-main{gap:10px !important;}
+.weather-icon{font-size:26px !important;}
+.weather-info div{font-size:14px !important; color:#2f466f !important; font-weight:800 !important;}
+.weather-info small{font-size:11px !important; color:#6f809d !important;}
+
+/* compass pindah ke kanan atas, chat di sebelahnya */
+.fab-compass{
+  display:flex !important;
+  opacity:1 !important;
+  top:calc(env(safe-area-inset-top,0px) + 12px) !important;
+  bottom:auto !important;
+  right:98px !important;
+  width:58px !important;
+  height:58px !important;
+  border-radius:50% !important;
+  background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(232,239,248,.88)) !important;
+  border:1px solid rgba(255,255,255,.72) !important;
+  box-shadow:0 14px 28px rgba(44,72,122,.16) !important;
+}
+.fab-compass span{
+  position:absolute !important;
+  bottom:8px !important;
+  font-size:0 !important;
+}
+.chat-toggle{
+  position:absolute !important;
+  top:calc(env(safe-area-inset-top,0px) + 12px) !important;
+  right:12px !important;
+  width:86px !important;
+  height:58px !important;
+  min-width:86px !important;
+  border-radius:20px !important;
+  background:linear-gradient(180deg, rgba(170,205,255,.92), rgba(155,183,245,.86)) !important;
+  box-shadow:0 14px 28px rgba(58,102,188,.20), inset 0 1px 0 rgba(255,255,255,.42) !important;
+}
+.anime-chat-dock{
+  top:calc(env(safe-area-inset-top,0px) + 76px) !important;
+  right:12px !important;
+}
+
+/* tombol kanan bawah versi terbaru */
+.fab-locate,.mapdex-action,.dex-action{
+  right:14px !important;
+  border-radius:22px !important;
+  background:linear-gradient(180deg, rgba(255,255,255,.92), rgba(232,243,252,.82)) !important;
+  border:1px solid rgba(255,255,255,.76) !important;
+  box-shadow:0 14px 28px rgba(32,75,148,.16), inset 0 1px 0 rgba(255,255,255,.74) !important;
+  backdrop-filter:blur(14px) !important;
+  color:#17386f !important;
+}
+.fab-locate{bottom:calc(env(safe-area-inset-bottom,0px) + 198px) !important; width:58px !important; height:58px !important;}
+.mapdex-action{bottom:calc(env(safe-area-inset-bottom,0px) + 110px) !important; width:82px !important; height:76px !important;}
+.dex-action{bottom:calc(env(safe-area-inset-bottom,0px) + 24px) !important; width:84px !important; height:72px !important;}
+.mapdex-action small{font-size:12px !important; font-weight:900 !important;}
+.dex-icon{font-size:14px !important; font-weight:900 !important;}
+
+/* kabut difokuskan hanya di horizon atas */
+#app::before{
+  top:-14dvh !important;
+  height:20dvh !important;
+  opacity:.96 !important;
+}
+#app::after{
+  top:2dvh !important;
+  height:10dvh !important;
+  opacity:.42 !important;
+}
+.cloud-band,
+.cloud-band-b{
+  top:-10dvh !important;
+  height:16dvh !important;
+  opacity:.34 !important;
+}
+.mist-layer,
+.mist-layer-a,
+.mist-layer-b{
+  top:-8dvh !important;
+  height:14dvh !important;
+  opacity:.26 !important;
+}
+#map::after{opacity:.10 !important;}
+
+/* tombol arahkan versi terbaru */
+.sheet-route-btn{
+  border:none !important;
+  border-radius:999px !important;
+  padding:12px 18px !important;
+  font-weight:1000 !important;
+  font-size:13px !important;
+  color:#ffffff !important;
+  cursor:pointer !important;
+  background:linear-gradient(180deg,#61d8ff 0%, #2a7bff 100%) !important;
+  box-shadow:0 12px 24px rgba(42,123,255,.28), 0 0 22px rgba(97,216,255,.16) !important;
+}
+.sheet-route-btn:hover,.sheet-route-btn:active{
+  transform:translateY(-1px) !important;
+}
+
+@media (max-width: 720px){
+  .top-status.compact-status{width:150px !important;}
+  #weatherChip,.weather-chip{width:160px !important;}
+  .fab-compass{right:96px !important;}
+  .chat-toggle{right:10px !important;}
+}
