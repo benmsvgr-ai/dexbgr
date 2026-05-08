@@ -1,7 +1,13 @@
 
-const SHEET_ID = "1aC-GTEV7pdTYYF2KGw3PjJg54BiAtfREUC4uqWHYy1E";
-const SHEET_NAME = "LOCDEX";
-const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(SHEET_NAME)}&tqx=out:json`;
+const SHEET_ID = window.BOGORDEX_MASTER_SHEET_ID || "";
+const SHEETS = {
+  lokasi: window.BOGORDEX_MASTER_SHEET_LOKASI || "MASTER_LOKASI",
+  quest: window.BOGORDEX_MASTER_SHEET_QUEST || "MASTER_QUEST",
+  badge: window.BOGORDEX_MASTER_SHEET_BADGE || "MASTER_BADGE"
+};
+function sheetUrl(sheetName){
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(sheetName)}&tqx=out:json`;
+}
 
 const state = {
   gpsBase: [106.79884, -6.59725],
@@ -28,6 +34,15 @@ const state = {
   maxOffsetMeters: 1800,
   facing: "down",
   pois: [],
+  quests: [],
+  badges: [],
+  completedQuests: new Set(),
+  unlockedBadges: new Set(),
+  playerProgress: {
+    level: 1,
+    exp: 0,
+    coin: 0
+  },
   activePoiId: null,
   activePoiMode: null,
   activeQuestPoiId: null,
@@ -109,6 +124,171 @@ function markPortalPopupDone(id){
 }
 loadPortalPopupDone();
 
+const PLAYER_PROGRESS_KEY = "bogordex_player_progress_v69";
+function levelFromExp(exp){
+  const n = Number(exp || 0);
+  if(n >= 1200) return 8;
+  if(n >= 900) return 7;
+  if(n >= 650) return 6;
+  if(n >= 450) return 5;
+  if(n >= 280) return 4;
+  if(n >= 160) return 3;
+  if(n >= 80) return 2;
+  return 1;
+}
+function savePlayerProgress(){
+  try{
+    localStorage.setItem(PLAYER_PROGRESS_KEY, JSON.stringify({
+      discovered: Array.from(state.discovered || []),
+      completedQuests: Array.from(state.completedQuests || []),
+      unlockedBadges: Array.from(state.unlockedBadges || []),
+      playerProgress: state.playerProgress || { level:1, exp:0, coin:0 }
+    }));
+  }catch(e){}
+}
+function syncPlayerProfileFromProgress(){
+  const exp = Number(state.playerProgress?.exp || 0);
+  const coin = Number(state.playerProgress?.coin || 0);
+  const level = levelFromExp(exp);
+  state.playerProgress.level = level;
+  PLAYER_PROFILE.level = level;
+  PLAYER_PROFILE.status = "BogorDex Ranger";
+  PLAYER_PROFILE.mode = "Road Patrol";
+  PLAYER_PROFILE.summary = `Explorer level ${level}. EXP ${exp} • Coin ${coin} • ${state.discovered.size} lokasi ditemukan • ${state.completedQuests.size} quest selesai • ${state.unlockedBadges.size} badge terbuka.`;
+}
+function loadPlayerProgress(){
+  try{
+    const raw = localStorage.getItem(PLAYER_PROGRESS_KEY);
+    if(!raw){
+      syncPlayerProfileFromProgress();
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    state.discovered = new Set(Array.isArray(parsed.discovered) ? parsed.discovered : []);
+    state.completedQuests = new Set(Array.isArray(parsed.completedQuests) ? parsed.completedQuests : []);
+    state.unlockedBadges = new Set(Array.isArray(parsed.unlockedBadges) ? parsed.unlockedBadges : []);
+    state.playerProgress = Object.assign({ level:1, exp:0, coin:0 }, parsed.playerProgress || {});
+  }catch(e){}
+  syncPlayerProfileFromProgress();
+}
+loadPlayerProgress();
+
+function rowToObject(cols, row){
+  const obj = {};
+  cols.forEach((col, i) => { obj[String(col || "").trim()] = row[i] ?? ""; });
+  return obj;
+}
+function parseTruthy(value){
+  const v = String(value ?? "").trim().toUpperCase();
+  return ["YA","Y","TRUE","1","AKTIF"].includes(v);
+}
+function colorFromKategori(kat){
+  const k = String(kat || "").toUpperCase();
+  if(k.includes("HALTE") || k.includes("TRANSPORT")) return "#4b84ff";
+  if(k.includes("KESEHATAN") || k.includes("RUMAH_SAKIT") || k.includes("PUSKESMAS")) return "#8d7bff";
+  if(k.includes("UMKM")) return "#f7b500";
+  if(k.includes("WISATA") || k.includes("TAMAN")) return "#38c172";
+  return "#ff6475";
+}
+function getQuestById(id){
+  return state.quests.find(q => q.id === id) || null;
+}
+function getBadgeById(id){
+  return state.badges.find(b => b.id === id) || null;
+}
+function badgeLabel(id){
+  const badge = getBadgeById(id);
+  return badge ? `${badge.icon || "🏅"} ${badge.name}` : "";
+}
+function questRewardText(quest){
+  if(!quest) return "";
+  const parts = [];
+  if(Number(quest.rewardExp || 0) > 0) parts.push(`+${Number(quest.rewardExp)} EXP`);
+  if(Number(quest.rewardCoin || 0) > 0) parts.push(`+${Number(quest.rewardCoin)} Coin`);
+  if(quest.rewardBadgeId){
+    const lbl = badgeLabel(quest.rewardBadgeId);
+    if(lbl) parts.push(lbl);
+  }
+  return parts.join(" • ");
+}
+function poiRewardText(poi){
+  if(!poi) return "";
+  const parts = [];
+  if(Number(poi.rewardExp || 0) > 0) parts.push(`+${Number(poi.rewardExp)} EXP`);
+  if(Number(poi.rewardCoin || 0) > 0) parts.push(`+${Number(poi.rewardCoin)} Coin`);
+  if(poi.rewardBadgeId){
+    const lbl = badgeLabel(poi.rewardBadgeId);
+    if(lbl) parts.push(lbl);
+  }
+  return parts.join(" • ");
+}
+function unlockBadge(id){
+  if(!id || state.unlockedBadges.has(id)) return false;
+  state.unlockedBadges.add(id);
+  const badge = getBadgeById(id);
+  if(badge && Number(badge.bonusExp || 0) > 0){
+    state.playerProgress.exp += Number(badge.bonusExp || 0);
+  }
+  syncPlayerProfileFromProgress();
+  savePlayerProgress();
+  return true;
+}
+function countDiscoveredByFilter(quest){
+  return state.pois.filter(poi => {
+    if(!state.discovered.has(poi.id)) return false;
+    if(quest.targetType === "lokasi") return poi.id === quest.targetLokasi;
+    if(quest.targetType === "subkategori") return String(poi.subkategori || "").toUpperCase() === String(quest.targetSubkategori || "").toUpperCase();
+    if(quest.targetType === "kategori") return String(poi.group || "").toUpperCase() === String(quest.targetKategori || "").toUpperCase();
+    if(quest.targetKategori && String(poi.group || "").toUpperCase() !== String(quest.targetKategori || "").toUpperCase()) return false;
+    if(quest.targetSubkategori && String(poi.subkategori || "").toUpperCase() !== String(quest.targetSubkategori || "").toUpperCase()) return false;
+    return true;
+  }).length;
+}
+function maybeCompleteQuest(quest){
+  if(!quest || state.completedQuests.has(quest.id)) return false;
+  const count = countDiscoveredByFilter(quest);
+  if(count < Number(quest.targetJumlah || 1)) return false;
+  state.completedQuests.add(quest.id);
+  state.playerProgress.exp += Number(quest.rewardExp || 0);
+  state.playerProgress.coin += Number(quest.rewardCoin || 0);
+  unlockBadge(quest.rewardBadgeId);
+  syncPlayerProfileFromProgress();
+  savePlayerProgress();
+  return true;
+}
+function evaluateQuestProgressForPoi(poi){
+  const completed = [];
+  for(const quest of state.quests){
+    if(!quest || state.completedQuests.has(quest.id)) continue;
+    let relevant = false;
+    if(quest.targetType === "lokasi" && quest.targetLokasi === poi.id) relevant = true;
+    if(quest.targetType === "subkategori" && String(quest.targetSubkategori || "").toUpperCase() === String(poi.subkategori || "").toUpperCase()) relevant = true;
+    if(quest.targetType === "kategori" && String(quest.targetKategori || "").toUpperCase() === String(poi.group || "").toUpperCase()) relevant = true;
+    if(!relevant && quest.targetKategori && String(quest.targetKategori || "").toUpperCase() === String(poi.group || "").toUpperCase()) relevant = true;
+    if(!relevant) continue;
+    if(maybeCompleteQuest(quest)) completed.push(quest);
+  }
+  return completed;
+}
+function markPoiDiscovered(poi){
+  if(!poi || !poi.id || state.discovered.has(poi.id)) return false;
+  state.discovered.add(poi.id);
+  state.playerProgress.exp += Number(poi.rewardExp || 0);
+  state.playerProgress.coin += Number(poi.rewardCoin || 0);
+  unlockBadge(poi.rewardBadgeId);
+  const completed = evaluateQuestProgressForPoi(poi);
+  syncPlayerProfileFromProgress();
+  savePlayerProgress();
+  renderDex();
+  const summary = [
+    `+${Number(poi.rewardExp || 0)} EXP`,
+    Number(poi.rewardCoin || 0) > 0 ? `+${Number(poi.rewardCoin || 0)} Coin` : "",
+    completed.length ? `Quest selesai: ${completed.map(q => q.name).join(", ")}` : ""
+  ].filter(Boolean).join(" • ");
+  updateStatus(`${poi.name} ditemukan${summary ? " • " + summary : ""}`);
+  return true;
+}
+
 const statusEl = () => document.getElementById("statusText");
 const sheetEl = () => document.getElementById("bottomSheet");
 const playerSprite = () => document.getElementById("playerSpriteMap") || document.getElementById("playerSprite");
@@ -117,7 +297,7 @@ const PLAYER_PROFILE = {
   gender: "Laki-laki",
   status: "BogorDex Ranger",
   mode: "Road Patrol",
-  level: 10,
+  level: 1,
   summary: "Karakter utama eksplorasi BogorDex. Fokus patroli jalan, portal event, dan penelusuran titik kota."
 };
 const TOMTOM_API_KEY = window.BOGORDEX_TOMTOM_API_KEY || "31o6wgDj0WALXnVE0xNqd3M6gVki7A3e";
@@ -139,9 +319,19 @@ function setStatus(text){
   }
 }
 function updatePlayerUiMeta(){
+  syncPlayerProfileFromProgress();
   document.querySelectorAll('.trainer-name').forEach(el => el.textContent = PLAYER_PROFILE.status);
-  document.querySelectorAll('.trainer-level').forEach(el => el.textContent = `Lv ${PLAYER_PROFILE.level} Explorer`);
-  const ids = { profileName:PLAYER_PROFILE.name, profileName2:PLAYER_PROFILE.name, profileGender:PLAYER_PROFILE.gender, profileRole:PLAYER_PROFILE.status, profileMode:PLAYER_PROFILE.mode, profileLevel:String(PLAYER_PROFILE.level), profileStatus:PLAYER_PROFILE.status + ' • ' + PLAYER_PROFILE.mode, profileSummary:PLAYER_PROFILE.summary };
+  document.querySelectorAll('.trainer-level').forEach(el => el.textContent = `Lv ${PLAYER_PROFILE.level} Explorer • EXP ${state.playerProgress.exp || 0}`);
+  const ids = {
+    profileName:PLAYER_PROFILE.name,
+    profileName2:PLAYER_PROFILE.name,
+    profileGender:PLAYER_PROFILE.gender,
+    profileRole:PLAYER_PROFILE.status,
+    profileMode:PLAYER_PROFILE.mode,
+    profileLevel:String(PLAYER_PROFILE.level),
+    profileStatus:`${PLAYER_PROFILE.status} • Coin ${state.playerProgress.coin || 0} • Badge ${state.unlockedBadges.size}`,
+    profileSummary:PLAYER_PROFILE.summary
+  };
   Object.entries(ids).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.textContent=val; });
   const lbl = document.querySelector('.player-name-tag b');
   if(lbl) lbl.textContent = PLAYER_PROFILE.name;
@@ -420,6 +610,10 @@ function openSheet(poi, mode="manual"){
   state.activePoiId = poi.id || null;
   state.activePoiMode = mode;
   state.lastPoi = poi;
+  const quest = getQuestById(poi.questId);
+  const rewardText = poiRewardText(poi);
+  const questReward = questRewardText(quest);
+  const badgeText = poi.rewardBadgeId ? badgeLabel(poi.rewardBadgeId) : "";
   document.getElementById("sheetContent").innerHTML = `
     <h3>${poi.name}</h3>
     <p>${poi.desc || "Tidak ada deskripsi."}</p>
@@ -428,12 +622,15 @@ function openSheet(poi, mode="manual"){
       <p>${poi.fungsi || "Belum diisi."}</p>
     </div>
     <div class="section">
-      <div class="section-title">Tupoksi Singkat</div>
-      <p>${poi.tupoksi || "Belum diisi."}</p>
+      <div class="section-title">Info Lokasi</div>
+      <p>${poi.address || poi.tupoksi || "Belum ada alamat/detail tambahan."}</p>
     </div>
+    ${quest ? `<div class="section"><div class="section-title">Quest Terkait</div><p><b>${quest.name}</b><br>${quest.desc || ""}</p></div>` : ""}
+    ${(rewardText || questReward || badgeText) ? `<div class="section"><div class="section-title">Reward</div><p>${[rewardText, questReward ? `Reward Quest: ${questReward}` : "", badgeText ? `Badge Lokasi: ${badgeText}` : ""].filter(Boolean).join("<br>")}</p></div>` : ""}
     <div class="tag-row">
       <span class="tag">${poi.group || "POI"}</span>
-      ${poi.aktif ? '<span class="tag">Aktif</span>' : ""}
+      ${poi.subkategori ? `<span class="tag">${poi.subkategori}</span>` : ""}
+      ${state.discovered.has(poi.id) ? '<span class="tag">Sudah ditemukan</span>' : ""}
     </div>
     ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">✦ Arahkan</button>' : ''}
   `;
@@ -455,7 +652,24 @@ function closeSheet(resetStatus=true, fullyHide=true){
   if(resetStatus) updateStatus(state.hasRealGps ? "Lokasi aktif" : "Lokasi simulasi");
   syncMiniButton();
 }
-function renderDex(){ updatePlayerUiMeta(); }
+function renderDex(){
+  updatePlayerUiMeta();
+  const list = document.getElementById("mapDexList");
+  if(!list) return;
+  const discoveredPois = state.pois.filter(p => state.discovered.has(p.id));
+  const completed = state.quests.filter(q => state.completedQuests.has(q.id));
+  const unlocked = state.badges.filter(b => state.unlockedBadges.has(b.id));
+  const summary = `
+    <div class="mapdex-row" style="display:block;text-align:left;cursor:default;">
+      <span>
+        <strong>Progress BogorDex</strong>
+        <small>${discoveredPois.length}/${state.pois.length} lokasi • ${completed.length}/${state.quests.length} quest • ${unlocked.length}/${state.badges.length} badge</small>
+      </span>
+      <b>Lv ${state.playerProgress.level}</b>
+    </div>`;
+  const rows = discoveredPois.slice(0,5).map(p => `<div class="mapdex-row" style="display:block;text-align:left;cursor:default;"><span><strong>${p.name}</strong><small>${p.group}${p.subkategori ? " • " + p.subkategori : ""}</small></span><b>${Math.round(p.rewardExp || 0)} XP</b></div>`).join("");
+  list.innerHTML = summary + rows;
+}
 function normalizeGroup(group){
   const g = String(group || "").toUpperCase().trim();
   if(g.includes("HALTE")) return "halte";
@@ -469,9 +683,65 @@ function parseLocation(value){
   if(parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) return null;
   return [parts[1], parts[0]];
 }
-function normalizeRows(rows, plain){
+function normalizeRows(rows, plain, cols=[]){
   return rows.map((row, idx) => {
-    const getVal = i => plain ? row[i] : row[i]?.v;
+    if(plain && !Array.isArray(row)){
+      const r = row || {};
+      const group = r.KELOMPOK || r.kategori || "";
+      const name = r.NAMA || r.nama_lokasi || `POI ${idx+1}`;
+      const coords = r.LOKASI ? parseLocation(r.LOKASI) : [Number(r.longitude), Number(r.latitude)];
+      const category = normalizeGroup(group);
+      return {
+        id: String(r.id_lokasi || `poi_${idx}`),
+        group,
+        subkategori: r.subkategori || "",
+        name,
+        fungsi: r.FUNGSI || r.fungsi_layanan || "",
+        tupoksi: r.TUPOKSI || r.alamat || "",
+        desc: r.DESKRIPSI || r.deskripsi_game || "",
+        warna: r.WARNA || r.warna_marker || colorFromKategori(group),
+        aktif: parseTruthy(r.AKTIF ?? r.status_tampil ?? "YA"),
+        coords,
+        category,
+        address: r.alamat || "",
+        icon: r.icon_marker || "",
+        radius: Number(r.radius_trigger || 30),
+        rewardExp: Number(r.reward_exp || 0),
+        rewardCoin: Number(r.reward_coin || 0),
+        rewardBadgeId: r.reward_badge_id || r.reward_badge || "",
+        questId: r.quest_id || ""
+      };
+    }
+    const r = rowToObject(cols, row);
+    const hasMasterHeaders = Object.prototype.hasOwnProperty.call(r, "id_lokasi") || Object.prototype.hasOwnProperty.call(r, "nama_lokasi");
+    if(hasMasterHeaders){
+      const lat = Number(r.latitude);
+      const lng = Number(r.longitude);
+      const group = String(r.kategori || "").trim();
+      const subkategori = String(r.subkategori || "").trim();
+      const category = normalizeGroup(group || subkategori);
+      return {
+        id: String(r.id_lokasi || `poi_${idx}`),
+        group,
+        subkategori,
+        name: String(r.nama_lokasi || `POI ${idx+1}`),
+        fungsi: String(r.fungsi_layanan || ""),
+        tupoksi: String(r.catatan || r.alamat || ""),
+        desc: String(r.deskripsi_game || ""),
+        warna: String(r.warna_marker || colorFromKategori(group || subkategori)),
+        aktif: parseTruthy(r.status_tampil ?? "YA"),
+        coords: (Number.isFinite(lat) && Number.isFinite(lng)) ? [lng, lat] : null,
+        category,
+        address: String(r.alamat || ""),
+        icon: String(r.icon_marker || ""),
+        radius: Number(r.radius_trigger || 30),
+        rewardExp: Number(r.reward_exp || 0),
+        rewardCoin: Number(r.reward_coin || 0),
+        rewardBadgeId: String(r.reward_badge_id || r.reward_badge || ""),
+        questId: String(r.quest_id || "")
+      };
+    }
+    const getVal = i => row[i];
     const group = getVal(0) || "";
     const name = getVal(1) || `POI ${idx+1}`;
     const location = getVal(2) || "";
@@ -482,8 +752,43 @@ function normalizeRows(rows, plain){
     const aktif = String(getVal(8) ?? "TRUE").toUpperCase() !== "FALSE";
     const coords = parseLocation(location);
     const category = normalizeGroup(group);
-    return { id:`poi_${idx}`, group, name, fungsi, tupoksi, desc:deskripsi, warna, aktif, coords, category };
+    return { id:`poi_${idx}`, group, subkategori:"", name, fungsi, tupoksi, desc:deskripsi, warna, aktif, coords, category, address:"", radius:30, rewardExp:0, rewardCoin:0, rewardBadgeId:"", questId:"" };
   }).filter(p => p.coords && p.aktif);
+}
+
+function normalizeQuestRows(rows, plain, cols=[]){
+  const source = plain ? rows : rows.map(row => rowToObject(cols, row));
+  return source.filter(r => parseTruthy((r || {}).status_quest ?? "YA")).map((r, idx) => ({
+    id: String(r.id_quest || `quest_${idx}`),
+    name: String(r.nama_quest || `Quest ${idx+1}`),
+    category: String(r.kategori_quest || ""),
+    desc: String(r.deskripsi_quest || ""),
+    targetType: String(r.tipe_target || "kategori").toLowerCase(),
+    targetKategori: String(r.target_kategori || ""),
+    targetSubkategori: String(r.target_subkategori || ""),
+    targetJumlah: Number(r.target_jumlah || 1),
+    targetLokasi: String(r.target_id_lokasi || ""),
+    rewardExp: Number(r.reward_exp || 0),
+    rewardCoin: Number(r.reward_coin || 0),
+    rewardBadgeId: String(r.reward_badge_id || r.reward_badge || ""),
+    unlockLevel: Number(r.unlock_level || 1),
+    showInPanel: parseTruthy(r.muncul_di_panel ?? "YA")
+  }));
+}
+function normalizeBadgeRows(rows, plain, cols=[]){
+  const source = plain ? rows : rows.map(row => rowToObject(cols, row));
+  return source.filter(r => parseTruthy((r || {}).status_tampil ?? "YA")).map((r, idx) => ({
+    id: String(r.id_badge || `badge_${idx}`),
+    name: String(r.nama_badge || `Badge ${idx+1}`),
+    category: String(r.kategori_badge || ""),
+    desc: String(r.deskripsi_badge || ""),
+    syaratType: String(r.syarat_tipe || ""),
+    syaratNilai: String(r.syarat_nilai || ""),
+    icon: String(r.icon_badge || "🏅"),
+    color: String(r.warna_badge || "biru"),
+    rarity: String(r.rarity || "umum"),
+    bonusExp: Number(r.reward_exp_bonus || 0)
+  }));
 }
 function toFeature(poi){
   return {
@@ -950,9 +1255,8 @@ function setupPoiLayers(){
     if(!feature) return;
     const poi = state.pois.find(p => p.id === feature.properties.id);
     if(!poi) return;
-    state.discovered.add(poi.id);
+    markPoiDiscovered(poi);
     state.portalDismissedIds.add(poi.id);
-    renderDex();
     openSheet(poi, "manual");
   });
 
@@ -988,9 +1292,10 @@ function showQuestPopup(poi, dist){
   markPortalPopupDone(poi.id);
   state.activeQuestPoiId = poi.id;
   state.lastPoi = poi;
+  const quest = getQuestById(poi.questId);
   document.getElementById("questPortalName").textContent = poi.name;
   document.getElementById("questPortalType").textContent = poi.group || "Portal BogorDex";
-  document.getElementById("questPortalDesc").textContent = poi.fungsi || poi.desc || "Dekati portal ini untuk membuka informasi lokasi dan menambah koleksi Dex.";
+  document.getElementById("questPortalDesc").textContent = quest ? `${quest.name} • ${quest.desc || poi.fungsi || poi.desc || ""}` : (poi.fungsi || poi.desc || "Dekati portal ini untuk membuka informasi lokasi dan menambah koleksi Dex.");
   document.getElementById("questPortalDistance").textContent = Math.max(1, Math.round(dist)) + " m";
   el.classList.remove("hidden");
   el.classList.remove("quest-pop");
@@ -1006,8 +1311,7 @@ function hideQuestPopup(markDismissed=false){
 function dismissActiveQuestPopup(){ hideQuestPopup(true); }
 function startQuestFromPopup(){
   if(!state.lastPoi) return;
-  state.discovered.add(state.lastPoi.id);
-  renderDex();
+  markPoiDiscovered(state.lastPoi);
   if(state.lastPoi && state.lastPoi.id) markPortalPopupDone(state.lastPoi.id);
   hideQuestPopup(true);
   openSheet(state.lastPoi, "manual");
@@ -1036,8 +1340,7 @@ function detectNearby(){
   updateNearestHighlight();
   const hit = nearestPoiWithin(state.playerWorld, state.portalNoticeRadiusMeters);
   if(hit){
-    state.discovered.add(hit.poi.id);
-    renderDex();
+    markPoiDiscovered(hit.poi);
     showQuestPopup(hit.poi, hit.dist);
     updateStatus("Portal terdeteksi: " + hit.poi.name);
   } else {
@@ -1272,24 +1575,46 @@ async function setNavigationTarget(target){
 }
 
 
+async function fetchSheetRows(sheetName){
+  const res = await fetch(sheetUrl(sheetName), { cache:"no-store" });
+  const txt = await res.text();
+  const json = JSON.parse(txt.substring(47, txt.length - 2));
+  const cols = (json.table.cols || []).map(c => (c.label || "").trim());
+  const rows = (json.table.rows || []).map(r => (r.c || []).map(cell => cell ? cell.v : ""));
+  return { cols, rows };
+}
 async function loadSheetData(){
+  let loadedFromSheet = false;
   try{
-    updateStatus("Memuat data Google Sheet…");
-    const res = await fetch(GVIZ_URL);
-    const txt = await res.text();
-    const json = JSON.parse(txt.substring(47, txt.length - 2));
-    state.pois = normalizeRows((json.table.rows || []).map(r => r.c || []), false);
+    if(SHEET_ID){
+      updateStatus("Memuat master Google Sheet…");
+      const [lokasiData, questData, badgeData] = await Promise.all([
+        fetchSheetRows(SHEETS.lokasi),
+        fetchSheetRows(SHEETS.quest),
+        fetchSheetRows(SHEETS.badge)
+      ]);
+      state.pois = normalizeRows(lokasiData.rows, false, lokasiData.cols);
+      state.quests = normalizeQuestRows(questData.rows, false, questData.cols);
+      state.badges = normalizeBadgeRows(badgeData.rows, false, badgeData.cols);
+      loadedFromSheet = true;
+    }
   } catch(err){
-    const rows = (window.BOGORDEX_FALLBACK_DATA || []).map(r => [r.KELOMPOK,r.NAMA,r.LOKASI,r.FUNGSI,r.TUPOKSI,r.DESKRIPSI,r.IKON,r.WARNA,r.AKTIF]);
-    state.pois = normalizeRows(rows, true);
+    console.warn("Gagal memuat Google Sheet master:", err);
   }
+  if(!loadedFromSheet){
+    const master = window.BOGORDEX_MASTER_DATA || {};
+    state.pois = normalizeRows(master.lokasi || window.BOGORDEX_FALLBACK_DATA || [], true);
+    state.quests = normalizeQuestRows(master.quests || [], true);
+    state.badges = normalizeBadgeRows(master.badges || [], true);
+  }
+  syncPlayerProfileFromProgress();
   setupPoiLayers();
   refreshPoiSource();
   updateNearestHighlight();
   renderDex();
   renderNPCs();
   await loadRealtimeEventPortals();
-  updateStatus(`Mode game aktif • ${state.pois.length} portal`);
+  updateStatus(`Mode game aktif • ${state.pois.length} lokasi • ${state.quests.length} quest • ${state.badges.length} badge`);
 }
 function normalizeHeading(value){
   let n = Number(value);
