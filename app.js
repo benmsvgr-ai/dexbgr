@@ -687,8 +687,56 @@ function getVectorBuildingSourceId(){
 }
 
 function setupAnimeMapMode(){
-  // v61 plain MapLibre mode: no extra hiding/ghost buildings/filter patches
-  return;
+  if(!map || !map.getStyle) return;
+  const style = map.getStyle();
+  const layers = style.layers || [];
+
+  // sembunyikan building bawaan style, lalu ganti jadi ghost/transparan seperti versi yang user suka
+  layers.forEach(layer => {
+    const id = String(layer.id || '').toLowerCase();
+    const sl = String(layer['source-layer'] || '').toLowerCase();
+    if(id.includes('building') || sl.includes('building')){
+      try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
+      return;
+    }
+    const noisy = id.includes('hillshade') || id.includes('contour');
+    if(noisy){
+      try{ map.setLayoutProperty(layer.id, 'visibility', 'none'); }catch(e){}
+    }
+  });
+
+  const vectorSourceId = getVectorBuildingSourceId();
+  if(!vectorSourceId) return;
+  try{
+    const labelLayer = layers.find(l => l.type === 'symbol' && l.layout && l.layout['text-field']);
+    const beforeId = labelLayer && labelLayer.id;
+    if(!map.getLayer('bdx-ghost-buildings')){
+      map.addLayer({
+        id:'bdx-ghost-buildings',
+        source:vectorSourceId,
+        'source-layer':'building',
+        type:'fill-extrusion',
+        minzoom:15,
+        paint:{
+          'fill-extrusion-color':'#dfe7f4',
+          'fill-extrusion-height':['interpolate',['linear'],['zoom'],15,2,18,['coalesce',['get','render_height'],['get','height'],18]],
+          'fill-extrusion-base':['coalesce',['get','render_min_height'],['get','min_height'],0],
+          'fill-extrusion-opacity':0.18,
+          'fill-extrusion-vertical-gradient':true
+        }
+      }, beforeId);
+    }
+    if(!map.getLayer('bdx-building-collision')){
+      map.addLayer({
+        id:'bdx-building-collision',
+        source:vectorSourceId,
+        'source-layer':'building',
+        type:'fill',
+        minzoom:15,
+        paint:{ 'fill-color':'#6ee7ff', 'fill-opacity':0.001 }
+      }, beforeId);
+    }
+  }catch(err){ console.warn('Ghost building layer skipped:', err); }
 }
 
 
