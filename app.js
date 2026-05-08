@@ -1097,20 +1097,7 @@ function lockPitchOnly(){
   }
 }
 
-const MAPLIBRE_STYLE_URL = {
-  version: 8,
-  sources: {
-    osm: {
-      type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors"
-    }
-  },
-  layers: [
-    { id: "osm-base", type: "raster", source: "osm" }
-  ]
-};
+const MAPLIBRE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
 if (!window.maplibregl) {
   const el = document.getElementById("statusText");
