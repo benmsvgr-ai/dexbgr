@@ -2552,3 +2552,75 @@ body::after{
 .profile-badge-card:nth-child(1) .profile-badge-icon{background-position:0% 0%}.profile-badge-card:nth-child(2) .profile-badge-icon{background-position:20% 0%}.profile-badge-card:nth-child(3) .profile-badge-icon{background-position:40% 0%}.profile-badge-card:nth-child(4) .profile-badge-icon{background-position:60% 20%}.profile-badge-card:nth-child(5) .profile-badge-icon{background-position:80% 20%}.profile-badge-card:nth-child(6) .profile-badge-icon{background-position:0% 40%}.profile-badge-card:nth-child(7) .profile-badge-icon{background-position:20% 60%}.profile-badge-card:nth-child(8) .profile-badge-icon{background-position:80% 60%}
 .rubo-assistant{animation:ruboBop 3s ease-in-out infinite}@keyframes ruboBop{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @media (max-width:720px){.fab-compass{top:calc(env(safe-area-inset-top,0px) + 162px)!important;width:64px!important;height:64px!important}.main-action{top:auto!important;bottom:136px!important}.sheet-content h3{font-size:31px!important}}
+
+
+/* ===== v89 camera + radar polish ===== */
+body{background:#dff1ff;}
+.mapdex-modal{backdrop-filter:blur(18px) saturate(1.15) !important; background:rgba(18,40,88,.22) !important;}
+.mapdex-phone{
+  width:min(92vw,560px)!important;
+  max-height:88vh!important;
+  padding:22px 22px 18px!important;
+  border-radius:34px!important;
+  background:linear-gradient(180deg,rgba(10,67,154,.90),rgba(10,48,116,.88))!important;
+  border:1px solid rgba(112,202,255,.55)!important;
+  box-shadow:0 24px 60px rgba(8,28,70,.45), inset 0 0 0 1px rgba(165,235,255,.20)!important;
+  color:#fff!important;
+}
+.mapdex-head{margin-bottom:14px!important;align-items:flex-start!important;}
+.mapdex-kicker{color:#8ce6ff!important;letter-spacing:.18em!important;font-weight:900!important;text-transform:uppercase!important;}
+.mapdex-head h3{font-size:28px!important;color:#fff!important;margin:2px 0 2px!important;}
+.mapdex-head p,.mapdex-desc{color:rgba(232,246,255,.88)!important;}
+#closeMapDexBtn.close-btn{background:rgba(255,255,255,.12)!important;color:#fff!important;border:1px solid rgba(255,255,255,.24)!important;box-shadow:none!important;}
+.mapdex-canvas{
+  height:340px!important;
+  border-radius:28px!important;
+  position:relative!important;
+  background:
+    radial-gradient(circle at center, rgba(74,170,255,.20), transparent 40%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.10) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.10) 0 1px, transparent 1px 34px),
+    linear-gradient(180deg, rgba(62,177,255,.32), rgba(20,72,169,.28)),
+    rgba(7,34,88,.62)!important;
+  border:1px solid rgba(145,225,255,.40)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 16px 34px rgba(0,0,0,.20)!important;
+}
+.mapdex-canvas::before{inset:11%!important;border:2px solid rgba(150,227,255,.30)!important;animation:none!important;}
+.mapdex-canvas::after{background:linear-gradient(45deg, rgba(116,250,255,.28), rgba(116,250,255,0) 65%)!important;animation:bdxRadarSweep 3.4s linear infinite!important;}
+.mapdex-player-dot{background:linear-gradient(180deg,#ffffff,#dff3ff)!important;color:#2c5ee9!important;border:2px solid rgba(102,211,255,.55)!important;}
+.mapdex-legend{margin:12px 0 14px!important;padding:10px 14px!important;border-radius:18px!important;background:rgba(255,255,255,.08)!important;color:#edf8ff!important;}
+.mapdex-rubo-tip{margin:12px 0 0!important;padding:12px 14px!important;border-radius:18px!important;background:rgba(255,255,255,.08)!important;color:#edf8ff!important;border:1px solid rgba(146,226,255,.22)!important;}
+.mapdex-list{display:flex!important;flex-direction:column!important;gap:10px!important;margin-top:14px!important;}
+.mapdex-row{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;
+  padding:14px 16px!important;border-radius:22px!important;
+  background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06))!important;
+  border:1px solid rgba(138,214,255,.20)!important;
+  box-shadow:0 10px 22px rgba(0,0,0,.14)!important;
+  color:#fff!important;
+}
+.mapdex-row-left{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important;}
+.mapdex-row-ico{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:22px;font-weight:900;flex:0 0 auto;box-shadow:0 8px 18px rgba(0,0,0,.20);}
+.mapdex-row-ico.portal{background:linear-gradient(180deg,#b456ff,#7d68ff)!important;}
+.mapdex-row-ico.npc{background:linear-gradient(180deg,#70df86,#39b96e)!important;}
+.mapdex-row-ico.report{background:linear-gradient(180deg,#ffcf62,#ff9d32)!important;}
+.mapdex-row-copy{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.mapdex-row-copy strong{font-size:16px!important;line-height:1.2!important;color:#fff!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;}
+.mapdex-row-copy small{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:rgba(231,244,255,.88)!important;}
+.mapdex-row-copy small label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px;}
+.mapdex-row b{font-size:18px!important;color:#fff!important;white-space:nowrap;}
+.mapdex-row b u{text-decoration:none!important;font-size:22px!important;margin-left:4px;color:#9fe5ff!important;}
+.type-chip{display:inline-flex!important;align-items:center!important;justify-content:center!important;padding:4px 10px!important;border-radius:999px!important;font-style:normal!important;font-weight:900!important;font-size:11px!important;letter-spacing:.02em;}
+.type-chip.portal{background:rgba(191,105,255,.18)!important;color:#f0c6ff!important;border:1px solid rgba(206,133,255,.35)!important;}
+.type-chip.npc{background:rgba(91,221,131,.16)!important;color:#bff6c8!important;border:1px solid rgba(101,230,143,.30)!important;}
+.type-chip.report{background:rgba(255,193,84,.16)!important;color:#ffe1a4!important;border:1px solid rgba(255,197,93,.30)!important;}
+.fab-compass{display:flex!important;}
+.bottom-nav{background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(233,242,255,.92))!important;box-shadow:0 16px 42px rgba(33,68,125,.22)!important;}
+.bottom-nav-item.active small{color:#2674ff!important;}
+@media (max-width: 720px){
+  .mapdex-phone{width:min(94vw,430px)!important;padding:18px 16px 14px!important;border-radius:28px!important;}
+  .mapdex-head h3{font-size:24px!important;}
+  .mapdex-canvas{height:300px!important;}
+  .mapdex-row-copy strong{max-width:180px;}
+  .mapdex-row-copy small label{max-width:150px;}
+}
