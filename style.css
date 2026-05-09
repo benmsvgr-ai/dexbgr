@@ -2870,3 +2870,71 @@ body.overlay-open .nav-center-banner{
 #dexModal .character-stat-grid{grid-template-columns:repeat(2,1fr) !important;}
 #dexModal .profile-badge-grid{grid-template-columns:repeat(2,1fr) !important; gap:8px !important;}
 body.overlay-open .top-right-hud, body.overlay-open .fab-locate, body.overlay-open .fab-compass, body.overlay-open .mapdex-action, body.overlay-open .report-action, body.overlay-open #bottomGameNav, body.overlay-open .move-pad, body.overlay-open .top-status, body.overlay-open #weatherChip{display:none !important;}
+
+
+/* ==== V95 professional cleanup ==== */
+:root{--pro-dark:#103b8d;--pro-dark-2:#0b2967;--pro-glow:#59d7ff;}
+.top-actions{display:none!important;}
+.chat-toggle.icon-only{
+  width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;
+  border:none!important;background:transparent!important;box-shadow:none!important;padding:0!important;
+  animation:iconFloat 2.6s ease-in-out infinite;
+}
+.chat-toggle .chat-icon-asset{width:40px!important;height:40px!important;display:block!important;background:url('assets/ui/chatcon.png') center/contain no-repeat!important;filter:drop-shadow(0 8px 16px rgba(67,103,255,.28));}
+.coin-hud,.player-hud{background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(235,244,255,.82))!important;backdrop-filter:blur(14px)!important;}
+.player-hud-frame::after{content:'';position:absolute;inset:8px;border-radius:50%;background:url('assets/player/portrait.png') center/cover no-repeat;}
+.fab-compass,.fab-locate,.mapdex-action,.report-action{
+  background:transparent!important;border:none!important;box-shadow:none!important;border-radius:0!important;
+  width:62px!important;height:62px!important;padding:0!important;display:grid!important;place-items:center!important;
+  animation:iconFloat 2.8s ease-in-out infinite;
+}
+.fab-compass{top:calc(env(safe-area-inset-top,0px) + 144px)!important;right:14px!important;position:absolute!important;}
+.fab-compass::before{content:''!important;display:block!important;width:58px!important;height:58px!important;background:url('assets/ui/bkompas.png') center/contain no-repeat!important;transform:none!important;filter:drop-shadow(0 10px 20px rgba(11,41,103,.24));}
+.fab-compass::after{content:''!important;position:absolute!important;inset:6px!important;background:url('assets/ui/jarumkompas.png') center/contain no-repeat!important;animation:compassPulse 2.6s ease-in-out infinite;transform-origin:50% 50%;}
+.fab-compass span,.fab-locate span,.mapdex-action small,.report-action small{display:none!important;}
+.fab-locate{top:calc(env(safe-area-inset-top,0px) + 216px)!important;right:14px!important;}
+.fab-locate::before{content:''!important;display:block!important;width:56px!important;height:56px!important;background:url('assets/ui/gpsicon.png') center/contain no-repeat!important;filter:drop-shadow(0 10px 20px rgba(17,54,120,.24));}
+.mapdex-action{top:calc(env(safe-area-inset-top,0px) + 288px)!important;right:14px!important;}
+.mapdex-action::before{content:''!important;width:56px!important;height:56px!important;display:block!important;background:url('assets/ui/mapdex-device.png') center/contain no-repeat!important;filter:drop-shadow(0 10px 20px rgba(19,55,124,.24));}
+.report-action{top:calc(env(safe-area-inset-top,0px) + 360px)!important;right:14px!important;}
+.report-action span{display:block!important;width:56px!important;height:56px!important;font-size:0!important;background:url('assets/ui/iconlaporan.png') center/contain no-repeat!important;filter:drop-shadow(0 10px 20px rgba(19,55,124,.24));}
+#bottomGameNav{background:linear-gradient(180deg,rgba(255,255,255,.90),rgba(228,238,255,.86))!important;backdrop-filter:blur(18px)!important;}
+.bottom-nav-item,.bottom-hub-orb{animation:iconBreathe 3.2s ease-in-out infinite;}
+.bottom-nav-item:nth-child(1){animation-delay:.0s}.bottom-nav-item:nth-child(2){animation-delay:.2s}.bottom-nav-item:nth-child(4){animation-delay:.4s}.bottom-nav-item:nth-child(5){animation-delay:.6s}
+.nav-home,.nav-inventory,.nav-profile,.nav-mission{background-size:28px 28px!important;animation:iconPulse 2.8s ease-in-out infinite;}
+.nav-home{background-image:url('assets/ui/homecon.png')!important;}
+.nav-inventory{background-image:url('assets/ui/inventorycon.png')!important;}
+.quest-card,.npc-dialog-card,.report-card,.mapdex-phone,.modal-card,.inventory-modal-card,.game-menu-card,#dexModal .character-modal-card{
+  background:linear-gradient(180deg,rgba(9,37,96,.96),rgba(14,67,138,.95) 54%,rgba(10,34,84,.96))!important;
+  color:#eef6ff!important;border:1px solid rgba(120,204,255,.24)!important;box-shadow:0 24px 60px rgba(3,18,54,.45)!important;
+}
+.quest-card::before,.npc-dialog-card::before,.report-card::before,.mapdex-phone::before,.modal-card::before,.inventory-modal-card::before,.game-menu-card::before,#dexModal .character-modal-card::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 22%,rgba(117,230,255,.06));pointer-events:none;
+}
+.quest-card h3,.npc-dialog-card h3,.report-card h3,.mapdex-head h3,.game-menu-card h2,.modal-card h2,#dexModal h2{color:#fff!important;text-shadow:0 2px 14px rgba(0,0,0,.18)!important;}
+.quest-card p,.npc-dialog-card p,.report-card p,.mapdex-row small,.game-menu-desc,.inventory-sub,#dexModal p,.report-sheet-head p{color:#d7e8ff!important;}
+.report-card select,.report-card textarea,.report-card input{background:rgba(255,255,255,.12)!important;border:1px solid rgba(144,209,255,.24)!important;color:#fff!important;}
+.report-card textarea::placeholder{color:#cddff7!important;}
+.mapdex-row{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.06))!important;color:#fff!important;border:1px solid rgba(131,201,255,.16)!important;}
+.mapdex-row b{color:#8edbff!important;}
+.mapdex-legend,.mapdex-legend span{color:#dcecff!important;}
+.report-actions button:first-child,.sheet-route-btn,.questStartBtn,#navCenterCancel,.report-manage-btn.blue{background:linear-gradient(135deg,#2a86ff,#6f6cff 55%,#4de7ff)!important;color:#fff!important;}
+.report-actions button:last-child{background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.10))!important;color:#fff!important;}
+.inventory-chip,.report-status-pill,.report-status-location,.category-chip{background:rgba(255,255,255,.10)!important;border:1px solid rgba(140,208,255,.20)!important;color:#fff!important;}
+.nav-center-banner{background:linear-gradient(180deg,rgba(10,42,98,.94),rgba(14,64,140,.93))!important;border:1px solid rgba(133,206,255,.22)!important;color:#fff!important;box-shadow:0 20px 44px rgba(3,18,54,.34)!important;}
+.nav-center-meta{color:#dff1ff!important}
+.portal-arrived-toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 92px);transform:translateX(-50%);z-index:210;padding:12px 18px;border-radius:18px;background:linear-gradient(135deg,rgba(16,92,42,.95),rgba(48,170,99,.95));border:1px solid rgba(181,255,203,.35);color:#fff;font-weight:900;box-shadow:0 18px 42px rgba(13,74,35,.34);animation:arrivePop .42s cubic-bezier(.2,.9,.2,1);}
+.portal-arrived-toast.hidden{display:none}
+@keyframes arrivePop{0%{opacity:0;transform:translateX(-50%) translateY(-10px) scale(.92)}100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+@keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes iconBreathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.03)}}
+@keyframes iconPulse{0%,100%{filter:drop-shadow(0 0 0 rgba(94,214,255,0))}50%{filter:drop-shadow(0 0 8px rgba(94,214,255,.35))}}
+@keyframes compassPulse{0%,100%{transform:rotate(0deg) scale(1)}50%{transform:rotate(0deg) scale(1.05)}}
+@media(max-width:720px){
+  .top-right-hud{gap:6px!important;right:10px!important}
+  .coin-hud{min-width:68px!important;height:38px!important;padding:0 8px!important}
+  .player-hud{min-width:126px!important;height:42px!important}
+  .player-hud-frame{width:38px!important;height:38px!important}
+  .fab-compass,.fab-locate,.mapdex-action,.report-action{width:56px!important;height:56px!important}
+  .fab-compass::before,.fab-compass::after,.fab-locate::before,.mapdex-action::before,.report-action span{width:52px!important;height:52px!important}
+}
