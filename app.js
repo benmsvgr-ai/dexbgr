@@ -294,6 +294,7 @@ function syncPlayerProfileFromProgress(){
   PLAYER_PROFILE.status = "BogorDex Ranger";
   PLAYER_PROFILE.mode = "Road Patrol";
   PLAYER_PROFILE.summary = `Explorer level ${level}. EXP ${exp} • Coin ${coin} • ${state.discovered.size} lokasi ditemukan • ${state.completedQuests.size} quest selesai • ${state.unlockedBadges.size} badge terbuka.`;
+  updateTopHud();
 }
 function loadPlayerProgress(){
   try{
@@ -835,7 +836,8 @@ function applyEnvironmentClasses(){
     app.classList.toggle('weather-rain', raining);
     app.classList.toggle('is-night', isNight);
   }
-  updateWeatherChip();
+  updateTopHud();
+updateWeatherChip();
   applySceneTheme();
 }
 
@@ -2598,6 +2600,16 @@ function closeAllOverlays(){
   closeSheet?.(true, true);
   setOverlayMode(false);
 }
+
+function updateTopHud(){
+  const coinEl = document.getElementById('coinHudValue');
+  if(coinEl) coinEl.textContent = String(state.playerProgress?.coin || 0);
+  const n = document.getElementById('playerHudName');
+  if(n) n.textContent = PLAYER_PROFILE?.name || 'Ranger Panji';
+  const l = document.getElementById('playerHudLevel');
+  if(l) l.textContent = 'Lv. ' + String(state.playerProgress?.level || 1);
+}
+
 function showBottomNavHelp(name){
   const info = {
     home:['Beranda','Kembali ke peta utama dan jelajah sekitar.'],
@@ -2610,6 +2622,7 @@ function showBottomNavHelp(name){
 function openCharacterProfile(){
   closeAllOverlays();
   updatePlayerUiMeta?.();
+  updateTopHud();
   document.getElementById('dexModal')?.classList.remove('hidden');
   setOverlayMode(true);
 }
@@ -2625,16 +2638,20 @@ function renderInventory(){
   if(chipList){
     const chips = [];
     if(unlocked.length){
-      unlocked.slice(0,8).forEach(id => { const b = allBadges.find(x => x.id===id) || {name:id, icon:'🏅'}; chips.push(`<span class="inventory-chip unlocked">${b.icon || '🏅'} ${b.name}</span>`); });
+      unlocked.slice(0,6).forEach(id => { const b = allBadges.find(x => x.id===id) || {name:id, icon:'🏅'}; chips.push(`<span class="inventory-chip unlocked">${b.icon || '🏅'} ${b.name}</span>`); });
     }
     chips.push(`<span class="inventory-chip">🪙 Coin ${(state.playerProgress.coin||0)}</span>`);
     chips.push(`<span class="inventory-chip">📍 Laporan ${(state.userReports||[]).length}</span>`);
     chips.push(`<span class="inventory-chip">✨ Bonus EXP +20%</span>`);
-    chipList.innerHTML = chips.join('');
+    chipList.innerHTML = chips.join('') + `
+      <div class="inventory-gallery-block"><div class="section-title">Token Warga</div><img class="inventory-gallery-sheet" src="assets/rewards/alltoken.png" alt="Token Warga"></div>
+      <div class="inventory-gallery-block"><div class="section-title">Suvenir Bogor</div><img class="inventory-gallery-sheet" src="assets/rewards/allsuvenir.png" alt="Suvenir Bogor"></div>`;
   }
+  updateTopHud();
 }
 function openInventoryModal(){
   closeAllOverlays();
+  updateTopHud();
   renderInventory();
   document.getElementById('inventoryModal')?.classList.remove('hidden');
   setOverlayMode(true);
@@ -2708,12 +2725,40 @@ function focusMapDexItem(item){
 }
 function openMapDex(){
   closeAllOverlays();
-  setRuboEmotion('serius','MapDex Radar aktif','Aku bantu cari portal, NPC, dan laporan terdekat.');
   renderMapDex();
   document.getElementById("mapDexModal").classList.remove("hidden");
   setOverlayMode(true);
 }
 function closeMapDex(){ document.getElementById("mapDexModal").classList.add("hidden"); setOverlayMode(false); }
+
+function distributeRadarPoints(items, radiusMeters, maxPct){
+  const pts = items.map((item) => {
+    const dx = haversineMeters(state.playerWorld, [item.coords[0], state.playerWorld[1]]) * (item.coords[0] >= state.playerWorld[0] ? 1 : -1);
+    const dy = haversineMeters(state.playerWorld, [state.playerWorld[0], item.coords[1]]) * (item.coords[1] >= state.playerWorld[1] ? -1 : 1);
+    let x = 50 + (dx / radiusMeters) * maxPct;
+    let y = 50 + (dy / radiusMeters) * maxPct;
+    return {item, x:Math.max(8, Math.min(92, x)), y:Math.max(10, Math.min(92, y))};
+  });
+  for(let pass=0; pass<28; pass++){
+    for(let i=0;i<pts.length;i++){
+      for(let j=i+1;j<pts.length;j++){
+        const a=pts[i], b=pts[j];
+        const dx=a.x-b.x, dy=a.y-b.y;
+        const d=Math.hypot(dx,dy) || 0.01;
+        if(d<8){
+          const push=(8-d)/2;
+          const ux=dx/d, uy=dy/d;
+          a.x=Math.max(8, Math.min(92, a.x + ux*push));
+          a.y=Math.max(10, Math.min(92, a.y + uy*push));
+          b.x=Math.max(8, Math.min(92, b.x - ux*push));
+          b.y=Math.max(10, Math.min(92, b.y - uy*push));
+        }
+      }
+    }
+  }
+  return pts;
+}
+
 function renderMapDex(){
   const canvas = document.getElementById("mapDexCanvas");
   const list = document.getElementById("mapDexList");
@@ -2721,23 +2766,20 @@ function renderMapDex(){
   canvas.querySelectorAll(".mapdex-pin").forEach(n => n.remove());
   list.innerHTML = "";
   const items = getMapDexItems();
-  const rectSize = 310;
-  const radiusMeters = 900;
-  items.slice(0,28).forEach((item, idx) => {
-    const dx = haversineMeters(state.playerWorld, [item.coords[0], state.playerWorld[1]]) * (item.coords[0] >= state.playerWorld[0] ? 1 : -1);
-    const dy = haversineMeters(state.playerWorld, [state.playerWorld[0], item.coords[1]]) * (item.coords[1] >= state.playerWorld[1] ? -1 : 1);
-    const x = Math.max(8, Math.min(92, 50 + (dx / radiusMeters) * 42));
-    const y = Math.max(10, Math.min(92, 50 + (dy / radiusMeters) * 42));
+  const radiusMeters = 1800;
+  const radarPts = distributeRadarPoints(items.slice(0,28), radiusMeters, 38);
+  radarPts.forEach(({item,x,y}) => {
     const btn = document.createElement("button");
     btn.className = "mapdex-pin " + item.type;
     btn.style.left = x + "%";
     btn.style.top = y + "%";
     btn.title = item.name;
-    btn.innerHTML = `<i><span>${item.emoji}</span></i>`;
+    const icon = item.type === 'portal' ? '🌀' : item.type === 'npc' ? '!' : '📍';
+    btn.innerHTML = `<i><span>${icon}</span></i>`;
     btn.addEventListener("click", () => focusMapDexItem(item));
     canvas.appendChild(btn);
   });
-  items.slice(0,20).forEach(item => {
+  items.slice(0,12).forEach(item => {
     const row = document.createElement("button");
     row.className = "mapdex-row";
     const label = item.type === "portal" ? "Portal" : item.type === "npc" ? "NPC" : "Laporan";
@@ -2746,9 +2788,10 @@ function renderMapDex(){
       : item.type === "npc"
         ? "Explorer & Penjaga BogorDex"
         : (item.ref?.category ? String(item.ref.category).replace(/_/g,' ') : "Info warga di sekitar kamu");
+    const icon = item.type === 'portal' ? '🌀' : item.type === 'npc' ? '!' : '📍';
     row.innerHTML = `
       <span class="mapdex-row-left">
-        <i class="mapdex-row-ico ${item.type}">${item.emoji}</i>
+        <i class="mapdex-row-ico ${item.type}">${icon}</i>
         <span class="mapdex-row-copy">
           <strong>${item.name}</strong>
           <small><em class="type-chip ${item.type}">${label}</em><label>${desc}</label></small>
@@ -2788,6 +2831,7 @@ document.getElementById("questCloseBtn").addEventListener("click", dismissActive
 const __navCancelBtn = document.getElementById("navCancelBtn"); if(__navCancelBtn){ __navCancelBtn.addEventListener("click", () => clearNavigationTarget()); }
 document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
 document.getElementById("chatToggleBtn").addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
+document.getElementById("playerHudBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); openCharacterProfile(); });
 document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
 document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
 document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
