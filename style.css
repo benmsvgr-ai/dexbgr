@@ -2168,3 +2168,17 @@ html,body,#app{
 /* ==== v80 manual movement unlocked with GPS ==== */
 .rubo-assistant{right:92px !important; bottom:104px !important; transform:scale(.92); transform-origin:right bottom;}
 @media(max-width:720px){.rubo-assistant{right:88px !important; bottom:92px !important; max-width:230px !important; transform:scale(.82);}}
+
+
+/* ==== v81 nuclear interaction fix ==== */
+html, body, #app, #map, .maplibregl-canvas{touch-action:none !important;}
+.rubo-assistant{pointer-events:none !important;}
+.rubo-assistant .rubo-close, .rubo-assistant button{pointer-events:auto !important;}
+.screen-vignette,.fog-overlay,.route-glow,.portal-glow,.player-aura,.sky-haze{pointer-events:none !important;}
+.modal.hidden,.game-menu-modal.hidden,.mapdex-modal.hidden,.arrival-popup.hidden,.bottom-sheet.hidden,#navCenterBanner.hidden{display:none !important;pointer-events:none !important;}
+.modal:not(.hidden),.game-menu-modal:not(.hidden),.mapdex-modal:not(.hidden),.arrival-popup:not(.hidden),.bottom-sheet:not(.hidden){pointer-events:auto !important;}
+.right-actions,.side-actions,.fab-stack,.floating-actions{pointer-events:auto !important;z-index:2600 !important;}
+.right-actions button,.side-actions button,.fab-stack button,.floating-actions button,.gps-btn,.mapdex-btn,.character-btn{pointer-events:auto !important;}
+#dexModal.hidden,#mainMenuModal.hidden,#mapdexModal.hidden,#reportModal.hidden{display:none !important;pointer-events:none !important;}
+#dexModal:not(.hidden),#mainMenuModal:not(.hidden),#mapdexModal:not(.hidden),#reportModal:not(.hidden){pointer-events:auto !important;}
+#map{z-index:0 !important;}
