@@ -2756,12 +2756,14 @@ function resetGameCamera(){
 
 
 function getMapDexItems(){
-  const items = [];
-  (state.pois || []).forEach(p => { if(p.coords) items.push({type:"portal", name:p.name, coords:p.coords, emoji:"🌀", ref:p}); });
-  (state.npcs || []).forEach(n => { if(n.coords) items.push({type:"npc", name:n.name, coords:n.coords, emoji:"!", ref:n}); });
-  (state.userReports || []).forEach(r => { if(r.coords) items.push({type:"report", name:r.note || "Info warga", coords:r.coords, emoji:"📍", ref:r}); });
-  return items.map(item => ({...item, dist:haversineMeters(state.playerWorld, item.coords)})).sort((a,b)=>a.dist-b.dist).slice(0,60);
+  const portals=[]; const npcs=[]; const reports=[];
+  (state.pois || []).forEach(p => { if(p.coords) portals.push({type:"portal", name:p.name, coords:p.coords, emoji:"🌀", ref:p}); });
+  (state.npcs || []).forEach(n => { if(n.coords) npcs.push({type:"npc", name:n.name, coords:n.coords, emoji:"!", ref:n}); });
+  (state.userReports || []).forEach(r => { if(r.coords) reports.push({type:"report", name:r.note || "Info warga", coords:r.coords, emoji:"📍", ref:r}); });
+  const withDist = arr => arr.map(item => ({...item, dist:haversineMeters(state.playerWorld, item.coords)})).sort((a,b)=>a.dist-b.dist);
+  return [...withDist(portals).slice(0,6), ...withDist(npcs).slice(0,4), ...withDist(reports).slice(0,4)].sort((a,b)=>a.dist-b.dist);
 }
+
 function focusMapDexItem(item){
   closeMapDex();
   map.easeTo({ center:item.coords, zoom:19.45, pitch:CAMERA_PITCH, bearing:getCameraBearing(), duration:450 });
@@ -2814,32 +2816,25 @@ function renderMapDex(){
   canvas.querySelectorAll(".mapdex-pin").forEach(n => n.remove());
   list.innerHTML = "";
   const items = getMapDexItems();
-  const radiusMeters = 1800;
-  const radarPts = distributeRadarPoints(items.slice(0,28), radiusMeters, 38);
+  const radarPts = distributeRadarPoints(items.slice(0,14), 1200, 34);
   radarPts.forEach(({item,x,y}) => {
     const btn = document.createElement("button");
     btn.className = "mapdex-pin " + item.type;
     btn.style.left = x + "%";
     btn.style.top = y + "%";
     btn.title = item.name;
-    const icon = item.type === 'portal' ? '🌀' : item.type === 'npc' ? '!' : '📍';
-    btn.innerHTML = `<i><span>${icon}</span></i>`;
+    btn.innerHTML = `<i><span></span></i>`;
     btn.addEventListener("click", () => focusMapDexItem(item));
     canvas.appendChild(btn);
   });
-  items.slice(0,12).forEach(item => {
+  items.forEach(item => {
     const row = document.createElement("button");
     row.className = "mapdex-row";
     const label = item.type === "portal" ? "Portal" : item.type === "npc" ? "NPC" : "Laporan";
-    const desc = item.type === "portal"
-      ? "Gerbang menuju lokasi spesial"
-      : item.type === "npc"
-        ? "Explorer & Penjaga BogorDex"
-        : (item.ref?.category ? String(item.ref.category).replace(/_/g,' ') : "Info warga di sekitar kamu");
-    const icon = item.type === 'portal' ? '🌀' : item.type === 'npc' ? '!' : '📍';
+    const desc = item.type === "portal" ? "Gerbang menuju lokasi penting" : item.type === "npc" ? (item.ref?.role || "Warga & penjaga BogorDex") : (item.ref?.category ? String(item.ref.category).replace(/_/g,' ') : "Info warga di sekitar kamu");
     row.innerHTML = `
       <span class="mapdex-row-left">
-        <i class="mapdex-row-ico ${item.type}">${icon}</i>
+        <i class="mapdex-row-ico ${item.type}"></i>
         <span class="mapdex-row-copy">
           <strong>${item.name}</strong>
           <small><em class="type-chip ${item.type}">${label}</em><label>${desc}</label></small>
@@ -2910,3 +2905,14 @@ document.getElementById("bottomProfileBtn")?.addEventListener("click", () => { s
 updateWeatherChip();
 updatePlayerUiMeta();
 setTimeout(() => { refreshEnvironment(true); try{ snapPlayerToRoad(true); }catch(e){} }, 900);
+
+function bindIconHoverFx(){
+  document.querySelectorAll('.fab-compass,.fab-locate,.mapdex-action,.report-action,.bottom-nav-item,.bottom-hub-orb,.player-hud,.chat-toggle,.mapdex-row,.sheet-route-btn').forEach(el=>{
+    if(el.dataset.fxBound) return;
+    el.dataset.fxBound='1';
+    const on=()=>{el.classList.add('icon-bounce'); setTimeout(()=>el.classList.remove('icon-bounce'),520);};
+    el.addEventListener('mouseenter', on);
+    el.addEventListener('pointerdown', on);
+  });
+}
+setTimeout(bindIconHoverFx,200);
