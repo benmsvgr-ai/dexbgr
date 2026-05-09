@@ -2817,56 +2817,56 @@ body.overlay-open .nav-center-banner{
 }
 
 
-/* ==== v93 compact ui + male character ==== */
-.player-sprite{background-image:none !important;background-size:contain !important;background-position:center bottom !important;background-repeat:no-repeat !important;width:84px !important;height:84px !important;image-rendering:auto !important;}
-.player-map-marker .player-sprite{background-image:none !important;background-size:contain !important;background-position:center bottom !important;background-repeat:no-repeat !important;width:88px !important;height:88px !important;filter:drop-shadow(0 8px 10px rgba(14,32,72,.18));}
-.player-map-marker .player-sprite.idle,.player-map-marker .player-sprite.walk,.player-map-marker .player-sprite.run,.player-map-marker .player-sprite.face-left,.player-map-marker .player-sprite.face-right,.player-map-marker .player-sprite.face-up,.player-map-marker .player-sprite.face-down{background-position:center bottom !important;transform:translate(-50%,-66%) !important;animation:none !important;}
-.move-pad{display:block !important;pointer-events:auto !important;}
-#map{touch-action:pan-x pan-y !important;}
-.top-right-hud{gap:8px !important;right:10px !important;}
-.coin-hud{min-width:70px !important;height:40px !important;padding:0 10px !important;}
-.coin-hud-icon{width:22px !important;height:22px !important;}
-.chat-toggle.icon-only{width:42px !important;height:42px !important;}
-.player-hud{min-width:118px !important;height:44px !important;padding:0 8px !important;gap:8px !important;}
-.player-hud-frame{width:42px !important;height:42px !important;}
-.player-hud-meta b{font-size:11px !important;max-width:56px !important;}
+/* ==== v94 requested cleanup final ==== */
+.rubo-assistant{display:none !important;}
+.top-actions,.bottom-left-profile,.reference-checklist,.main-action{display:none !important;}
+#weatherChip,.weather-chip{z-index:88 !important;}
+.top-status{z-index:88 !important;}
+.top-right-hud{gap:8px !important; right:10px !important; top:calc(env(safe-area-inset-top,0px) + 10px) !important; z-index:94 !important;}
+.coin-hud{height:42px !important; min-width:76px !important; padding:0 10px !important; border-radius:999px !important;}
+.coin-hud-icon{width:22px !important; height:22px !important;}
+.player-hud{height:46px !important; min-width:138px !important; padding:0 10px 0 6px !important; gap:6px !important; border-radius:999px !important;}
+.player-hud-frame{position:relative; width:42px !important; height:42px !important; background:url('assets/ui/frameplayer1.png') center/contain no-repeat !important;}
+.player-hud-frame::after{content:''; position:absolute; inset:8px; border-radius:50%; background:url('assets/player/portrait.png') center/cover no-repeat;}
+.player-hud-meta b{font-size:11px !important; max-width:72px !important;}
 .player-hud-meta small{font-size:10px !important;}
-#weatherChip,.weather-chip{width:178px !important;min-width:178px !important;padding:12px 14px !important;border-radius:22px !important;}
-.top-status{max-width:138px !important;padding:12px 14px !important;border-radius:22px !important;}
-.fab-compass,.fab-locate,.mapdex-action,.report-action{width:62px !important;height:62px !important;}
-.fab-compass{top:150px !important;right:12px !important;}
-.fab-locate{top:224px !important;right:12px !important;bottom:auto !important;}
-.mapdex-action{top:300px !important;right:12px !important;bottom:auto !important;}
-.report-action{top:376px !important;right:12px !important;bottom:auto !important;}
-.report-card,.game-menu-card,.mapdex-phone,#dexModal .character-modal-card,.inventory-modal-card{width:min(84vw,390px) !important;max-height:66dvh !important;padding:14px !important;border-radius:24px !important;}
-.mapdex-phone{max-height:66dvh !important;}
-.mapdex-canvas{height:180px !important;margin-top:8px !important;}
-.mapdex-list{max-height:122px !important;margin-top:8px !important;}
-.mapdex-row{padding:8px 10px !important;border-radius:16px !important;gap:8px !important;}
-.mapdex-row-ico{width:32px !important;height:32px !important;font-size:14px !important;}
-.mapdex-row-copy strong{font-size:12px !important;max-width:145px !important;}
-.mapdex-row-copy small{font-size:10px !important;}
-.mapdex-rubo-tip{display:none !important;}
-.report-card h3{font-size:24px !important;margin:8px 0 6px !important;text-align:center !important;}
-.report-card p{font-size:12px !important;line-height:1.45 !important;text-align:center !important;}
-.report-rubo-hero{padding:8px 10px !important;grid-template-columns:42px 1fr !important;}
-.report-rubo-hero img{width:42px !important;height:42px !important;}
-.report-card textarea{min-height:88px !important;}
-#dexModal .character-profile-hero{grid-template-columns:86px 1fr !important;padding:10px !important;gap:10px !important;}
-#dexModal .character-avatar-big{width:82px !important;height:96px !important;border-radius:18px !important;}
-#dexModal .character-hero-meta h4{font-size:18px !important;}
-#dexModal .character-stat-grid{gap:6px !important;}
-#dexModal .character-stat{padding:8px !important;border-radius:14px !important;}
-.profile-badge-grid{grid-template-columns:repeat(4,1fr) !important;max-height:108px !important;}
-.profile-badge-icon{width:40px !important;height:40px !important;}
-.inventory-hero{padding:10px !important;grid-template-columns:54px 1fr !important;}
-.inventory-gallery-sheet{max-height:90px !important;object-fit:contain !important;}
-.bottom-game-nav{width:92vw !important;height:74px !important;grid-template-columns:1fr 1fr 88px 1fr 1fr !important;}
-body.overlay-open .top-status, body.overlay-open #weatherChip, body.overlay-open .top-right-hud, body.overlay-open .fab-compass, body.overlay-open .fab-locate, body.overlay-open .mapdex-action, body.overlay-open .report-action, body.overlay-open #bottomGameNav, body.overlay-open .rubo-assistant, body.overlay-open .anime-chat-dock, body.overlay-open .bottom-sheet{display:none !important;}
-@media (max-width: 720px){
-  .report-card,.game-menu-card,.mapdex-phone,#dexModal .character-modal-card,.inventory-modal-card{width:86vw !important;max-height:68dvh !important;}
-  .fab-compass,.fab-locate,.mapdex-action,.report-action{width:58px !important;height:58px !important;}
-  .move-pad{left:10px !important;bottom:96px !important;width:100px !important;height:100px !important;}
-  .mapdex-canvas{height:168px !important;}
-  .mapdex-list{max-height:118px !important;}
+.chat-toggle.icon-only,.fab-locate,.fab-compass,.mapdex-action,.report-action{
+  background:transparent !important; border:none !important; box-shadow:none !important; backdrop-filter:none !important;
+  width:58px !important; height:58px !important; min-width:58px !important; min-height:58px !important; border-radius:0 !important;
+  display:grid !important; place-items:center !important; padding:0 !important;
 }
+.chat-toggle.icon-only{width:50px !important; height:50px !important;}
+.chat-toggle.icon-only .chat-icon-asset{width:46px !important; height:46px !important; display:block !important; background:url('assets/ui/chatcon.png') center/contain no-repeat !important;}
+.chat-toggle.icon-only::before,.chat-toggle.icon-only small{display:none !important;}
+.fab-locate{top:calc(env(safe-area-inset-top,0px) + 204px) !important; right:12px !important;}
+.fab-locate::before{content:'' !important; width:54px !important; height:54px !important; display:block !important; background:url('assets/ui/gpsicon.png') center/contain no-repeat !important;}
+.fab-locate span{display:none !important;}
+.fab-compass{display:grid !important; top:calc(env(safe-area-inset-top,0px) + 146px) !important; right:12px !important;}
+.fab-compass::before{content:'' !important; width:52px !important; height:52px !important; border:none !important; background:url('assets/ui/gpsicon.png') center/contain no-repeat !important; transform:rotate(-45deg) !important; filter:hue-rotate(145deg) saturate(0.7); opacity:.95;}
+.fab-compass span{display:none !important;}
+.mapdex-action{top:calc(env(safe-area-inset-top,0px) + 262px) !important; right:12px !important;}
+.mapdex-action::before{content:'' !important; width:52px !important; height:52px !important; display:block !important; background:url('assets/ui/mapdex-device.png') center/contain no-repeat !important;}
+.mapdex-action small{display:none !important;}
+.report-action{top:calc(env(safe-area-inset-top,0px) + 326px) !important; right:12px !important;}
+.report-action span{display:block !important; width:54px !important; height:54px !important; font-size:0 !important; background:url('assets/ui/iconlaporan.png') center/contain no-repeat !important;}
+.report-action small{display:none !important;}
+.move-pad{display:block !important; pointer-events:auto !important; left:12px !important; bottom:calc(env(safe-area-inset-bottom,0px) + 98px) !important; width:98px !important; height:98px !important; background:radial-gradient(circle,rgba(255,255,255,.34),rgba(255,255,255,.10) 68%) !important; border:1px solid rgba(255,255,255,.30) !important; box-shadow:0 12px 24px rgba(23,56,110,.18) !important;}
+.move-pad::after{content:'JALAN' !important; bottom:-20px !important; font-size:10px !important; letter-spacing:.14em !important;}
+.move-btn{width:38px !important; height:38px !important; border-radius:14px !important; font-size:18px !important;}
+#bottomGameNav{height:74px !important; width:min(92vw,520px) !important; bottom:10px !important; z-index:94 !important;}
+.bottom-nav-item small{font-size:11px !important;}
+.bottom-hub-orb{width:70px !important; height:70px !important; margin-top:-26px !important;}
+.game-menu-card,.mapdex-phone,#dexModal .character-modal-card,.report-card,.inventory-modal-card{width:min(84vw,360px) !important; max-height:64dvh !important; padding:14px !important; border-radius:24px !important;}
+.mapdex-canvas{height:180px !important;}
+.mapdex-list{height:auto !important; max-height:220px !important;}
+.report-card h3,#dexModal .modal-head h3,.inventory-modal-card .modal-head h3{font-size:20px !important;}
+.report-card p{font-size:13px !important; line-height:1.5 !important;}
+.report-card textarea{height:84px !important;}
+.report-rubo-hero,.report-helper-callout,#ruboFace,#ruboAssistantClose,.hub-rubo-buddy{display:none !important;}
+#dexModal .character-avatar-big{background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(239,249,255,.85)), url('assets/player/portrait.png') center 10px/68px auto no-repeat !important;}
+#dexModal .character-profile-hero{grid-template-columns:86px 1fr !important; gap:10px !important; padding:12px !important;}
+#dexModal .character-avatar-big{width:82px !important; height:96px !important; border-radius:22px !important;}
+#dexModal .character-hero-meta h4{font-size:20px !important;}
+#dexModal .character-stat-grid{grid-template-columns:repeat(2,1fr) !important;}
+#dexModal .profile-badge-grid{grid-template-columns:repeat(2,1fr) !important; gap:8px !important;}
+body.overlay-open .top-right-hud, body.overlay-open .fab-locate, body.overlay-open .fab-compass, body.overlay-open .mapdex-action, body.overlay-open .report-action, body.overlay-open #bottomGameNav, body.overlay-open .move-pad, body.overlay-open .top-status, body.overlay-open #weatherChip{display:none !important;}
