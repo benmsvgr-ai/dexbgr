@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BogorDex v85 UI FX Reference</title>
+  <title>BogorDex v77 Radar Report Badges</title>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -97,15 +97,6 @@
     </div>
 
     <button id="mainMenuBtn" class="main-action" title="Menu utama" aria-label="Buka menu utama"></button>
-
-    <nav id="bottomGameNav" class="bottom-game-nav" aria-label="Navigasi BogorDex">
-      <button id="bottomHomeBtn" class="bottom-nav-item active" type="button"><span class="nav-ico">⌂</span><small>Beranda</small></button>
-      <button id="bottomMissionBtn" class="bottom-nav-item" type="button"><span class="nav-ico">⚑</span><em>3</em><small>Misi</small></button>
-      <button id="bottomHubBtn" class="bottom-hub-orb" type="button" aria-label="Buka HUB"><span></span></button>
-      <button id="bottomInventoryBtn" class="bottom-nav-item" type="button"><span class="nav-ico">▣</span><small>Inventori</small></button>
-      <button id="bottomProfileBtn" class="bottom-nav-item" type="button"><span class="nav-ico">◉</span><small>Profil</small></button>
-    </nav>
-
     <div class="move-pad" aria-label="Kontrol gerak">
       <button class="move-btn up" data-dir="up">▲</button>
       <button class="move-btn left" data-dir="left">◀</button>
@@ -113,10 +104,9 @@
       <button class="move-btn down" data-dir="down">▼</button>
     </div>
 
-    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="mapdex-asset"></span><small>Radar</small></button>
+    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="mapdex-asset"></span><small>MapDex</small></button>
     <button id="chatToggleBtn" class="chat-toggle" title="Buka chat">Chat</button>
     <button id="dexBtn" class="dex-action" title="Info Karakter"><span class="dex-icon">Karakter</span></button>
-    <button id="reportQuickBtn" class="report-action" title="Laporkan titik" aria-label="Laporkan titik"><span>＋</span><small>Laporkan</small></button>
 
     <aside id="animeChatDock" class="anime-chat-dock collapsed" aria-label="Chat karakter">
       <div class="chat-dock-head">
@@ -164,7 +154,6 @@
       <div class="game-menu-card">
         <button id="closeMainMenuBtn" class="game-menu-close" title="Tutup">×</button>
         <div class="game-menu-orb">BD</div>
-        <div class="hub-rubo-buddy"><img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"><span>RUBO mode jelajah aktif ✨</span></div>
         <div class="game-menu-kicker">BogorDex Quest Hub</div>
         <h2>Jelajah Bogor, buka portal, kumpulkan Dex!</h2>
         <p class="game-menu-desc">Pilih mode cepat. Versi ini sudah ditambah NPC warga/penjaga portal. Dekati atau klik NPC untuk membuka bubble quest, ngobrol, dan dapat misi eksplorasi BogorDex.</p>
@@ -196,32 +185,52 @@
           </button>
         </div>
         <div class="game-menu-footer">
-          <span>HP: tahan & drag map untuk jalan</span>
-          <span>Dekati NPC/portal = quest muncul</span>
+          <span>HP: tahan & drag layar untuk jalan</span>
+          <span>Desktop: WASD / panah • HP: drag layar</span>
         </div>
       </div>
     </div>
 
     <div id="reportModal" class="report-modal hidden">
-      <div class="report-card">
+      <div class="report-card report-card-v77">
         <button id="reportCloseBtn" class="report-close" title="Tutup">×</button>
+        <div class="report-mascot report-mascot-rubo" aria-hidden="true">
+          <img id="reportMascotImg" src="assets/rubo/SERIUS-RUBO.png" alt="RUBO">
+          <div class="mascot-bubble">✨</div>
+          <div class="mascot-pin">📍</div>
+        </div>
         <div class="report-kicker">Citizen Report</div>
-        <div class="report-rubo-hero"><img src="assets/rubo/KAGET-RUBO.png" alt="RUBO"><div><b>RUBO bantu pasang info</b><span>Titik laporan ikut posisi karaktermu sekarang.</span></div></div>
         <h3>Tambah Info di Titik Ini</h3>
-        <p>Info akan dipasang di posisi karakter sekarang. Cocok buat lobang jalan, pohon tumbang, pembangunan, kemacetan, atau catatan lapangan.</p>
-        <label>Kategori</label>
-        <select id="reportCategory">
-          <option value="lobang">🕳️ Lobang Jalan</option>
-          <option value="pohon">🌳 Pohon / Ranting</option>
-          <option value="pembangunan">🚧 Pembangunan</option>
-          <option value="macet">🚦 Kemacetan</option>
-          <option value="lainnya">📌 Info Lainnya</option>
+        <p class="report-lead">Bantu sesama Ranger dengan melaporkan kondisi sekitar. Info kamu bikin BogorDex makin akurat.</p>
+        <div class="report-location-chip">
+          <span class="loc-orb">📍</span>
+          <div><small>Laporan terhubung dengan posisi karaktermu saat ini</small><b id="reportLocationText">BogorDex Area</b></div>
+          <em>± 10 m</em>
+        </div>
+        <label class="report-section-label">Pilih Kategori</label>
+        <select id="reportCategory" class="report-select-hidden" aria-label="Kategori laporan">
+          <option value="lobang">Lubang Jalan</option>
+          <option value="pohon">Pohon Tumbang</option>
+          <option value="pembangunan">Pembangunan</option>
+          <option value="macet">Macet</option>
+          <option value="lainnya">Lainnya</option>
         </select>
-        <label>Keterangan singkat</label>
-        <textarea id="reportNote" maxlength="160" placeholder="Contoh: Jalan berlubang cukup dalam dekat pertigaan..."></textarea>
-        <div class="report-actions">
-          <button id="reportSaveBtn">Pasang di Map</button>
-          <button id="reportCancelBtn">Batal</button>
+        <div class="report-category-grid" id="reportCategoryGrid">
+          <button type="button" class="report-category-card active" data-category="lobang"><span>🕳️</span><b>Lubang Jalan</b></button>
+          <button type="button" class="report-category-card" data-category="pohon"><span>🌳</span><b>Pohon Tumbang</b></button>
+          <button type="button" class="report-category-card" data-category="macet"><span>🚗</span><b>Macet</b></button>
+          <button type="button" class="report-category-card" data-category="pembangunan"><span>🚧</span><b>Pembangunan</b></button>
+          <button type="button" class="report-category-card wide" data-category="lainnya"><span>📌</span><b>Lainnya</b></button>
+        </div>
+        <label class="report-section-label">Keterangan <span>(opsional)</span></label>
+        <div class="report-textbox-wrap">
+          <textarea id="reportNote" maxlength="200" placeholder="Berikan detail tambahan seperti lokasi spesifik, ukuran, atau keterangan lainnya..."></textarea>
+          <small id="reportCounter">0/200</small>
+        </div>
+        <div class="report-tip">💡 Tips: laporkan dengan detail agar lebih cepat ditindaklanjuti.</div>
+        <div class="report-actions report-actions-v77">
+          <button id="reportSaveBtn" class="report-primary-btn">✈️ Pasang di Map ✨<small>Bagikan ke semua Ranger</small></button>
+          <button id="reportCancelBtn" class="report-secondary-btn">Batal</button>
         </div>
       </div>
     </div>
@@ -229,35 +238,39 @@
 
 
     <div id="mapDexModal" class="mapdex-modal hidden">
-      <div class="mapdex-phone">
-        <div class="mapdex-head">
+      <div class="mapdex-phone mapdex-phone-v77">
+        <div class="mapdex-head mapdex-head-v77">
           <div>
-            <div class="mapdex-kicker">BogorDex Phone</div>
+            <div class="mapdex-kicker">BOGORDEX</div>
             <h3>MapDex Radar</h3>
+            <p>Temukan portal, NPC, dan laporan di sekitarmu.</p>
           </div>
           <button id="closeMapDexBtn" class="close-btn">×</button>
         </div>
-        <div id="mapDexCanvas" class="mapdex-canvas">
-          <div class="mapdex-player-dot">YOU</div>
+        <div id="mapDexCanvas" class="mapdex-canvas mapdex-canvas-v77">
+          <div class="radar-sweep"></div>
+          <div class="radar-ring r1"></div><div class="radar-ring r2"></div><div class="radar-ring r3"></div>
+          <div class="mapdex-player-dot">KAMU</div>
         </div>
-        <div class="mapdex-legend">
+        <div class="mapdex-legend mapdex-legend-v77">
           <span><b class="pin portal"></b>Portal</span>
           <span><b class="pin npc"></b>NPC</span>
           <span><b class="pin report"></b>Laporan</span>
         </div>
-        <div class="mapdex-rubo-tip"><img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"><span>Scan radius aktif. Tap titik untuk lihat detail!</span></div>
-        <div id="mapDexList" class="mapdex-list"></div>
+        <div class="mapdex-list-head"><b>⌖ Temuan Terdekat</b><span id="mapDexFoundCount">0 ditemukan</span></div>
+        <div id="mapDexList" class="mapdex-list mapdex-list-v77"></div>
+        <div class="mapdex-tip mapdex-tip-rubo"><img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"> <span>✨ Tip: Dekatkan dirimu untuk melihat detail lokasi.</span></div>
       </div>
     </div>
 
     <div id="dexModal" class="modal hidden">
-      <div class="modal-card character-modal-card">
-        <div class="modal-head">
-          <h3>Info Karakter</h3>
+      <div class="modal-card character-modal-card character-v77-card">
+        <div class="modal-head character-v77-head">
+          <h3>✨ Info Karakter</h3>
           <button id="closeDexBtn" class="close-btn">×</button>
         </div>
-        <div class="character-profile-hero">
-          <div class="character-avatar-big"></div>
+        <div class="character-profile-hero character-v77-hero">
+          <div class="character-avatar-big character-avatar-v77"></div>
           <div class="character-hero-meta">
             <h4 id="profileName">Ranger Panji</h4>
             <div class="profile-badges">
@@ -268,27 +281,17 @@
             <p id="profileStatus">Sedang patroli di jalan BogorDex.</p>
           </div>
         </div>
-        <div class="character-stat-grid">
-          <div class="character-stat"><span>Nama</span><strong id="profileName2">Ranger Panji</strong></div>
-          <div class="character-stat"><span>Gender</span><strong id="profileGender">Laki-laki</strong></div>
-          <div class="character-stat"><span>Status</span><strong id="profileRole">BogorDex Ranger</strong></div>
-          <div class="character-stat"><span>Mode</span><strong id="profileMode">Road Patrol</strong></div>
+        <div class="character-stat-grid character-v77-stat-grid">
+          <div class="character-stat stat-level"><span>Level</span><strong id="profileLevel2">1</strong><em>Ranger</em></div>
+          <div class="character-stat stat-exp"><span>EXP</span><strong id="profileExp">0</strong><em id="profileExpMax">/ 1.200</em><i class="exp-bar"><b id="profileExpBar"></b></i></div>
+          <div class="character-stat stat-coin"><span>Coin</span><strong id="profileCoin">0</strong><em>Koin</em></div>
+          <div class="character-stat stat-location"><span>Lokasi</span><strong id="profileLocationCount">0</strong><em>Ditemukan</em></div>
         </div>
-        <div class="character-badge-showcase">
-          <div class="badge-showcase-head">
-            <div>
-              <span class="section-kicker">BADGE DIPEROLEH</span>
-              <strong>Prestasi Ranger</strong>
-            </div>
-            <span id="profileBadgeCount" class="badge-count-pill">0 / 0</span>
-          </div>
-          <div id="profileBadgeGrid" class="profile-badge-grid"></div>
+        <div class="character-badge-section">
+          <div class="character-section-title"><b>🏅 Badge Diperoleh</b><span id="profileBadgeCount">0 / 0</span></div>
+          <div id="characterBadgeGallery" class="character-badge-gallery"></div>
         </div>
-        <div class="character-rubo-tip">
-          <img src="assets/rubo/KAGET-RUBO.png" alt="RUBO" />
-          <div><b>RUBO bilang:</b><span>Badge makin banyak kalau kamu sering eksplorasi, cek titik, dan bantu warga.</span></div>
-        </div>
-        <div class="character-profile-section">
+        <div class="character-profile-section character-summary-v77">
           <div class="section-title">Ringkasan</div>
           <p id="profileSummary">Karakter utama eksplorasi BogorDex. Fokus pada patroli jalan, portal event, dan penelusuran titik kota.</p>
         </div>
@@ -296,7 +299,53 @@
     </div>
   
 
+
+    <div id="myReportModal" class="my-report-modal hidden">
+      <div class="my-report-card">
+        <button id="myReportCloseBtn" class="report-close" title="Tutup">×</button>
+        <div class="my-report-mascot"><img id="myReportMascotImg" src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"></div>
+        <div class="my-report-kicker">BOGORDEX</div>
+        <h3>Info Titik Saya</h3>
+        <p>Kelola informasi yang kamu buat di BogorDex.</p>
+        <div class="my-report-summary-card">
+          <div id="myReportIcon" class="my-report-icon">🕳️</div>
+          <div class="my-report-main">
+            <div class="my-report-title-row"><h4 id="myReportTitle">Lubang Jalan</h4><span id="myReportStatus" class="my-report-status pending">Menunggu verifikasi</span></div>
+            <p id="myReportNote">Catatan laporan</p>
+            <div class="my-report-meta"><span>📍 <b id="myReportArea">BogorDex Area</b></span><span>🕒 <b id="myReportAgo">baru saja</b></span></div>
+          </div>
+        </div>
+        <div class="my-report-actions">
+          <button id="myReportUpdateBtn" class="my-report-action update">🔄 <b>Perbarui Status</b><small>Ubah atau tambahkan informasi terbaru</small></button>
+          <button id="myReportCorrectBtn" class="my-report-action correct">✅ <b>Tandai Sudah Benar</b><small>Masalah sudah teratasi / info sudah benar</small></button>
+          <button id="myReportDeleteBtn" class="my-report-action delete">🗑️ <b>Hapus Laporan</b><small>Hapus info ini dari BogorDex</small></button>
+        </div>
+        <div class="my-report-history">
+          <b>Riwayat Laporan</b>
+          <div class="history-row"><span></span><div><strong>Dibuat</strong><small id="myReportCreatedAt">-</small></div><em>Oleh Kamu</em></div>
+          <div class="history-row purple"><span></span><div><strong>Terakhir Diperbarui</strong><small id="myReportUpdatedAt">-</small></div><em>Oleh Kamu</em></div>
+        </div>
+        <div class="my-report-tip my-report-tip-rubo"><img src="assets/rubo/KAGET-RUBO.png" alt="RUBO"><span>✨ Info Anda membantu Bogor jadi lebih baik!</span></div>
+      </div>
+    </div>
+
     <div id="animeToastStack" class="anime-toast-stack" aria-live="polite"></div>
+
+    <div id="arrivalPopup" class="arrival-popup hidden" aria-live="polite">
+      <div class="arrival-card">
+        <div class="arrival-glow"></div>
+        <button id="arrivalCloseBtn" class="arrival-close" type="button">×</button>
+        <div class="arrival-icon arrival-icon-rubo"><img id="arrivalRuboImg" src="assets/rubo/KAGET-RUBO.png" alt="RUBO"></div>
+        <div class="arrival-kicker">Tujuan tercapai</div>
+        <h2 id="arrivalTitle">Kamu sudah sampai!</h2>
+        <p id="arrivalSub">Lokasi tujuan berhasil ditemukan.</p>
+        <div class="arrival-actions">
+          <button id="arrivalCheckinBtn" type="button">Check-in</button>
+          <button id="arrivalInfoBtn" type="button">Lihat Info</button>
+        </div>
+      </div>
+    </div>
+
 
     <div id="rewardBanner" class="reward-banner hidden" aria-live="polite">
       <div class="reward-banner-spark"></div>
@@ -307,11 +356,18 @@
       </div>
     </div>
 
-    <div id="navCenterBanner" class="nav-center-banner hidden" aria-live="polite">
-      <div class="nav-center-kicker">Sedang menuju</div>
-      <div id="navCenterTitle" class="nav-center-title">Tujuan</div>
-      <div id="navCenterMeta" class="nav-center-meta">Menghitung rute...</div>
-      <button id="navCancelBtn" class="nav-cancel-btn" type="button">Batalkan</button>
+    <div id="navCenterBanner" class="nav-center-banner nav-v75 hidden" aria-live="polite">
+      <div id="navDirectionIcon" class="nav-direction-icon">↑</div>
+      <div class="nav-center-copy">
+        <div class="nav-center-kicker">Sedang menuju</div>
+        <div id="navCenterTitle" class="nav-center-title">Tujuan</div>
+        <div id="navInstructionText" class="nav-instruction-text">Ikuti jalur biru</div>
+        <div id="navCenterMeta" class="nav-center-meta">Menghitung rute...</div>
+      </div>
+      <div class="nav-right-box">
+        <div id="navDistanceText" class="nav-distance-text">-- m</div>
+        <button id="navCancelBtn" class="nav-cancel-btn" type="button">Batalkan</button>
+      </div>
     </div>
 
   </div>
@@ -348,7 +404,7 @@
       }
       function loadApp(){
         const s = document.createElement("script");
-        s.src = "app.js?v=87";
+        s.src = "app.js?v=82";
         s.onerror = function(){ setStatus("Gagal memuat app.js"); };
         document.body.appendChild(s);
       }
