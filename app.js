@@ -2797,14 +2797,10 @@ function closeCharacterProfile(){
   modal.classList.remove('show');
 }
 
-function setupTouchDragMovement(){
-  const area = document.getElementById('map') || document.getElementById('app');
-  if(!area || state.__touchDragBound) return;
-  state.__touchDragBound = true;
 
-  const isInteractive = (target) => !!target.closest(
-    'button, a, input, textarea, select, .modal, .modal-card, .game-menu-modal, .game-menu-card, .mapdex-modal, .mapdex-phone, .bottom-sheet, .npc-dialog-card, .quest-card, .report-card, .sheet-content, .anime-chat-dock, .rubo-assistant, .nav-center-banner, .top-weather, .weather-chip, .right-actions, .side-actions, .floating-actions'
-  );
+function setupTouchDragMovement(){
+  if(state.__touchDragBound) return;
+  state.__touchDragBound = true;
 
   const clearMove = () => {
     state.move.up = false;
@@ -2815,13 +2811,15 @@ function setupTouchDragMovement(){
     state.touchDragActive = false;
   };
 
-  const applyFromDelta = (dx, dy) => {
-    state.move.up = false;
-    state.move.down = false;
-    state.move.left = false;
-    state.move.right = false;
+  const isBlocker = (target) => {
+    if(!target) return false;
+    return !!target.closest('input, textarea, select, option, button, a, .modal:not(.hidden), .game-menu-modal:not(.hidden), .mapdex-modal:not(.hidden), .bottom-sheet:not(.hidden), .npc-dialog-card, .quest-card, .report-card, .anime-chat-dock, .sheet-content');
+  };
+
+  const applyDirection = (dx, dy) => {
+    state.move.up = state.move.down = state.move.left = state.move.right = false;
     const ax = Math.abs(dx), ay = Math.abs(dy);
-    if(Math.max(ax, ay) < 14){
+    if(Math.max(ax, ay) < 12){
       state.touchDragMove = null;
       return;
     }
@@ -2837,36 +2835,52 @@ function setupTouchDragMovement(){
     state.touchDragActive = true;
   };
 
-  let startX = 0, startY = 0, active = false, pointerId = null;
+  let active = false;
+  let pointerId = null;
+  let sx = 0, sy = 0;
 
-  area.addEventListener('pointerdown', (e) => {
+  document.addEventListener('pointerdown', (e) => {
     if(e.button != null && e.button !== 0) return;
-    if(isInteractive(e.target)) return;
+    if(isBlocker(e.target)) return;
     active = true;
     pointerId = e.pointerId;
-    startX = e.clientX;
-    startY = e.clientY;
-    try{ area.setPointerCapture(pointerId); }catch(err){}
-  }, { passive:true });
+    sx = e.clientX;
+    sy = e.clientY;
+  }, true);
 
-  area.addEventListener('pointermove', (e) => {
+  document.addEventListener('pointermove', (e) => {
     if(!active || (pointerId !== null && e.pointerId !== pointerId)) return;
-    applyFromDelta(e.clientX - startX, e.clientY - startY);
-    if(state.touchDragMove) e.preventDefault();
-  }, { passive:false });
+    if(isBlocker(e.target)){
+      clearMove();
+      return;
+    }
+    applyDirection(e.clientX - sx, e.clientY - sy);
+    if(state.touchDragMove){
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, { capture:true, passive:false });
 
-  const endPointer = (e) => {
+  const stop = (e) => {
     if(pointerId !== null && e && e.pointerId !== pointerId) return;
     active = false;
     pointerId = null;
     clearMove();
   };
-  area.addEventListener('pointerup', endPointer, { passive:true });
-  area.addEventListener('pointercancel', endPointer, { passive:true });
-  area.addEventListener('pointerleave', endPointer, { passive:true });
-
-  // Safety: if a modal closes while pointer is active, release movement.
+  document.addEventListener('pointerup', stop, true);
+  document.addEventListener('pointercancel', stop, true);
+  window.addEventListener('blur', () => clearMove());
   document.addEventListener('visibilitychange', () => { if(document.hidden) clearMove(); });
+
+  // Also keep a simple click-to-move fallback for desktop testing.
+  document.addEventListener('dblclick', (e) => {
+    if(isBlocker(e.target)) return;
+    const rect = document.body.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    applyDirection(e.clientX - cx, e.clientY - cy);
+    setTimeout(clearMove, 700);
+  }, true);
 }
 
 
