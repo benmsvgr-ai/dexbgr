@@ -261,6 +261,20 @@
           <div class="character-stat"><span>Status</span><strong id="profileRole">BogorDex Ranger</strong></div>
           <div class="character-stat"><span>Mode</span><strong id="profileMode">Road Patrol</strong></div>
         </div>
+        <div class="character-badge-showcase">
+          <div class="badge-showcase-head">
+            <div>
+              <span class="section-kicker">BADGE DIPEROLEH</span>
+              <strong>Prestasi Ranger</strong>
+            </div>
+            <span id="profileBadgeCount" class="badge-count-pill">0 / 0</span>
+          </div>
+          <div id="profileBadgeGrid" class="profile-badge-grid"></div>
+        </div>
+        <div class="character-rubo-tip">
+          <img src="assets/rubo/KAGET-RUBO.png" alt="RUBO" />
+          <div><b>RUBO bilang:</b><span>Badge makin banyak kalau kamu sering eksplorasi, cek titik, dan bantu warga.</span></div>
+        </div>
         <div class="character-profile-section">
           <div class="section-title">Ringkasan</div>
           <p id="profileSummary">Karakter utama eksplorasi BogorDex. Fokus pada patroli jalan, portal event, dan penelusuran titik kota.</p>
@@ -321,7 +335,7 @@
       }
       function loadApp(){
         const s = document.createElement("script");
-        s.src = "app.js?v=86";
+        s.src = "app.js?v=87";
         s.onerror = function(){ setStatus("Gagal memuat app.js"); };
         document.body.appendChild(s);
       }
