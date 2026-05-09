@@ -980,6 +980,11 @@ function openSheet(poi, mode="manual"){
   const questReward = questRewardText(quest);
   const badgeText = poi.rewardBadgeId ? badgeLabel(poi.rewardBadgeId) : "";
   document.getElementById("sheetContent").innerHTML = `
+    <div class="chips">
+      <span>${poi.group || "POI"}</span>
+      ${poi.subkategori ? `<span>${poi.subkategori}</span>` : ""}
+      ${state.discovered.has(poi.id) ? `<span>Sudah ditemukan</span>` : ""}
+    </div>
     <h3>${poi.name}</h3>
     <p>${poi.desc || "Tidak ada deskripsi."}</p>
     <div class="section">
@@ -997,7 +1002,7 @@ function openSheet(poi, mode="manual"){
       ${poi.subkategori ? `<span class="tag">${poi.subkategori}</span>` : ""}
       ${state.discovered.has(poi.id) ? '<span class="tag">Sudah ditemukan</span>' : ""}
     </div>
-    ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">✦ Arahkan</button>' : ''}
+    ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">✨ Arahkan</button>' : ''}
   `;
   const routeBtn = document.getElementById("sheetRouteBtn");
   if(routeBtn && Array.isArray(poi.coords)){
@@ -2393,20 +2398,20 @@ function manualMoveKeyFromInput(forwardInput, strafeInput){
   return `${forwardInput}|${strafeInput}|${state.touchDragMove || ''}`;
 }
 function updateManualCameraTarget(forwardInput, strafeInput){
-  // v87: balik ke kamera biasa.
-  // Input manual/drag hanya menggerakkan karakter relatif terhadap arah kamera saat ini.
-  // Kamera tidak dipaksa rotate 180 derajat saat mundur / tombol S.
+  const key = manualMoveKeyFromInput(forwardInput, strafeInput);
   if(!forwardInput && !strafeInput){
     state.manualMoveKey = '';
     state.manualMoveBaseBearing = null;
     state.manualMoveTargetBearing = null;
+    return getCameraBearing();
   }
-  return getCameraBearing();
-}
-function getManualMoveBearing(forwardInput, strafeInput){
-  const cameraBearing = getCameraBearing();
-  const rel = manualMoveAngleFromInput(forwardInput, strafeInput);
-  return normalizeHeading(cameraBearing + rel);
+  if(state.manualMoveKey !== key || typeof state.manualMoveBaseBearing !== 'number'){
+    state.manualMoveKey = key;
+    state.manualMoveBaseBearing = getCameraBearing();
+    const rel = manualMoveAngleFromInput(forwardInput, strafeInput);
+    state.manualMoveTargetBearing = normalizeHeading(state.manualMoveBaseBearing + rel);
+  }
+  return typeof state.manualMoveTargetBearing === 'number' ? state.manualMoveTargetBearing : getCameraBearing();
 }
 function setBottomNavActive(name){
   document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
@@ -2431,9 +2436,10 @@ function updateMovement(dt=1/60){
     return;
   }
 
-  // v87: arah gerak tetap mengikuti input, tapi kamera tetap biasa / tidak auto rotate 180 saat mundur.
-  updateManualCameraTarget(forwardInput, strafeInput);
-  const moveBearing = getManualMoveBearing(forwardInput, strafeInput);
+  // v85: arah gerak manual = arah yang user drag/tekan.
+  // Kamera tetap mengikuti dari belakang karakter. Jadi kalau user tarik bawah / tombol S,
+  // kamera rotate 180 derajat dan punggung karakter tetap menghadap kamera.
+  const moveBearing = updateManualCameraTarget(forwardInput, strafeInput);
   const step = state.moveSpeedMeters * Math.min(0.033, Math.max(0.008, dt));
 
   const rad = degToRad(moveBearing);
@@ -2455,11 +2461,12 @@ function updateMovement(dt=1/60){
     snapPlayerToRoad();
     updatePlayerMapMarker();
     updateRenderBounds();
-    followPlayerCamera({ zoom: CAMERA_ZOOM, duration: 120, force:true });
+    followPlayerCamera({ bearing: moveBearing, zoom: CAMERA_ZOOM, duration: 120, force:true });
     detectNearby();
   }else{
     updateStatus("Jalur tertutup • karakter hanya bisa jalan di lintasan");
-    // Kamera dibiarkan tetap biasa; tidak rotate saat langkah tertahan.
+    // tetap rotate kamera agar arah karakter terasa responsif meskipun langkah tertahan
+    if(map) map.easeTo({ bearing: moveBearing, pitch: CAMERA_PITCH, duration: 120 });
   }
 }
 function bindMoveButton(btn){
@@ -2737,7 +2744,6 @@ document.getElementById("chatToggleBtn").addEventListener("click", () => { chatD
 document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
 document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
 document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
-document.getElementById("dexBtn").addEventListener("click", () => { setRuboEmotion('serius','Profil Ranger','Lihat level, badge, dan progres eksplorasimu.'); document.getElementById("dexModal").classList.remove("hidden"); });
 document.getElementById("closeDexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.add("hidden"));
 document.getElementById("sheetHandle").addEventListener("click", () => { sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.toggle("collapsed"); syncMiniButton(); });
 document.getElementById("sheetCloseBtn").addEventListener("click", (e) => { e.stopPropagation(); closeSheet(true, true); });
@@ -2752,12 +2758,12 @@ document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if(k=
 
 
 // v85 bottom game nav + quick report buttons
-document.getElementById("reportQuickBtn")?.addEventListener("click", () => { setBottomNavActive('home'); openReportModal(); });
-document.getElementById("bottomHomeBtn")?.addEventListener("click", () => { setBottomNavActive('home'); closeMainMenu?.(); closeMapDex?.(); document.getElementById("dexModal")?.classList.add("hidden"); });
-document.getElementById("bottomMissionBtn")?.addEventListener("click", () => { setBottomNavActive('mission'); openMainMenu(); });
+document.getElementById("reportQuickBtn")?.addEventListener("click", () => { setBottomNavActive('home'); setRuboEmotion('kaget','Laporkan titik','Sampaikan kondisi sekitar agar warga lain lebih terbantu.'); openReportModal(); });
+document.getElementById("bottomHomeBtn")?.addEventListener("click", () => { setBottomNavActive('home'); showBottomNavHelp('home'); closeMainMenu?.(); closeMapDex?.(); document.getElementById("dexModal")?.classList.add("hidden"); });
+document.getElementById("bottomMissionBtn")?.addEventListener("click", () => { setBottomNavActive('mission'); showBottomNavHelp('mission'); openMainMenu(); });
 document.getElementById("bottomHubBtn")?.addEventListener("click", () => { openMainMenu(); });
-document.getElementById("bottomInventoryBtn")?.addEventListener("click", () => { setBottomNavActive('inventory'); showAnimeToast?.('info','Inventori','Fitur inventori siap dikembangkan.'); });
-document.getElementById("bottomProfileBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); document.getElementById("dexModal")?.classList.remove("hidden"); setRuboEmotion?.('serius','Profil Ranger','Lihat level, badge, dan progres eksplorasimu.'); });
+document.getElementById("bottomInventoryBtn")?.addEventListener("click", () => { setBottomNavActive('inventory'); showBottomNavHelp('inventory'); showAnimeToast?.('info','Inventori','Fitur inventori siap dikembangkan.'); });
+document.getElementById("bottomProfileBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); showBottomNavHelp('profile'); document.getElementById("dexModal")?.classList.remove("hidden"); setRuboEmotion?.('serius','Profil Ranger','Lihat level, badge, dan progres eksplorasimu.'); });
 
 updateWeatherChip();
 updatePlayerUiMeta();
