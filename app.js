@@ -2484,12 +2484,15 @@ function tryMoveWithCollision(mx, my){
 }
 
 function updateMovement(dt=1/60){
-  if(state.hasRealGps && state.geoWatch !== null){
+  const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
+  const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
+
+  // GPS tetap mode utama, tapi jangan kunci total.
+  // Kalau user drag/tombol arah, biarkan karakter bergerak untuk simulasi/manual.
+  if(state.hasRealGps && state.geoWatch !== null && !forwardInput && !strafeInput){
     if(Date.now() > (state.gpsMovingUntil || 0) && !playerSprite().classList.contains('idle')) setPlayerAnim('idle', state.facing || 'up');
     return;
   }
-  const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
-  const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
   if(!forwardInput && !strafeInput){
     if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle");
     return;
