@@ -2118,3 +2118,398 @@ html,body,#app{
 .rubo-assistant img{animation:bdxFloat 1.55s ease-in-out infinite alternate!important;}
 
 @media(max-width:720px){.game-menu-card{width:min(94vw,396px)!important;max-height:82dvh!important;padding:22px 18px!important}.game-menu-card h2{font-size:28px!important}.game-menu-grid{grid-template-columns:1fr 1fr!important}.game-menu-item{min-height:112px!important}.hub-rubo-buddy{right:14px;top:14px;max-width:150px}.hub-rubo-buddy span{display:none}.mapdex-canvas{height:300px!important}.report-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.report-card{width:min(94vw,410px)!important}.report-rubo-hero{grid-template-columns:58px 1fr}.report-rubo-hero img{width:58px;height:58px}}
+
+
+/* =========================================================
+   v85 — UI FX Reference Upgrade
+   Fokus: mengikuti referensi UI cerah, tombol kanan bulat,
+   bottom nav glossy, MapDex/Profile/Report lebih premium.
+========================================================= */
+:root{
+  --bdx-blue:#1f78ff;
+  --bdx-blue2:#63dcff;
+  --bdx-navy:#13366d;
+  --bdx-soft:#f6fbff;
+  --bdx-purple:#8d63ff;
+  --bdx-pink:#ff7fc1;
+  --bdx-glass:rgba(255,255,255,.88);
+  --bdx-shadow:0 20px 46px rgba(35,75,145,.22);
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:5;
+  background:
+    radial-gradient(circle at 52% 9%,rgba(255,255,255,.65),transparent 16%),
+    radial-gradient(circle at 82% 18%,rgba(87,213,255,.18),transparent 24%),
+    linear-gradient(180deg,rgba(42,185,255,.11),transparent 30%,rgba(30,80,160,.06));
+}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:6;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.95) 0 1.2px, transparent 1.6px),
+    radial-gradient(circle, rgba(110,226,255,.7) 0 1px, transparent 1.5px);
+  background-size:160px 170px, 220px 260px;
+  background-position:20px 40px, 90px 130px;
+  opacity:.26;
+  animation:bdxSparkleDrift 8s linear infinite;
+}
+@keyframes bdxSparkleDrift{from{transform:translateY(0)}to{transform:translateY(-60px)}}
+
+/* Top HUD like reference */
+.top-status.compact-status{
+  z-index:90!important;
+  left:26px!important;
+  top:26px!important;
+  width:220px!important;
+  max-width:calc(100vw - 220px)!important;
+  min-width:0!important;
+  padding:15px 20px!important;
+  border-radius:26px!important;
+  background:linear-gradient(135deg,rgba(9,86,152,.94),rgba(22,50,121,.86))!important;
+  border:1px solid rgba(119,235,255,.34)!important;
+  box-shadow:0 18px 42px rgba(10,60,130,.22), inset 0 1px 0 rgba(255,255,255,.28)!important;
+  backdrop-filter:blur(16px)!important;
+}
+.compact-status .status-row{font-size:19px!important;color:#fff!important;letter-spacing:.01em!important;}
+.compact-status .status-sub{font-size:15px!important;color:#e7f8ff!important;max-width:none!important;margin-top:7px!important;font-weight:800!important;}
+.live-dot{box-shadow:0 0 0 7px rgba(67,255,164,.13),0 0 18px rgba(69,255,169,.65)!important;}
+
+#weatherChip,.weather-chip{
+  z-index:90!important;
+  top:26px!important;
+  width:250px!important;
+  min-width:250px!important;
+  padding:18px 22px!important;
+  border-radius:28px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(238,248,255,.88))!important;
+  border:1px solid rgba(255,255,255,.82)!important;
+  box-shadow:0 18px 44px rgba(50,93,156,.20), inset 0 1px 0 rgba(255,255,255,1)!important;
+  backdrop-filter:blur(18px)!important;
+}
+.weather-main{justify-content:center!important;gap:14px!important;}
+.weather-icon{font-size:32px!important;filter:drop-shadow(0 6px 8px rgba(255,190,54,.28));}
+.weather-info div{font-size:20px!important;color:#16376d!important;font-weight:950!important;}
+.weather-info small{font-size:14px!important;color:#425e90!important;font-weight:850!important;}
+
+/* Right vertical action stack — Radar / Karakter / Laporkan / Menu */
+.fab-locate,.fab-compass,.mapdex-action,.dex-action,.report-action{
+  z-index:130!important;
+  right:28px!important;
+  width:86px!important;
+  height:86px!important;
+  border-radius:999px!important;
+  border:1px solid rgba(255,255,255,.86)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(229,244,255,.88))!important;
+  box-shadow:0 18px 36px rgba(27,73,154,.20), inset 0 1px 0 rgba(255,255,255,1)!important;
+  color:#1f5fca!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-direction:column!important;
+  gap:5px!important;
+  font-weight:950!important;
+  text-shadow:none!important;
+  backdrop-filter:blur(16px)!important;
+  transition:transform .18s ease, box-shadow .18s ease, filter .18s ease!important;
+}
+.fab-locate:hover,.fab-compass:hover,.mapdex-action:hover,.dex-action:hover,.report-action:hover,
+.fab-locate:active,.fab-compass:active,.mapdex-action:active,.dex-action:active,.report-action:active{
+  transform:translateY(-2px) scale(1.035)!important;
+  box-shadow:0 24px 48px rgba(27,73,154,.27),0 0 22px rgba(110,224,255,.32),inset 0 1px 0 #fff!important;
+}
+.mapdex-action::before{content:"◎";font-size:31px;line-height:1;}
+.dex-action::before{content:"●";font-size:28px;line-height:1;color:#5b7fbd;}
+.report-action::before{content:"+";font-size:42px;line-height:.8;font-weight:950;}
+.fab-locate::before{content:"⌖";font-size:28px;line-height:1;}
+.mapdex-action small,.report-action small{font-size:13px!important;font-weight:950!important;}
+.dex-action .dex-icon{font-size:0!important;}
+.dex-action .dex-icon::after{content:"Karakter";font-size:13px!important;font-weight:950!important;}
+.fab-locate span{font-size:12px!important;font-weight:950!important;}
+.fab-locate{bottom:calc(env(safe-area-inset-bottom,0px) + 370px)!important;}
+.mapdex-action{bottom:calc(env(safe-area-inset-bottom,0px) + 278px)!important;}
+.dex-action{bottom:calc(env(safe-area-inset-bottom,0px) + 186px)!important;}
+.report-action{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 94px)!important;}
+.fab-compass{display:none!important;}
+.chat-toggle{display:none!important;}
+
+/* Bottom nav reference */
+.bottom-game-nav{
+  position:fixed;
+  left:50%;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
+  transform:translateX(-50%);
+  width:min(92vw,720px);
+  height:88px;
+  z-index:145;
+  border-radius:44px;
+  background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(223,242,255,.86));
+  border:1px solid rgba(255,255,255,.86);
+  box-shadow:0 18px 48px rgba(18,69,144,.25), inset 0 1px 0 rgba(255,255,255,1);
+  display:grid;
+  grid-template-columns:1fr 1fr 110px 1fr 1fr;
+  align-items:center;
+  padding:0 14px;
+  backdrop-filter:blur(18px);
+}
+.bottom-nav-item{
+  position:relative;
+  height:70px;
+  border:0;
+  background:transparent;
+  color:#6a83ab;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:5px;
+  font-weight:950;
+  cursor:pointer;
+}
+.bottom-nav-item .nav-ico{font-size:28px;line-height:1;filter:drop-shadow(0 6px 8px rgba(39,94,200,.10));}
+.bottom-nav-item small{font-size:15px;}
+.bottom-nav-item.active{color:#2072ff;}
+.bottom-nav-item.active .nav-ico{transform:translateY(-2px);filter:drop-shadow(0 10px 12px rgba(32,114,255,.24));}
+.bottom-nav-item em{
+  position:absolute;
+  top:6px;
+  right:27%;
+  min-width:22px;
+  height:22px;
+  padding:0 6px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:#ff5270;
+  color:#fff;
+  font-size:12px;
+  font-style:normal;
+  box-shadow:0 8px 18px rgba(255,82,112,.36);
+}
+.bottom-hub-orb{
+  position:relative;
+  width:88px;
+  height:88px;
+  border-radius:50%;
+  border:4px solid rgba(255,255,255,.86);
+  background:
+    radial-gradient(circle at 35% 25%,rgba(255,255,255,.98) 0 12%,transparent 13%),
+    radial-gradient(circle at 50% 48%,#fff 0 13%,#8cb9ff 14% 21%,transparent 22%),
+    linear-gradient(135deg,#ff5f82 0 44%,#fff 45% 53%,#5b83ff 54% 100%);
+  box-shadow:0 20px 36px rgba(74,118,255,.32),0 0 32px rgba(89,222,255,.48);
+  transform:translateY(-22px);
+  cursor:pointer;
+  animation:bdxHubPulse 1.7s ease-in-out infinite alternate;
+}
+.bottom-hub-orb span{position:absolute;inset:29px;border-radius:50%;background:linear-gradient(180deg,#fff,#dbe9ff);border:3px solid #8aa9db;}
+@keyframes bdxHubPulse{from{filter:brightness(1)}to{filter:brightness(1.08);box-shadow:0 22px 42px rgba(74,118,255,.38),0 0 42px rgba(89,222,255,.58)}}
+.main-action{display:none!important;}
+
+/* Keep dpad hidden */
+.move-pad{display:none!important;pointer-events:none!important;}
+
+/* Modal shell reference */
+.game-menu-modal,.mapdex-modal,.modal,.report-modal{
+  backdrop-filter:blur(9px)!important;
+  background:rgba(12,34,67,.34)!important;
+}
+.game-menu-card,.mapdex-phone,#dexModal .character-modal-card,.report-card{
+  border-radius:40px!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(238,248,255,.91) 62%,rgba(255,232,249,.86))!important;
+  border:1px solid rgba(255,255,255,.88)!important;
+  box-shadow:0 30px 76px rgba(22,61,135,.28),0 0 32px rgba(108,224,255,.15),inset 0 1px 0 #fff!important;
+  color:#17366d!important;
+  animation:bdxModalPop .28s cubic-bezier(.2,.9,.2,1) both;
+}
+@keyframes bdxModalPop{from{opacity:0;transform:translateY(20px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* HUB */
+.game-menu-card{
+  width:min(92vw,480px)!important;
+  max-height:82vh!important;
+  overflow:auto!important;
+  padding:28px 24px!important;
+}
+.game-menu-orb{
+  width:78px!important;height:78px!important;border-radius:30px!important;
+  background:linear-gradient(135deg,#51e5ff,#5e83ff 48%,#ff89c6)!important;
+  box-shadow:0 20px 42px rgba(62,122,255,.26),0 0 24px rgba(100,222,255,.36)!important;
+  font-size:22px!important;
+}
+.game-menu-kicker{color:#6fdcff!important;letter-spacing:.22em!important;font-size:12px!important;font-weight:950!important;}
+.game-menu-card h2{font-size:34px!important;line-height:1.02!important;color:#13376f!important;text-shadow:0 2px 0 rgba(255,255,255,.70);}
+.game-menu-desc{font-size:15px!important;line-height:1.55!important;color:#577199!important;}
+.game-menu-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:14px!important;}
+.game-menu-item{
+  min-height:132px!important;
+  border-radius:27px!important;
+  padding:17px!important;
+  border:1px solid rgba(255,255,255,.88)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(236,246,255,.9))!important;
+  box-shadow:0 16px 32px rgba(44,84,150,.12)!important;
+  transition:transform .18s ease, box-shadow .18s ease!important;
+}
+.game-menu-item.primary{background:linear-gradient(135deg,#dffcff,#fff1a4 52%,#ffb8df)!important;}
+.game-menu-item.warning{background:linear-gradient(135deg,#fff0c8,#ffe8f8 58%,#d9f5ff)!important;}
+.game-menu-item:hover,.game-menu-item:active{transform:translateY(-4px);box-shadow:0 22px 46px rgba(43,85,154,.18)!important;}
+.menu-emoji{font-size:30px!important;filter:drop-shadow(0 8px 10px rgba(40,82,146,.13));}
+.game-menu-item strong{font-size:18px!important;color:#153b7a!important;}
+.game-menu-item small{font-size:12px!important;color:#5c7194!important;}
+
+/* MapDex radar */
+.mapdex-phone{
+  width:min(92vw,520px)!important;
+  max-height:86vh!important;
+  padding:28px 24px 22px!important;
+  overflow:auto!important;
+}
+.mapdex-kicker{color:#72d8ff!important;letter-spacing:.20em!important;font-weight:950!important;}
+.mapdex-head h3{font-size:42px!important;color:#12366e!important;margin:4px 0 0!important;}
+.mapdex-canvas{
+  height:330px!important;
+  border-radius:28px!important;
+  overflow:hidden!important;
+  background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.18) 0 1px,transparent 1px 36px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0 1px,transparent 1px 36px),
+    radial-gradient(circle at center,rgba(255,255,255,.32),transparent 34%),
+    linear-gradient(135deg,#58d6ff,#2f95ea)!important;
+  border:1px solid rgba(255,255,255,.8)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 18px 40px rgba(40,119,200,.16)!important;
+}
+.mapdex-canvas::before{
+  content:"";position:absolute;inset:13%;border-radius:50%;border:2px dashed rgba(255,255,255,.5);animation:bdxRadarRing 2.8s linear infinite;
+}
+.mapdex-canvas::after{
+  content:"";position:absolute;left:50%;top:50%;width:44%;height:44%;transform-origin:left top;
+  background:linear-gradient(45deg,rgba(255,255,255,.42),transparent 68%);
+  clip-path:polygon(0 0,100% 0,0 100%);
+  animation:bdxRadarSweep 2.6s linear infinite;
+}
+@keyframes bdxRadarRing{to{transform:scale(1.03);opacity:.8}}
+@keyframes bdxRadarSweep{to{transform:rotate(360deg)}}
+.mapdex-player-dot{
+  z-index:4!important;width:70px!important;height:70px!important;border-radius:999px!important;
+  box-shadow:0 14px 22px rgba(34,88,156,.20)!important;font-weight:950!important;
+}
+.mapdex-list{margin-top:16px!important;}
+.mapdex-list-item,.mapdex-row{
+  border-radius:22px!important;background:rgba(255,255,255,.88)!important;
+  border:1px solid rgba(220,233,255,.86)!important;
+  box-shadow:0 12px 24px rgba(48,91,158,.09)!important;
+}
+
+/* Character */
+#dexModal .character-modal-card{
+  width:min(94vw,680px)!important;
+  max-height:86vh!important;
+  padding:26px!important;
+}
+#dexModal .modal-head h3{font-size:36px!important;color:#143872!important;}
+#dexModal .character-profile-hero{
+  grid-template-columns:230px 1fr!important;
+  min-height:280px!important;
+  border-radius:34px!important;
+  background:linear-gradient(135deg,rgba(200,242,255,.9),rgba(243,250,255,.92) 52%,rgba(255,228,249,.86))!important;
+}
+#dexModal .character-avatar-big{
+  width:210px!important;height:250px!important;border-radius:38px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(116,218,255,.28)),url('assets/player/player-front.png') center bottom 14px/145px auto no-repeat!important;
+  box-shadow:0 25px 48px rgba(37,107,180,.20),0 0 0 10px rgba(126,234,255,.13)!important;
+}
+#dexModal .character-avatar-big::before{
+  content:"";position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:160px;height:38px;border-radius:50%;
+  border:2px solid rgba(61,211,255,.75);box-shadow:0 0 24px rgba(71,211,255,.55),inset 0 0 18px rgba(71,211,255,.20);
+}
+#dexModal .character-hero-meta h4{font-size:38px!important;color:#153a76!important;}
+.profile-badge-grid{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:12px!important;}
+.profile-badge-card{
+  min-height:122px!important;border-radius:22px!important;background:linear-gradient(180deg,#fff,rgba(236,246,255,.90))!important;
+  border:1px solid rgba(220,233,255,.86)!important;box-shadow:0 14px 28px rgba(50,90,160,.10)!important;
+}
+.profile-badge-icon,.profile-badge-card .badge-icon{font-size:38px!important;filter:drop-shadow(0 10px 12px rgba(36,88,160,.18));}
+
+/* Report */
+.report-card{
+  width:min(92vw,560px)!important;
+  max-height:86vh!important;
+  padding:90px 28px 28px!important;
+  overflow:visible!important;
+}
+.report-card::before{
+  content:"";
+  position:absolute;left:50%;top:-72px;transform:translateX(-50%);
+  width:160px;height:130px;background:url('assets/rubo/KAGET-RUBO.png') center/contain no-repeat;
+  filter:drop-shadow(0 20px 22px rgba(44,98,160,.23));
+  animation:bdxFloat 1.7s ease-in-out infinite alternate;
+}
+@keyframes bdxFloat{from{transform:translateX(-50%) translateY(0)}to{transform:translateX(-50%) translateY(-8px)}}
+.report-card h3{font-size:38px!important;line-height:1.05!important;text-align:center!important;color:#143872!important;}
+.report-card p{text-align:center!important;color:#4b6690!important;font-size:17px!important;line-height:1.55!important;}
+.report-card label{letter-spacing:.18em!important;color:#5a77aa!important;font-weight:950!important;margin-top:18px!important;}
+.report-card select,.report-card textarea{
+  border-radius:22px!important;background:rgba(255,255,255,.82)!important;border:1px solid rgba(205,222,250,.88)!important;
+  box-shadow:inset 0 1px 0 #fff,0 12px 24px rgba(38,83,150,.08)!important;
+  color:#17366d!important;font-weight:850!important;
+}
+.report-actions{display:grid!important;grid-template-columns:1fr!important;gap:12px!important;margin-top:18px!important;}
+#reportSaveBtn{
+  height:64px!important;border-radius:26px!important;font-size:18px!important;
+  background:linear-gradient(135deg,#2479ff,#8b55ff)!important;box-shadow:0 18px 34px rgba(67,97,255,.32),0 0 24px rgba(89,222,255,.25)!important;
+}
+#reportCancelBtn{height:54px!important;border-radius:24px!important;background:rgba(255,255,255,.78)!important;color:#24436f!important;}
+
+/* RUBO assistant = speech bubble like reference */
+.rubo-assistant{
+  right:132px!important;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 118px)!important;
+  z-index:140!important;
+  border-radius:30px!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(233,245,255,.92) 62%,rgba(255,226,246,.88))!important;
+  border:1px solid rgba(255,255,255,.86)!important;
+  box-shadow:0 18px 42px rgba(23,63,130,.22),inset 0 1px 0 #fff!important;
+  animation:bdxRuboIn .35s ease both;
+  pointer-events:none!important;
+}
+@keyframes bdxRuboIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.rubo-assistant-close{pointer-events:auto!important;}
+.rubo-assistant img{width:74px!important;height:74px!important;filter:drop-shadow(0 12px 14px rgba(37,94,156,.20));}
+.rubo-speech b{font-size:15px!important;color:#143872!important;}
+.rubo-speech small{font-size:12px!important;color:#4b6690!important;}
+
+/* Navigation banner */
+.nav-center-banner{
+  border-radius:26px!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.94),rgba(229,244,255,.9))!important;
+  border:1px solid rgba(255,255,255,.88)!important;
+  box-shadow:0 20px 44px rgba(27,73,154,.20),inset 0 1px 0 #fff!important;
+}
+.nav-center-icon{background:linear-gradient(135deg,#32e0ff,#2d79ff,#a66cff)!important;box-shadow:0 0 22px rgba(67,196,255,.38)!important;}
+
+@media(max-width:720px){
+  .top-status.compact-status{left:16px!important;top:18px!important;width:152px!important;padding:11px 13px!important;border-radius:22px!important;}
+  .compact-status .status-row{font-size:14px!important}.compact-status .status-sub{font-size:11px!important}
+  #weatherChip,.weather-chip{top:18px!important;width:186px!important;min-width:186px!important;padding:13px 15px!important;border-radius:24px!important;}
+  .weather-icon{font-size:25px!important}.weather-info div{font-size:17px!important}.weather-info small{font-size:12px!important}
+  .fab-locate,.mapdex-action,.dex-action,.report-action{right:14px!important;width:72px!important;height:72px!important;}
+  .fab-locate{bottom:calc(env(safe-area-inset-bottom,0px) + 330px)!important;}
+  .mapdex-action{bottom:calc(env(safe-area-inset-bottom,0px) + 252px)!important;}
+  .dex-action{bottom:calc(env(safe-area-inset-bottom,0px) + 174px)!important;}
+  .report-action{bottom:calc(env(safe-area-inset-bottom,0px) + 96px)!important;}
+  .bottom-game-nav{height:78px;width:94vw;grid-template-columns:1fr 1fr 94px 1fr 1fr;border-radius:39px;padding:0 8px;}
+  .bottom-nav-item small{font-size:12px}.bottom-nav-item .nav-ico{font-size:23px}.bottom-hub-orb{width:76px;height:76px;transform:translateY(-18px)}
+  .game-menu-card,.mapdex-phone,#dexModal .character-modal-card,.report-card{border-radius:32px!important;}
+  .game-menu-card h2{font-size:30px!important}.game-menu-grid{gap:10px!important}.game-menu-item{min-height:118px!important;padding:13px!important}
+  .mapdex-head h3{font-size:34px!important}.mapdex-canvas{height:280px!important}
+  #dexModal .character-profile-hero{grid-template-columns:1fr!important;text-align:center!important;min-height:0!important;}
+  #dexModal .character-avatar-big{width:180px!important;height:210px!important;margin:auto!important;background-size:122px auto!important;}
+  #dexModal .character-hero-meta h4{font-size:30px!important;}
+  .profile-badge-grid{grid-template-columns:repeat(3,1fr)!important;}
+  .rubo-assistant{right:94px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 104px)!important;max-width:240px!important;}
+}
