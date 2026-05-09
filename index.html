@@ -41,7 +41,7 @@
     </div>
 
     <button id="locateBtn" class="fab fab-locate" title="Ambil lokasi"><span>GPS</span></button>
-    <button id="resetViewBtn" class="fab fab-compass" title="Reset view"><span>RESET</span></button>
+    <button id="resetViewBtn" class="fab fab-compass" title="Kompas / Reset View"><span>Kompas</span></button>
 
     <div class="scan-ring"></div>
 
@@ -99,11 +99,11 @@
     <button id="mainMenuBtn" class="main-action" title="Menu utama" aria-label="Buka menu utama"></button>
 
     <nav id="bottomGameNav" class="bottom-game-nav" aria-label="Navigasi BogorDex">
-      <button id="bottomHomeBtn" class="bottom-nav-item active" type="button"><span class="nav-ico">⌂</span><small>Beranda</small></button>
-      <button id="bottomMissionBtn" class="bottom-nav-item" type="button"><span class="nav-ico">⚑</span><em>3</em><small>Misi</small></button>
+      <button id="bottomHomeBtn" class="bottom-nav-item active" type="button"><span class="nav-ico nav-home"></span><small>Beranda</small></button>
+      <button id="bottomMissionBtn" class="bottom-nav-item" type="button"><span class="nav-ico nav-mission"></span><em>3</em><small>Misi</small></button>
       <button id="bottomHubBtn" class="bottom-hub-orb" type="button" aria-label="Buka HUB"><span></span></button>
-      <button id="bottomInventoryBtn" class="bottom-nav-item" type="button"><span class="nav-ico">▣</span><small>Inventori</small></button>
-      <button id="bottomProfileBtn" class="bottom-nav-item" type="button"><span class="nav-ico">◉</span><small>Profil</small></button>
+      <button id="bottomInventoryBtn" class="bottom-nav-item" type="button"><span class="nav-ico nav-inventory"></span><small>Inventori</small></button>
+      <button id="bottomProfileBtn" class="bottom-nav-item" type="button"><span class="nav-ico nav-profile"></span><small>Profil</small></button>
     </nav>
 
     <div class="move-pad" aria-label="Kontrol gerak">
@@ -114,8 +114,7 @@
     </div>
 
     <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="mapdex-asset"></span><small>Radar</small></button>
-    <button id="chatToggleBtn" class="chat-toggle" title="Buka chat">Chat</button>
-    <button id="dexBtn" class="dex-action" title="Info Karakter"><span class="dex-icon">Karakter</span></button>
+    <button id="chatToggleBtn" class="chat-toggle" title="Buka chat"><span class="chat-icon-asset"></span><small>Chat</small></button>
     <button id="reportQuickBtn" class="report-action" title="Laporkan titik" aria-label="Laporkan titik"><span>＋</span><small>Laporkan</small></button>
 
     <aside id="animeChatDock" class="anime-chat-dock collapsed" aria-label="Chat karakter">
@@ -348,7 +347,7 @@
       }
       function loadApp(){
         const s = document.createElement("script");
-        s.src = "app.js?v=89";
+        s.src = "app.js?v=87";
         s.onerror = function(){ setStatus("Gagal memuat app.js"); };
         document.body.appendChild(s);
       }
