@@ -2651,3 +2651,132 @@ body.overlay-open .nav-center-banner{opacity:0;pointer-events:none;transform:tra
   .report-modal,.mapdex-modal,.game-menu-modal,.modal{padding:12px!important;}
   .report-card,.game-menu-card,.mapdex-phone,#dexModal .character-modal-card{max-height:78vh!important;}
 }
+
+
+/* ===== v91 clean mobile UI + button movement + map rotate ===== */
+/* Saat modal terbuka, HUD luar disembunyikan supaya tidak menumpuk dan tidak bikin pusing. */
+body.overlay-open .top-status,
+body.overlay-open #weatherChip,
+body.overlay-open .weather-chip,
+body.overlay-open .chat-toggle,
+body.overlay-open .fab-compass,
+body.overlay-open .fab-locate,
+body.overlay-open .mapdex-action,
+body.overlay-open .report-action,
+body.overlay-open .main-action,
+body.overlay-open .bottom-game-nav,
+body.overlay-open .move-pad,
+body.overlay-open .rubo-assistant,
+body.overlay-open .nav-center-banner{
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  transform:translateY(8px) scale(.98)!important;
+}
+
+/* Tombol jalan dikembalikan. Drag map sekarang untuk MapLibre/rotate, bukan untuk jalan. */
+.move-pad{
+  display:block!important;
+  pointer-events:auto!important;
+  opacity:1!important;
+  visibility:visible!important;
+  position:absolute!important;
+  left:14px!important;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 112px)!important;
+  width:116px!important;
+  height:116px!important;
+  z-index:92!important;
+  border-radius:34px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.70),rgba(226,241,255,.38))!important;
+  border:1px solid rgba(255,255,255,.78)!important;
+  box-shadow:0 18px 42px rgba(33,77,139,.20), inset 0 1px 0 rgba(255,255,255,.95)!important;
+  backdrop-filter:blur(18px) saturate(1.15)!important;
+}
+.move-pad::after{content:'JALAN'!important;position:absolute!important;left:50%!important;bottom:-22px!important;transform:translateX(-50%)!important;font-size:10px!important;letter-spacing:.14em!important;font-weight:900!important;color:#fff!important;text-shadow:0 4px 12px rgba(24,48,92,.35)!important;white-space:nowrap!important;}
+.move-btn{
+  width:38px!important;height:38px!important;border-radius:16px!important;
+  background:linear-gradient(180deg,#fff,#eaf4ff)!important;
+  border:1px solid rgba(255,255,255,.86)!important;
+  color:#28538f!important;font-size:16px!important;font-weight:900!important;
+  box-shadow:0 8px 16px rgba(41,78,133,.16)!important;
+  pointer-events:auto!important;touch-action:none!important;
+}
+.move-btn:active{transform:scale(.92)!important;background:linear-gradient(180deg,#dff7ff,#dbe8ff)!important;}
+.move-btn.up{left:39px!important;top:8px!important}.move-btn.down{left:39px!important;bottom:8px!important}.move-btn.left{left:8px!important;top:39px!important}.move-btn.right{right:8px!important;top:39px!important}
+
+/* Modal dibuat lebih kecil, lebih napas, dan tidak memenuhi layar. */
+.report-modal,.mapdex-modal,.game-menu-modal,.modal{align-items:center!important;justify-content:center!important;padding:12px!important;}
+.report-card,.game-menu-card,.mapdex-phone,#dexModal .character-modal-card,.inventory-modal-card{
+  width:min(90vw,430px)!important;
+  max-height:72dvh!important;
+  border-radius:28px!important;
+  padding:16px!important;
+  overflow:auto!important;
+  box-sizing:border-box!important;
+}
+.report-card h3{font-size:30px!important;line-height:1.05!important;margin:10px 0 8px!important;text-align:left!important;}
+.report-card p{font-size:14px!important;line-height:1.45!important;text-align:left!important;margin:0 0 12px!important;}
+.report-kicker{font-size:11px!important;margin-bottom:10px!important;}
+.report-rubo-hero{padding:10px 12px!important;border-radius:20px!important;margin-bottom:10px!important;grid-template-columns:48px 1fr!important;}
+.report-rubo-hero img{width:48px!important;height:48px!important;}
+.report-rubo-hero b{font-size:15px!important}.report-rubo-hero span{font-size:12px!important;}
+.report-card label{font-size:11px!important;margin:12px 0 6px!important;}
+.report-card select{height:48px!important;border-radius:18px!important;font-size:14px!important;}
+.report-card textarea{min-height:108px!important;border-radius:20px!important;font-size:14px!important;}
+.report-actions{margin-top:12px!important;gap:10px!important}.report-actions button{height:48px!important;border-radius:18px!important;font-size:14px!important;}
+
+/* MapDex Radar compact: radar tetap keren tapi list tidak kebanting keluar layar. */
+.mapdex-phone{background:linear-gradient(180deg,rgba(11,67,154,.94),rgba(10,48,116,.92))!important;color:#fff!important;}
+.mapdex-head{margin-bottom:10px!important;}
+.mapdex-kicker{font-size:10px!important;letter-spacing:.18em!important;}
+.mapdex-head h3{font-size:26px!important;line-height:1!important;margin:2px 0 6px!important;}
+.mapdex-desc{font-size:14px!important;line-height:1.35!important;margin:0!important;}
+#closeMapDexBtn.close-btn,.close-btn{width:38px!important;height:38px!important;font-size:24px!important;flex:0 0 auto!important;}
+.mapdex-canvas{height:220px!important;border-radius:24px!important;margin-top:10px!important;}
+.mapdex-legend{margin:10px 0!important;padding:8px 10px!important;border-radius:16px!important;font-size:12px!important;}
+.mapdex-rubo-tip{margin:10px 0!important;padding:10px 12px!important;border-radius:16px!important;font-size:12px!important;}
+.mapdex-rubo-tip img{width:34px!important;height:34px!important;}
+.mapdex-list{max-height:170px!important;overflow:auto!important;gap:8px!important;margin-top:10px!important;padding-right:3px!important;}
+.mapdex-row{padding:10px 12px!important;border-radius:18px!important;gap:10px!important;}
+.mapdex-row-ico{width:42px!important;height:42px!important;font-size:18px!important;}
+.mapdex-row-copy strong{font-size:14px!important;max-width:180px!important;}
+.mapdex-row-copy small{font-size:11px!important;gap:6px!important;}
+.mapdex-row-copy small label{max-width:150px!important;}
+.mapdex-row b{font-size:14px!important;}
+
+/* Profil dan inventori compact tapi isi tetap ada. */
+#dexModal .modal-head h3,.inventory-modal-card .modal-head h3{font-size:26px!important;line-height:1.1!important;}
+#dexModal .character-profile-hero{grid-template-columns:96px 1fr!important;gap:12px!important;text-align:left!important;padding:12px!important;border-radius:24px!important;margin-bottom:12px!important;}
+#dexModal .character-avatar-big{width:90px!important;height:108px!important;background-size:64px auto!important;margin:0!important;border-radius:22px!important;}
+#dexModal .character-hero-meta h4{font-size:22px!important;margin:0 0 8px!important;}
+#dexModal .profile-badges{gap:6px!important}.profile-badges .tag{font-size:11px!important;padding:6px 9px!important;}
+#dexModal .character-stat-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px!important;margin-bottom:10px!important;}
+#dexModal .character-stat{padding:10px!important;border-radius:16px!important;}
+#dexModal .character-stat strong{font-size:14px!important;}
+.character-badge-showcase{padding:12px!important;border-radius:20px!important;margin-bottom:10px!important;}
+.profile-badge-grid{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:8px!important;max-height:130px!important;overflow:auto!important;}
+.profile-badge-card{padding:8px!important;border-radius:16px!important;min-height:auto!important;}
+.profile-badge-icon{width:46px!important;height:46px!important;border-radius:14px!important;}
+.profile-badge-card b{font-size:11px!important;line-height:1.15!important;}.profile-badge-card small{display:none!important;}
+.character-rubo-tip,.character-profile-section{display:none!important;}
+.inventory-hero{grid-template-columns:58px 1fr!important;padding:10px!important;border-radius:20px!important;}
+.inventory-hero-icon{width:58px!important;height:58px!important;background-size:38px auto!important;}
+.inventory-hero b{font-size:15px!important}.inventory-hero p{font-size:12px!important;line-height:1.35!important;margin:4px 0 0!important;}
+.inventory-stat-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px!important;}
+.inventory-stat{padding:11px 8px!important;border-radius:16px!important;}
+.inventory-chip-list{gap:8px!important}.inventory-chip{padding:8px 10px!important;font-size:13px!important;}
+
+/* Bottom sheet lokasi jangan nutup separuh layar terlalu besar. */
+.bottom-sheet{max-height:36vh!important;border-top-left-radius:26px!important;border-top-right-radius:26px!important;}
+.sheet-content{padding:18px 14px 20px!important}.sheet-content h3{font-size:25px!important}.sheet-content p{font-size:13px!important;line-height:1.5!important;}
+.sheet-content .section{padding:10px 12px!important;margin-bottom:8px!important;}
+.sheet-route-btn{padding:10px 16px!important;font-size:13px!important;}
+
+@media(max-width:720px){
+  .move-pad{width:106px!important;height:106px!important;left:12px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 104px)!important;}
+  .move-btn{width:35px!important;height:35px!important;border-radius:14px!important;}
+  .move-btn.up{left:36px!important;top:7px!important}.move-btn.down{left:36px!important;bottom:7px!important}.move-btn.left{left:7px!important;top:36px!important}.move-btn.right{right:7px!important;top:36px!important}
+  .report-card,.game-menu-card,.mapdex-phone,#dexModal .character-modal-card,.inventory-modal-card{width:88vw!important;max-height:70dvh!important;padding:14px!important;border-radius:24px!important;}
+  .mapdex-canvas{height:205px!important}.mapdex-list{max-height:150px!important;}
+  .report-card h3{font-size:27px!important}.report-card textarea{min-height:96px!important;}
+}
