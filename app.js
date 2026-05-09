@@ -479,6 +479,7 @@ function setupSafeMapDragControls(){
   state.__safeMapDragBound = true;
   if(map){
     try{ map.dragPan.enable(); }catch(err){}
+    try{ map.touchZoomRotate.enableRotation(); }catch(err){}
     try{ map.dragRotate.enable(); }catch(err){}
     try{ map.touchZoomRotate.enable(); }catch(err){}
     try{ map.touchZoomRotate.enableRotation(); }catch(err){}
@@ -562,15 +563,6 @@ const REALTIME_EVENT_ENDPOINT = TOMTOM_TRAFFIC_ENDPOINT;
 const OSRM_BASE_URL = window.BOGORDEX_OSRM_BASE_URL || "https://router.project-osrm.org";
 const OSRM_PROFILE = window.BOGORDEX_OSRM_PROFILE || "driving";
 const OSRM_NEAREST_MIN_INTERVAL_MS = 2400;
-const PLAYER_VISUALS = {
-  portrait: "assets/player/male/portrait.png",
-  idle: ["assets/player/male/idle-1.png","assets/player/male/idle-2.png"],
-  walkUp: ["assets/player/male/walk-up-1.png","assets/player/male/walk-up-2.png"],
-  walkDown: ["assets/player/male/walk-down-1.png","assets/player/male/walk-down-2.png"],
-  walkLeft: ["assets/player/male/walk-left-1.png","assets/player/male/walk-left-2.png"],
-  walkRight: ["assets/player/male/walk-right-1.png","assets/player/male/walk-right-2.png"]
-};
-
 
 function setStatus(text){
   statusEl().textContent = text;
@@ -619,20 +611,6 @@ function updatePlayerUiMeta(){
   }
   const lbl = document.querySelector('.player-name-tag b');
   if(lbl) lbl.textContent = PLAYER_PROFILE.name;
-  const hudFrame = document.querySelector('.player-hud-frame');
-  if(hudFrame){
-    hudFrame.style.backgroundImage = `url(assets/ui/frameplayer1.png), url(${PLAYER_VISUALS.portrait})`;
-    hudFrame.style.backgroundSize = 'contain, 72% auto';
-    hudFrame.style.backgroundPosition = 'center, center 56%';
-    hudFrame.style.backgroundRepeat = 'no-repeat, no-repeat';
-  }
-  const bigAvatar = document.querySelector('.character-avatar-big');
-  if(bigAvatar){
-    bigAvatar.style.backgroundImage = `linear-gradient(180deg,rgba(255,255,255,.92),rgba(239,249,255,.85)), url(${PLAYER_VISUALS.portrait})`;
-    bigAvatar.style.backgroundSize = 'auto, 78% auto';
-    bigAvatar.style.backgroundPosition = 'center, center 55%';
-    bigAvatar.style.backgroundRepeat = 'no-repeat, no-repeat';
-  }
 }
 function chatDock(){ return document.getElementById('animeChatDock'); }
 function openChatDock(){ chatDock()?.classList.remove('collapsed'); }
@@ -751,15 +729,17 @@ function setPlayerAnim(mode, facing){
 function applyPlayerSpriteFrame(){
   const el = playerSprite();
   if(!el) return;
+  const fw = 125;
+  const fh = 125;
+  const facingRows = { down:0, left:1, right:2, up:3 };
   const facing = state.facing || "up";
+  const row = facingRows[facing] ?? 3;
   const mode = state.playerMode || "idle";
-  const key = mode === "idle" ? "idle" : (facing === "up" ? "walkUp" : facing === "down" ? "walkDown" : facing === "left" ? "walkLeft" : "walkRight");
-  const frames = PLAYER_VISUALS[key] || PLAYER_VISUALS.idle;
-  const idx = mode === "idle" ? Math.floor(Date.now()/520) % frames.length : Math.floor(Date.now()/180) % frames.length;
-  const src = frames[idx] || frames[0];
-  el.style.backgroundImage = `url(${src})`;
+  const cycle = mode === "idle" ? [1] : [0,1,2,3];
+  const col = cycle[Math.floor(Date.now()/160) % cycle.length] ?? 1;
+  el.style.setProperty("--sprite-x", (-col * fw) + "px");
+  el.style.setProperty("--sprite-y", (-row * fh) + "px");
 }
-
 
 function createPlayerMapMarker(){
   if(state.playerMarker || !maplibregl || !map) return;
@@ -1420,6 +1400,7 @@ const map = new maplibregl.Map({
 });
 try{ map.touchZoomRotate.enableRotation(); }catch(e){}
 try{ map.dragRotate.enable(); }catch(e){}
+try{ map.touchZoomRotate.enableRotation(); }catch(e){}
 
 
 function setupMapLibre3D(){
@@ -2609,7 +2590,7 @@ function renderUserReports(){
   });
 }
 
-function setOverlayMode(active){ document.body.classList.toggle('overlay-open', !!active); document.getElementById('app')?.classList.toggle('overlay-open', !!active); }
+function setOverlayMode(active){ document.body.classList.toggle('overlay-open', !!active); }
 function closeAllOverlays(){
   document.getElementById('mainMenuModal')?.classList.add('hidden');
   document.getElementById('mapDexModal')?.classList.add('hidden');
