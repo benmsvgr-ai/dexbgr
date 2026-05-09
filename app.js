@@ -26,6 +26,9 @@ const state = {
   gpsSmooth: null,
   gpsLastAt: 0,
   move: { up:false, down:false, left:false, right:false },
+  manualMoveKey: '',
+  manualMoveBaseBearing: null,
+  manualMoveTargetBearing: null,
   moveSpeedMeters: 28.0,
   gpsAcceptedAt: 0,
   gpsLastAccepted: null,
@@ -2380,35 +2383,67 @@ function tryMoveWithCollision(mx, my){
   return false;
 }
 
+
+function manualMoveAngleFromInput(forwardInput, strafeInput){
+  if(!forwardInput && !strafeInput) return 0;
+  // relative screen angle in degrees: up=0, right=90, down=180, left=-90
+  return Math.atan2(strafeInput, forwardInput) * 180 / Math.PI;
+}
+function manualMoveKeyFromInput(forwardInput, strafeInput){
+  return `${forwardInput}|${strafeInput}|${state.touchDragMove || ''}`;
+}
+function updateManualCameraTarget(forwardInput, strafeInput){
+  const key = manualMoveKeyFromInput(forwardInput, strafeInput);
+  if(!forwardInput && !strafeInput){
+    state.manualMoveKey = '';
+    state.manualMoveBaseBearing = null;
+    state.manualMoveTargetBearing = null;
+    return getCameraBearing();
+  }
+  if(state.manualMoveKey !== key || typeof state.manualMoveBaseBearing !== 'number'){
+    state.manualMoveKey = key;
+    state.manualMoveBaseBearing = getCameraBearing();
+    const rel = manualMoveAngleFromInput(forwardInput, strafeInput);
+    state.manualMoveTargetBearing = normalizeHeading(state.manualMoveBaseBearing + rel);
+  }
+  return typeof state.manualMoveTargetBearing === 'number' ? state.manualMoveTargetBearing : getCameraBearing();
+}
+function setBottomNavActive(name){
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+  const map = {home:'bottomHomeBtn', mission:'bottomMissionBtn', inventory:'bottomInventoryBtn', profile:'bottomProfileBtn'};
+  const el = document.getElementById(map[name] || 'bottomHomeBtn');
+  if(el) el.classList.add('active');
+}
+
 function updateMovement(dt=1/60){
   const forwardInput = (state.move.up ? 1 : 0) - (state.move.down ? 1 : 0);
   const strafeInput = (state.move.right ? 1 : 0) - (state.move.left ? 1 : 0);
+
   if(state.hasRealGps && state.geoWatch !== null && !forwardInput && !strafeInput){
+    updateManualCameraTarget(0, 0);
     if(Date.now() > (state.gpsMovingUntil || 0) && !playerSprite().classList.contains('idle')) setPlayerAnim('idle', state.facing || 'up');
     return;
   }
+
   if(!forwardInput && !strafeInput){
+    updateManualCameraTarget(0, 0);
     if(!playerSprite().classList.contains("idle")) setPlayerAnim("idle");
     return;
   }
 
-  // V38: gerak karakter mengikuti arah kamera, bukan utara/selatan absolut.
-  // Jadi saat map di-rotate kiri/kanan, tombol atas tetap berarti maju ke depan layar.
+  // v85: arah gerak manual = arah yang user drag/tekan.
+  // Kamera tetap mengikuti dari belakang karakter. Jadi kalau user tarik bawah / tombol S,
+  // kamera rotate 180 derajat dan punggung karakter tetap menghadap kamera.
+  const moveBearing = updateManualCameraTarget(forwardInput, strafeInput);
   const step = state.moveSpeedMeters * Math.min(0.033, Math.max(0.008, dt));
-  const bearingRad = degToRad(getCameraBearing());
-  const forwardX = Math.sin(bearingRad);
-  const forwardY = Math.cos(bearingRad);
-  const rightX = Math.cos(bearingRad);
-  const rightY = -Math.sin(bearingRad);
-  let mx = (forwardX * forwardInput + rightX * strafeInput) * step;
-  let my = (forwardY * forwardInput + rightY * strafeInput) * step;
-  if(forwardInput && strafeInput){ mx *= 0.7071; my *= 0.7071; }
 
-  let facing = state.facing || "down";
-  if(Math.abs(strafeInput) > Math.abs(forwardInput)) facing = strafeInput < 0 ? "left" : "right";
-  else if(forwardInput) facing = forwardInput > 0 ? "up" : "down";
+  const rad = degToRad(moveBearing);
+  let mx = Math.sin(rad) * step;
+  let my = Math.cos(rad) * step;
 
+  const facing = facingFromMovementBearing(moveBearing);
   const moved = tryMoveWithCollision(mx, my);
+
   state.playerFrameTick += dt;
   if(state.playerFrameTick > 0.15){
     state.playerFrameTick = 0;
@@ -2416,15 +2451,17 @@ function updateMovement(dt=1/60){
     applyPlayerSpriteFrame();
   }
   if(!playerSprite().classList.contains("walk") || state.facing !== facing) setPlayerAnim("walk", facing);
+
   if(moved){
     snapPlayerToRoad();
     updatePlayerMapMarker();
     updateRenderBounds();
-    // v83: jangan recenter/rotate kamera setiap karakter jalan manual.
-    // Kamera tetap diam; user yang bergerak di dalam view.
+    followPlayerCamera({ bearing: moveBearing, zoom: CAMERA_ZOOM, duration: 120, force:true });
     detectNearby();
   }else{
     updateStatus("Jalur tertutup • karakter hanya bisa jalan di lintasan");
+    // tetap rotate kamera agar arah karakter terasa responsif meskipun langkah tertahan
+    if(map) map.easeTo({ bearing: moveBearing, pitch: CAMERA_PITCH, duration: 120 });
   }
 }
 function bindMoveButton(btn){
@@ -2714,6 +2751,15 @@ setTimeout(()=>setRuboEmotion('serius','RUBO siap bantu!','Jelajahi Bogor, cek p
 document.addEventListener("keydown", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=true; if(k==="s"||k==="arrowdown") state.move.down=true; if(k==="a"||k==="arrowleft") state.move.left=true; if(k==="d"||k==="arrowright") state.move.right=true; });
 document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if(k==="w"||k==="arrowup") state.move.up=false; if(k==="s"||k==="arrowdown") state.move.down=false; if(k==="a"||k==="arrowleft") state.move.left=false; if(k==="d"||k==="arrowright") state.move.right=false; });
 
+
+
+// v85 bottom game nav + quick report buttons
+document.getElementById("reportQuickBtn")?.addEventListener("click", () => { setBottomNavActive('home'); openReportModal(); });
+document.getElementById("bottomHomeBtn")?.addEventListener("click", () => { setBottomNavActive('home'); closeMainMenu?.(); closeMapDex?.(); document.getElementById("dexModal")?.classList.add("hidden"); });
+document.getElementById("bottomMissionBtn")?.addEventListener("click", () => { setBottomNavActive('mission'); openMainMenu(); });
+document.getElementById("bottomHubBtn")?.addEventListener("click", () => { openMainMenu(); });
+document.getElementById("bottomInventoryBtn")?.addEventListener("click", () => { setBottomNavActive('inventory'); showAnimeToast?.('info','Inventori','Fitur inventori siap dikembangkan.'); });
+document.getElementById("bottomProfileBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); document.getElementById("dexModal")?.classList.remove("hidden"); setRuboEmotion?.('serius','Profil Ranger','Lihat level, badge, dan progres eksplorasimu.'); });
 
 updateWeatherChip();
 updatePlayerUiMeta();
