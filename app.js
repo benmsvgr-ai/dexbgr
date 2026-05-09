@@ -1248,10 +1248,10 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 74;
-const CAMERA_ZOOM = 20.55;
+const CAMERA_PITCH = 71;
+const CAMERA_ZOOM = 20.35;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
-const CAMERA_AHEAD_METERS = 8.0;
+const CAMERA_AHEAD_METERS = 11.5;
 const CAMERA_FOLLOW_MIN_MS = 360;
 const CAMERA_MOVE_DEADBAND_METERS = 6;
 const CAMERA_FOLLOW_MOVE_MIN_MS = 1100;
@@ -2436,9 +2436,8 @@ function updateMovement(dt=1/60){
     return;
   }
 
-  // v85: arah gerak manual = arah yang user drag/tekan.
-  // Kamera tetap mengikuti dari belakang karakter. Jadi kalau user tarik bawah / tombol S,
-  // kamera rotate 180 derajat dan punggung karakter tetap menghadap kamera.
+  // v89: arah gerak manual tetap mengikuti input user, tapi kamera tidak auto-rotate 180 derajat.
+  // Jadi third-person feel tetap stabil dan lebih nyaman di HP/Desktop.
   const moveBearing = updateManualCameraTarget(forwardInput, strafeInput);
   const step = state.moveSpeedMeters * Math.min(0.033, Math.max(0.008, dt));
 
@@ -2461,12 +2460,12 @@ function updateMovement(dt=1/60){
     snapPlayerToRoad();
     updatePlayerMapMarker();
     updateRenderBounds();
-    followPlayerCamera({ bearing: moveBearing, zoom: CAMERA_ZOOM, duration: 120, force:true });
+    followPlayerCamera({ bearing: getCameraBearing(), zoom: CAMERA_ZOOM, duration: 120, force:true });
     detectNearby();
   }else{
     updateStatus("Jalur tertutup • karakter hanya bisa jalan di lintasan");
-    // tetap rotate kamera agar arah karakter terasa responsif meskipun langkah tertahan
-    if(map) map.easeTo({ bearing: moveBearing, pitch: CAMERA_PITCH, duration: 120 });
+    // kamera dibiarkan stabil; cukup pertahankan pitch biar pandangan tidak muter sendiri
+    if(map) map.easeTo({ bearing: getCameraBearing(), pitch: CAMERA_PITCH, duration: 120 });
   }
 }
 function bindMoveButton(btn){
@@ -2707,7 +2706,20 @@ function renderMapDex(){
     const row = document.createElement("button");
     row.className = "mapdex-row";
     const label = item.type === "portal" ? "Portal" : item.type === "npc" ? "NPC" : "Laporan";
-    row.innerHTML = `<span><strong>${item.name}</strong><small>${label}</small></span><b>${Math.round(item.dist)} m</b>`;
+    const desc = item.type === "portal"
+      ? "Gerbang menuju lokasi spesial"
+      : item.type === "npc"
+        ? "Explorer & Penjaga BogorDex"
+        : (item.ref?.category ? String(item.ref.category).replace(/_/g,' ') : "Info warga di sekitar kamu");
+    row.innerHTML = `
+      <span class="mapdex-row-left">
+        <i class="mapdex-row-ico ${item.type}">${item.emoji}</i>
+        <span class="mapdex-row-copy">
+          <strong>${item.name}</strong>
+          <small><em class="type-chip ${item.type}">${label}</em><label>${desc}</label></small>
+        </span>
+      </span>
+      <b>${Math.round(item.dist)} m <u>›</u></b>`;
     row.addEventListener("click", () => focusMapDexItem(item));
     list.appendChild(row);
   });
