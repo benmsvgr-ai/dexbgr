@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BogorDex v70 Anime Event UI</title>
+  <title>BogorDex v85 UI FX Reference</title>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -97,6 +97,15 @@
     </div>
 
     <button id="mainMenuBtn" class="main-action" title="Menu utama" aria-label="Buka menu utama"></button>
+
+    <nav id="bottomGameNav" class="bottom-game-nav" aria-label="Navigasi BogorDex">
+      <button id="bottomHomeBtn" class="bottom-nav-item active" type="button"><span class="nav-ico">⌂</span><small>Beranda</small></button>
+      <button id="bottomMissionBtn" class="bottom-nav-item" type="button"><span class="nav-ico">⚑</span><em>3</em><small>Misi</small></button>
+      <button id="bottomHubBtn" class="bottom-hub-orb" type="button" aria-label="Buka HUB"><span></span></button>
+      <button id="bottomInventoryBtn" class="bottom-nav-item" type="button"><span class="nav-ico">▣</span><small>Inventori</small></button>
+      <button id="bottomProfileBtn" class="bottom-nav-item" type="button"><span class="nav-ico">◉</span><small>Profil</small></button>
+    </nav>
+
     <div class="move-pad" aria-label="Kontrol gerak">
       <button class="move-btn up" data-dir="up">▲</button>
       <button class="move-btn left" data-dir="left">◀</button>
@@ -104,9 +113,10 @@
       <button class="move-btn down" data-dir="down">▼</button>
     </div>
 
-    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="mapdex-asset"></span><small>MapDex</small></button>
+    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="mapdex-asset"></span><small>Radar</small></button>
     <button id="chatToggleBtn" class="chat-toggle" title="Buka chat">Chat</button>
     <button id="dexBtn" class="dex-action" title="Info Karakter"><span class="dex-icon">Karakter</span></button>
+    <button id="reportQuickBtn" class="report-action" title="Laporkan titik" aria-label="Laporkan titik"><span>＋</span><small>Laporkan</small></button>
 
     <aside id="animeChatDock" class="anime-chat-dock collapsed" aria-label="Chat karakter">
       <div class="chat-dock-head">
@@ -338,7 +348,7 @@
       }
       function loadApp(){
         const s = document.createElement("script");
-        s.src = "app.js?v=87";
+        s.src = "app.js?v=89";
         s.onerror = function(){ setStatus("Gagal memuat app.js"); };
         document.body.appendChild(s);
       }
