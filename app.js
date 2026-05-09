@@ -472,41 +472,16 @@ function setRuboEmotion(key='serius', title='RUBO siap bantu!', text='Jelajahi B
 }
 function hideRuboAssistant(){ document.getElementById('ruboAssistant')?.classList.add('hidden'); }
 function setupSafeMapDragControls(){
-  const el = document.getElementById('map');
-  if(!el || state.__safeMapDragBound) return;
+  // v91: Gerak karakter balik pakai tombol.
+  // MapLibre dibiarkan menerima gesture HP supaya map bisa digeser/rotate kiri-kanan.
+  if(state.__safeMapDragBound) return;
   state.__safeMapDragBound = true;
-  let active=false, sx=0, sy=0, pid=null;
-  const clear=()=>{ state.move.up=false; state.move.down=false; state.move.left=false; state.move.right=false; state.touchDragMove=null; state.touchDragActive=false; };
-  const isUi = (target)=> !!target.closest('button,a,input,textarea,select,.modal:not(.hidden),.game-menu-modal:not(.hidden),.mapdex-modal:not(.hidden),.bottom-sheet:not(.hidden),.rubo-assistant,.nav-center-banner,.anime-chat-dock,.right-actions,.side-actions,.fab,.main-action,.dex-action,.mapdex-action');
-  const apply=(dx,dy)=>{
-    state.move.up=false; state.move.down=false; state.move.left=false; state.move.right=false;
-    const ax=Math.abs(dx), ay=Math.abs(dy);
-    if(Math.max(ax,ay)<12){ state.touchDragMove=null; state.touchDragActive=false; return; }
-    if(ax>ay){ state.move.left=dx<0; state.move.right=dx>0; state.touchDragMove=dx<0?'left':'right'; }
-    else { state.move.up=dy<0; state.move.down=dy>0; state.touchDragMove=dy<0?'up':'down'; }
-    state.touchDragActive=true;
-  };
-  const grab=(e)=>{
-    if(e.button!=null && e.button!==0) return;
-    if(isUi(e.target)) return;
-    active=true; pid=e.pointerId; sx=e.clientX; sy=e.clientY;
-    try{ el.setPointerCapture(pid); }catch(err){}
-    // v83: tahan camera MapLibre supaya drag layar hanya menggerakkan karakter, bukan map.
-    e.preventDefault(); e.stopPropagation();
-  };
-  const move=(e)=>{
-    if(!active || e.pointerId!==pid) return;
-    apply(e.clientX-sx, e.clientY-sy);
-    if(state.touchDragMove){ e.preventDefault(); e.stopPropagation(); }
-  };
-  const stop=(e)=>{ if(pid!==null && e && e.pointerId!==pid) return; active=false; pid=null; clear(); };
-  el.addEventListener('pointerdown', grab, {capture:true, passive:false});
-  el.addEventListener('pointermove', move, {capture:true, passive:false});
-  el.addEventListener('pointerup', stop, {capture:true, passive:true});
-  el.addEventListener('pointercancel', stop, {capture:true, passive:true});
-  el.addEventListener('pointerleave', stop, {capture:true, passive:true});
-  window.addEventListener('blur', clear);
-  if(map){ try{ map.dragPan.disable(); map.dragRotate.disable(); map.touchZoomRotate.disableRotation(); }catch(err){} }
+  if(map){
+    try{ map.dragPan.enable(); }catch(err){}
+    try{ map.dragRotate.enable(); }catch(err){}
+    try{ map.touchZoomRotate.enable(); }catch(err){}
+    try{ map.touchZoomRotate.enableRotation(); }catch(err){}
+  }
 }
 
 
@@ -2627,7 +2602,7 @@ function showBottomNavHelp(name){
   const info = {
     home:['Beranda','Kembali ke peta utama dan jelajah sekitar.'],
     mission:['Misi','Lihat quest aktif, event, dan target eksplorasi.'],
-    inventory:['Inventori','Isi inventori = badge, laporan, bonus aktif, dan koleksi progres.'],
+    inventory:['Inventori','Inventori menyimpan coin, badge, laporan, bonus, dan koleksi progres.'],
     profile:['Profil','Lihat level, badge, statistik, dan progres Ranger.']
   }[name] || ['BogorDex','Siap jelajah lagi!'];
   if(typeof setRuboEmotion === 'function') setRuboEmotion('serius', info[0], info[1]);
