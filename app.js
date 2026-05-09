@@ -86,6 +86,8 @@ const state = {
   eventMarkers: [],
   eventPortals: [],
   navigationTarget: null,
+  navigationRouteCoords: null,
+  navigationArrived: false,
   osrmNearestPending: false,
   osrmLastNearestAt: 0,
   osrmLastNearestCoord: null,
@@ -523,6 +525,8 @@ function clearNavigationTarget(silent=false){
   if(map && map.getSource && map.getSource('bdx-navigation-route')){
     try{ map.getSource('bdx-navigation-route').setData({type:'FeatureCollection',features:[]}); }catch(e){}
   }
+  state.navigationRouteCoords = null;
+  state.navigationArrived = false;
   hideNavBanner();
   if(!silent) updateStatus('Arah dibatalkan');
 }
@@ -534,15 +538,54 @@ function updateNavigationUi(){
     return;
   }
   const dist = Math.max(1, Math.round(haversineMeters(state.playerWorld, state.navigationTarget.coords)));
+  const turn = getRouteTurnText();
   document.getElementById('navCenterTitle').textContent = state.navigationTarget.title || state.navigationTarget.name || 'Tujuan';
-  document.getElementById('navCenterMeta').textContent = `Sisa jarak ${dist} m • ikuti jalur biru`;
+  document.getElementById('navCenterMeta').textContent = dist <= 18 ? `Tujuan sudah sampai` : `Sisa ${dist} m • ${turn}`;
   box.classList.remove('hidden');
+  if(dist <= 18 && !state.navigationArrived){
+    state.navigationArrived = true;
+    showArrivedToast('Kamu sudah sampai di tujuan');
+    showAnimeToast('event','Tujuan tercapai', state.navigationTarget.title || 'Portal', ['Tujuan sudah sampai']);
+    updateStatus('Tujuan sudah sampai');
+  }
 }
 function showNavigationBanner(target, subtitle='Rute aktif'){
   if(!target) return;
   document.getElementById('navCenterTitle').textContent = target.title || target.name || 'Tujuan';
   document.getElementById('navCenterMeta').textContent = subtitle;
   navBannerEl()?.classList.remove('hidden');
+}
+
+function getRouteTurnText(){
+  const route = state.navigationRouteCoords;
+  if(!route || route.length < 2 || !state.playerWorld) return 'Ikuti jalur biru';
+  let nearest = 0, best = Infinity;
+  for(let i=0;i<route.length;i++){
+    const d = haversineMeters(state.playerWorld, route[i]);
+    if(d < best){ best = d; nearest = i; }
+  }
+  const a = route[Math.max(0, nearest-1)] || state.playerWorld;
+  const b = route[nearest] || state.playerWorld;
+  const c = route[Math.min(route.length-1, nearest+1)] || state.navigationTarget?.coords || b;
+  const b1 = bearingBetweenCoords(a,b); const b2 = bearingBetweenCoords(b,c);
+  if(b1 == null || b2 == null) return 'Lurus';
+  let diff = ((b2 - b1 + 540) % 360) - 180;
+  if(Math.abs(diff) < 22) return 'Lurus';
+  if(diff > 0) return 'Belok kanan';
+  return 'Belok kiri';
+}
+function showArrivedToast(text='Tujuan sudah sampai!'){
+  let el = document.getElementById('arrivedToast');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'arrivedToast';
+    el.className = 'portal-arrived-toast hidden';
+    document.getElementById('app')?.appendChild(el);
+  }
+  el.textContent = text;
+  el.classList.remove('hidden');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.add('hidden'), 2600);
 }
 function flashEventNotice(title, subtitle=''){
   showRewardBanner('Event Kota', title, subtitle || 'Ada aktivitas baru di sekitar kamu', 2600);
@@ -1971,6 +2014,8 @@ async function tryOsrmNearestSnap(coord, opts={}){
 
 function renderNavigationRoute(routeCoords, fit=true){
   if(!routeCoords || routeCoords.length < 2 || !map) return;
+  state.navigationRouteCoords = routeCoords.slice();
+  state.navigationArrived = false;
   const src = map.getSource('bdx-navigation-route');
   if(src){
     src.setData({ type:'FeatureCollection', features:[{ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: routeCoords } }] });
@@ -2017,6 +2062,7 @@ async function setNavigationTarget(target){
   ensureRouteLayer();
   state.navigationTarget = target;
   showNavigationBanner(target, 'Menghitung rute terbaik...');
+  state.navigationArrived = false;
   showAnimeToast('event', 'Direction aktif', target.title || target.name || 'Tujuan dipilih', ['Rute biru aktif', 'Bisa dibatalkan dari panel tengah']);
   updateStatus('Mengambil jalur OSRM…');
   let routeCoords = null;
