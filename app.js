@@ -2375,7 +2375,7 @@ function tryMoveWithCollision(mx, my){
       tx *= r; ty *= r;
     }
     const nextCoord = worldFromOffset(tx, ty);
-    const snappedCoord = snapCoordToNearestRoad(nextCoord, 240);
+    const snappedCoord = snapCoordToNearestRoad(nextCoord, 420);
     if(snappedCoord && canPlayerStandAt(snappedCoord)){
       state.playerWorld = snappedCoord;
       const [baseLng, baseLat] = state.gpsBase;
@@ -2610,12 +2610,70 @@ function renderUserReports(){
     state.reportMarkers.push(marker);
   });
 }
+
+function setOverlayMode(active){ document.body.classList.toggle('overlay-open', !!active); }
+function closeAllOverlays(){
+  document.getElementById('mainMenuModal')?.classList.add('hidden');
+  document.getElementById('mapDexModal')?.classList.add('hidden');
+  document.getElementById('dexModal')?.classList.add('hidden');
+  document.getElementById('reportModal')?.classList.add('hidden');
+  document.getElementById('inventoryModal')?.classList.add('hidden');
+  document.getElementById('npcDialog')?.classList.add('hidden');
+  document.getElementById('questPopup')?.classList.add('hidden');
+  closeSheet?.(true, true);
+  setOverlayMode(false);
+}
+function showBottomNavHelp(name){
+  const info = {
+    home:['Beranda','Kembali ke peta utama dan jelajah sekitar.'],
+    mission:['Misi','Lihat quest aktif, event, dan target eksplorasi.'],
+    inventory:['Inventori','Isi inventori = badge, laporan, bonus aktif, dan koleksi progres.'],
+    profile:['Profil','Lihat level, badge, statistik, dan progres Ranger.']
+  }[name] || ['BogorDex','Siap jelajah lagi!'];
+  if(typeof setRuboEmotion === 'function') setRuboEmotion('serius', info[0], info[1]);
+}
+function openCharacterProfile(){
+  closeAllOverlays();
+  updatePlayerUiMeta?.();
+  document.getElementById('dexModal')?.classList.remove('hidden');
+  setOverlayMode(true);
+}
+function closeCharacterProfile(){ document.getElementById('dexModal')?.classList.add('hidden'); setOverlayMode(false); }
+function renderInventory(){
+  const chipList = document.getElementById('inventoryChipList');
+  const allBadges = Array.isArray(state.badges) ? state.badges : [];
+  const unlocked = Array.from(state.unlockedBadges || []);
+  document.getElementById('invCoin') && (document.getElementById('invCoin').textContent = String(state.playerProgress.coin || 0));
+  document.getElementById('invBadge') && (document.getElementById('invBadge').textContent = String(unlocked.length));
+  document.getElementById('invReport') && (document.getElementById('invReport').textContent = String((state.userReports||[]).length));
+  document.getElementById('invFound') && (document.getElementById('invFound').textContent = String((state.discovered||new Set()).size));
+  if(chipList){
+    const chips = [];
+    if(unlocked.length){
+      unlocked.slice(0,8).forEach(id => { const b = allBadges.find(x => x.id===id) || {name:id, icon:'🏅'}; chips.push(`<span class="inventory-chip unlocked">${b.icon || '🏅'} ${b.name}</span>`); });
+    }
+    chips.push(`<span class="inventory-chip">🪙 Coin ${(state.playerProgress.coin||0)}</span>`);
+    chips.push(`<span class="inventory-chip">📍 Laporan ${(state.userReports||[]).length}</span>`);
+    chips.push(`<span class="inventory-chip">✨ Bonus EXP +20%</span>`);
+    chipList.innerHTML = chips.join('');
+  }
+}
+function openInventoryModal(){
+  closeAllOverlays();
+  renderInventory();
+  document.getElementById('inventoryModal')?.classList.remove('hidden');
+  setOverlayMode(true);
+}
+function closeInventoryModal(){ document.getElementById('inventoryModal')?.classList.add('hidden'); setOverlayMode(false); }
+
 function openReportModal(){
+  closeAllOverlays();
   setRuboEmotion('kaget','Tambah info titik','Laporkan kondisi sekitar agar warga lain terbantu.');
   document.getElementById("reportNote").value = "";
   document.getElementById("reportModal").classList.remove("hidden");
+  setOverlayMode(true);
 }
-function closeReportModal(){ document.getElementById("reportModal").classList.add("hidden"); }
+function closeReportModal(){ document.getElementById("reportModal").classList.add("hidden"); setOverlayMode(false); }
 function saveCurrentPointReport(){
   const category = document.getElementById("reportCategory").value || "lainnya";
   const note = (document.getElementById("reportNote").value || "").trim();
@@ -2637,8 +2695,8 @@ function saveCurrentPointReport(){
   updateStatus(GAS_URL ? "Info warga dipasang dan dikirim ke Google Sheets" : "Info warga dipasang di map • isi GAS URL untuk kirim ke Google Sheets");
 }
 
-function openMainMenu(){ document.getElementById('mainMenuModal').classList.remove('hidden'); }
-function closeMainMenu(){ document.getElementById('mainMenuModal').classList.add('hidden'); }
+function openMainMenu(){ closeAllOverlays(); document.getElementById('mainMenuModal').classList.remove('hidden'); setOverlayMode(true); }
+function closeMainMenu(){ document.getElementById('mainMenuModal').classList.add('hidden'); setOverlayMode(false); }
 function scanNearestFromMenu(){
   const hit = nearestPoiWithin(state.playerWorld, 999999);
   if(!hit){ updateStatus('Belum ada titik untuk discan'); return; }
@@ -2674,11 +2732,13 @@ function focusMapDexItem(item){
   }
 }
 function openMapDex(){
+  closeAllOverlays();
   setRuboEmotion('serius','MapDex Radar aktif','Aku bantu cari portal, NPC, dan laporan terdekat.');
   renderMapDex();
   document.getElementById("mapDexModal").classList.remove("hidden");
+  setOverlayMode(true);
 }
-function closeMapDex(){ document.getElementById("mapDexModal").classList.add("hidden"); }
+function closeMapDex(){ document.getElementById("mapDexModal").classList.add("hidden"); setOverlayMode(false); }
 function renderMapDex(){
   const canvas = document.getElementById("mapDexCanvas");
   const list = document.getElementById("mapDexList");
@@ -2756,7 +2816,10 @@ document.getElementById("chatToggleBtn").addEventListener("click", () => { chatD
 document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
 document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
 document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
-document.getElementById("closeDexBtn").addEventListener("click", () => document.getElementById("dexModal").classList.add("hidden"));
+document.getElementById("closeDexBtn").addEventListener("click", closeCharacterProfile);
+document.getElementById("dexModal").addEventListener("click", (e) => { if(e.target.id === "dexModal") closeCharacterProfile(); });
+document.getElementById("closeInventoryBtn")?.addEventListener("click", closeInventoryModal);
+document.getElementById("inventoryModal")?.addEventListener("click", (e) => { if(e.target.id === "inventoryModal") closeInventoryModal(); });
 document.getElementById("sheetHandle").addEventListener("click", () => { sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.toggle("collapsed"); syncMiniButton(); });
 document.getElementById("sheetCloseBtn").addEventListener("click", (e) => { e.stopPropagation(); closeSheet(true, true); });
 const __sheetMiniBtn = document.getElementById("sheetMiniBtn"); if(__sheetMiniBtn){ __sheetMiniBtn.addEventListener("click", () => { if(state.lastPoi) openSheet(state.lastPoi, state.activePoiMode || "manual"); }); }
@@ -2771,12 +2834,12 @@ document.addEventListener("keyup", (e) => { const k = e.key.toLowerCase(); if(k=
 
 // v85 bottom game nav + quick report buttons
 document.getElementById("reportQuickBtn")?.addEventListener("click", () => { setBottomNavActive('home'); setRuboEmotion('kaget','Laporkan titik','Sampaikan kondisi sekitar agar warga lain lebih terbantu.'); openReportModal(); });
-document.getElementById("bottomHomeBtn")?.addEventListener("click", () => { setBottomNavActive('home'); showBottomNavHelp('home'); closeMainMenu?.(); closeMapDex?.(); document.getElementById("dexModal")?.classList.add("hidden"); });
+document.getElementById("bottomHomeBtn")?.addEventListener("click", () => { setBottomNavActive('home'); showBottomNavHelp('home'); closeAllOverlays(); });
 document.getElementById("bottomMissionBtn")?.addEventListener("click", () => { setBottomNavActive('mission'); showBottomNavHelp('mission'); openMainMenu(); });
 document.getElementById("bottomHubBtn")?.addEventListener("click", () => { openMainMenu(); });
-document.getElementById("bottomInventoryBtn")?.addEventListener("click", () => { setBottomNavActive('inventory'); showBottomNavHelp('inventory'); showAnimeToast?.('info','Inventori','Fitur inventori siap dikembangkan.'); });
-document.getElementById("bottomProfileBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); showBottomNavHelp('profile'); document.getElementById("dexModal")?.classList.remove("hidden"); setRuboEmotion?.('serius','Profil Ranger','Lihat level, badge, dan progres eksplorasimu.'); });
+document.getElementById("bottomInventoryBtn")?.addEventListener("click", () => { setBottomNavActive('inventory'); showBottomNavHelp('inventory'); openInventoryModal(); });
+document.getElementById("bottomProfileBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); showBottomNavHelp('profile'); openCharacterProfile(); setRuboEmotion?.('serius','Profil Ranger','Lihat level, badge, dan progres eksplorasimu.'); });
 
 updateWeatherChip();
 updatePlayerUiMeta();
-setTimeout(() => refreshEnvironment(true), 900);
+setTimeout(() => { refreshEnvironment(true); try{ snapPlayerToRoad(true); }catch(e){} }, 900);
