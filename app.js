@@ -473,22 +473,39 @@ function setupSafeMapDragControls(){
   if(!el || state.__safeMapDragBound) return;
   state.__safeMapDragBound = true;
   let active=false, sx=0, sy=0, pid=null;
-  const clear=()=>{ state.move.up=false; state.move.down=false; state.move.left=false; state.move.right=false; state.touchDragMove=null; };
+  const clear=()=>{ state.move.up=false; state.move.down=false; state.move.left=false; state.move.right=false; state.touchDragMove=null; state.touchDragActive=false; };
+  const isUi = (target)=> !!target.closest('button,a,input,textarea,select,.modal:not(.hidden),.game-menu-modal:not(.hidden),.mapdex-modal:not(.hidden),.bottom-sheet:not(.hidden),.rubo-assistant,.nav-center-banner,.anime-chat-dock,.right-actions,.side-actions,.fab,.main-action,.dex-action,.mapdex-action');
   const apply=(dx,dy)=>{
     state.move.up=false; state.move.down=false; state.move.left=false; state.move.right=false;
     const ax=Math.abs(dx), ay=Math.abs(dy);
-    if(Math.max(ax,ay)<14) return;
+    if(Math.max(ax,ay)<12){ state.touchDragMove=null; state.touchDragActive=false; return; }
     if(ax>ay){ state.move.left=dx<0; state.move.right=dx>0; state.touchDragMove=dx<0?'left':'right'; }
     else { state.move.up=dy<0; state.move.down=dy>0; state.touchDragMove=dy<0?'up':'down'; }
+    state.touchDragActive=true;
   };
-  el.addEventListener('pointerdown', (e)=>{ active=true; pid=e.pointerId; sx=e.clientX; sy=e.clientY; }, {passive:true});
-  el.addEventListener('pointermove', (e)=>{ if(!active || e.pointerId!==pid) return; apply(e.clientX-sx, e.clientY-sy); if(state.touchDragMove) e.preventDefault(); }, {passive:false});
+  const grab=(e)=>{
+    if(e.button!=null && e.button!==0) return;
+    if(isUi(e.target)) return;
+    active=true; pid=e.pointerId; sx=e.clientX; sy=e.clientY;
+    try{ el.setPointerCapture(pid); }catch(err){}
+    // v83: tahan camera MapLibre supaya drag layar hanya menggerakkan karakter, bukan map.
+    e.preventDefault(); e.stopPropagation();
+  };
+  const move=(e)=>{
+    if(!active || e.pointerId!==pid) return;
+    apply(e.clientX-sx, e.clientY-sy);
+    if(state.touchDragMove){ e.preventDefault(); e.stopPropagation(); }
+  };
   const stop=(e)=>{ if(pid!==null && e && e.pointerId!==pid) return; active=false; pid=null; clear(); };
-  el.addEventListener('pointerup', stop, {passive:true});
-  el.addEventListener('pointercancel', stop, {passive:true});
-  el.addEventListener('pointerleave', stop, {passive:true});
+  el.addEventListener('pointerdown', grab, {capture:true, passive:false});
+  el.addEventListener('pointermove', move, {capture:true, passive:false});
+  el.addEventListener('pointerup', stop, {capture:true, passive:true});
+  el.addEventListener('pointercancel', stop, {capture:true, passive:true});
+  el.addEventListener('pointerleave', stop, {capture:true, passive:true});
   window.addEventListener('blur', clear);
+  if(map){ try{ map.dragPan.disable(); map.dragRotate.disable(); map.touchZoomRotate.disableRotation(); }catch(err){} }
 }
+
 
 function toastStackEl(){ return document.getElementById("animeToastStack"); }
 function rewardBannerEl(){ return document.getElementById("rewardBanner"); }
@@ -593,6 +610,25 @@ function updatePlayerUiMeta(){
     profileSummary:PLAYER_PROFILE.summary
   };
   Object.entries(ids).forEach(([id,val]) => { const el=document.getElementById(id); if(el) el.textContent=val; });
+
+  const badgeGrid = document.getElementById('profileBadgeGrid');
+  const badgeCount = document.getElementById('profileBadgeCount');
+  if(badgeGrid){
+    const unlocked = Array.from(state.unlockedBadges || []);
+    const all = Array.isArray(state.badges) ? state.badges : [];
+    const shown = unlocked.length ? unlocked.map(id => all.find(b => b.id === id) || {id, name:id, icon:'🏅', desc:'Badge terbuka'}) : all.slice(0,4);
+    badgeGrid.innerHTML = (shown.slice(0,8).map((b,idx)=>`
+      <div class="profile-badge-card ${unlocked.includes(b.id) ? 'unlocked' : 'locked'}">
+        <div class="profile-badge-icon">${b.icon || ['🏛️','🧭','🌿','⭐','📸','🤝','🚌','🚨'][idx%8]}</div>
+        <b>${b.name || b.id || 'Badge'}</b>
+        <small>${b.desc || b.category || 'Prestasi BogorDex'}</small>
+      </div>`).join('')) || `
+      <div class="profile-badge-card locked"><div class="profile-badge-icon">🔒</div><b>Belum ada</b><small>Jelajahi lokasi untuk membuka badge.</small></div>`;
+  }
+  if(badgeCount){
+    const total = (Array.isArray(state.badges) && state.badges.length) ? state.badges.length : Math.max(1, (state.unlockedBadges||new Set()).size);
+    badgeCount.textContent = `${(state.unlockedBadges||new Set()).size} / ${total}`;
+  }
   const lbl = document.querySelector('.player-name-tag b');
   if(lbl) lbl.textContent = PLAYER_PROFILE.name;
 }
@@ -1185,8 +1221,10 @@ function applyDeviceHeadingToCamera(heading, duration=240){
   const now = performance.now();
   if(now - (state.headingCameraLastAt || 0) < CAMERA_FOLLOW_MIN_MS) return;
   state.headingCameraLastAt = now;
-  if(map && !state.browsing && (state.move.up || state.move.down || state.move.left || state.move.right)){
-    followPlayerCamera({ bearing: state.deviceHeadingBearing, duration: Math.max(duration, 520) });
+  // v83: saat user jalan manual/drag di HP, kamera jangan ikut rotate.
+  // Kompas hanya dipakai untuk mode GPS-follow, bukan saat tombol/drag aktif.
+  if(map && !state.browsing && !(state.move.up || state.move.down || state.move.left || state.move.right || state.touchDragMove)){
+    // sengaja tidak dipanggil agar kamera tidak muter sendiri saat mundur / tekan S
   }
 }
 function cameraCenterAhead(bearing){
@@ -2310,7 +2348,8 @@ function updateMovement(dt=1/60){
     snapPlayerToRoad();
     updatePlayerMapMarker();
     updateRenderBounds();
-    if(!state.browsing){ followPlayerCamera({ duration: 220 }); }
+    // v83: jangan recenter/rotate kamera setiap karakter jalan manual.
+    // Kamera tetap diam; user yang bergerak di dalam view.
     detectNearby();
   }else{
     updateStatus("Jalur tertutup • karakter hanya bisa jalan di lintasan");
