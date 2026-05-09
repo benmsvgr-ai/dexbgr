@@ -2154,3 +2154,13 @@ html,body,#app{
 .report-card-v77{padding-top:56px!important}.report-card-v77 h3{margin-top:2px!important}.report-category-card{position:relative;overflow:hidden}.report-category-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.42),transparent 44%,rgba(116,170,255,.10));pointer-events:none}.report-category-card.active{box-shadow:0 0 0 3px rgba(83,126,255,.14),0 14px 24px rgba(67,98,177,.14)!important}.report-primary-btn{position:relative;overflow:hidden}.report-primary-btn::after{content:'';position:absolute;inset:-80% -30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);transform:rotate(18deg);animation:buttonShine 2.6s linear infinite}@keyframes buttonShine{from{translate:-120% 0}to{translate:120% 0}}
 .anime-toast.badge::after,.anime-toast.reward::after{content:'';position:absolute;right:10px;bottom:-8px;width:58px;height:58px;background:url('assets/rubo/KAGET-RUBO.png') center/contain no-repeat;opacity:.88;filter:drop-shadow(0 8px 10px rgba(42,70,130,.18));pointer-events:none}.anime-toast.event::after{content:'';position:absolute;right:10px;bottom:-8px;width:58px;height:58px;background:url('assets/rubo/KECEWA-RUBO.png') center/contain no-repeat;opacity:.88;filter:drop-shadow(0 8px 10px rgba(42,70,130,.18));pointer-events:none}
 @media(max-width:720px){.rubo-assistant{right:90px;bottom:114px;max-width:260px;padding:8px 10px;border-radius:24px}.rubo-assistant img{width:58px;height:58px}.rubo-speech b{font-size:13px}.rubo-speech small{font-size:11px}.report-mascot-rubo{top:-64px!important}.report-mascot-rubo img{width:108px;height:108px}.character-badge-gallery{grid-template-columns:repeat(3,minmax(0,1fr))!important}.badge-card-v77{min-height:84px}.my-report-mascot{width:92px;height:92px;right:12px;top:-42px}.my-report-mascot img{width:92px;height:92px}.report-card-v77{padding-top:48px!important}.mapdex-head-v77 h3{font-size:28px!important}}
+
+
+/* ==== v79 anti-hang + movement fix ==== */
+.rubo-assistant{pointer-events:none !important;}
+.rubo-assistant button,.rubo-assistant .rubo-action{pointer-events:auto !important;}
+#map{touch-action:none;}
+#app{touch-action:none;}
+.modal.hidden,.game-menu-modal.hidden,.mapdex-modal.hidden,.arrival-popup.hidden,#navCenterBanner.hidden{display:none !important;pointer-events:none !important;}
+.modal:not(.hidden),.game-menu-modal:not(.hidden),.mapdex-modal:not(.hidden){pointer-events:auto !important;}
+.maplibregl-canvas{touch-action:none;}
