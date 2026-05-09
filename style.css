@@ -2780,3 +2780,38 @@ body.overlay-open .nav-center-banner{
   .mapdex-canvas{height:205px!important}.mapdex-list{max-height:150px!important;}
   .report-card h3{font-size:27px!important}.report-card textarea{min-height:96px!important;}
 }
+
+
+/* ===== v92 HUD cleanup + assets ===== */
+.top-right-hud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;display:flex;align-items:center;gap:10px;z-index:92}
+.coin-hud{height:52px;min-width:92px;padding:0 14px 0 12px;border-radius:999px;display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(240,246,255,.90));border:1px solid rgba(255,255,255,.82);box-shadow:0 14px 30px rgba(32,69,132,.16), inset 0 1px 0 rgba(255,255,255,.98);color:#25477f;font-weight:950}
+.coin-hud-icon{width:28px;height:28px;display:inline-block;background:url('assets/ui/coinrubo.png') center/contain no-repeat;flex:0 0 auto}
+.chat-toggle.icon-only{position:relative!important;top:auto!important;right:auto!important;width:52px!important;height:52px!important;border-radius:50%!important;padding:0!important;display:grid!important;place-items:center!important;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(240,246,255,.90))!important;border:1px solid rgba(255,255,255,.82)!important;box-shadow:0 14px 30px rgba(32,69,132,.16), inset 0 1px 0 rgba(255,255,255,.98)!important}
+.chat-toggle.icon-only small{display:none!important}
+.player-hud{height:58px;min-width:182px;padding:0 12px 0 10px;border:none;border-radius:999px;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(240,246,255,.90));border:1px solid rgba(255,255,255,.82);box-shadow:0 14px 30px rgba(32,69,132,.16), inset 0 1px 0 rgba(255,255,255,.98);color:#244983;cursor:pointer}
+.player-hud-frame{width:56px;height:56px;background:url('assets/ui/frameplayer1.png') center/contain no-repeat;display:block;flex:0 0 auto}
+.player-hud-meta{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05}
+.player-hud-meta b{font-size:13px;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-hud-meta small{font-size:12px;font-weight:900;color:#6b61ff}
+.mapdex-action{display:grid!important;place-items:center!important}
+.mapdex-action small{display:none!important}
+.mapdex-action::before{content:''!important;width:30px;height:30px;display:block;background:url('assets/ui/mapdex-device.png') center/contain no-repeat}
+.report-action{display:grid!important;place-items:center!important}
+.report-action small{display:none!important}
+.report-action span{display:block!important;width:34px!important;height:34px!important;font-size:0!important;background:url('assets/ui/iconlaporan.png') center/contain no-repeat!important}
+.chat-toggle{right:auto!important;top:auto!important}
+.overlay-open .top-right-hud,.overlay-open .fab-locate,.overlay-open .fab-compass,.overlay-open .mapdex-action,.overlay-open .report-action,.overlay-open #bottomGameNav,.overlay-open .rubo-assistant{display:none!important}
+.game-menu-card .hub-rubo-buddy{display:none!important}
+.inventory-gallery-block{margin-top:14px;padding:12px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(241,247,255,.92));border:1px solid rgba(226,236,255,.95);box-shadow:0 10px 22px rgba(34,69,128,.08)}
+.inventory-gallery-sheet{width:100%;height:auto;display:block;margin-top:10px;border-radius:16px;background:rgba(255,255,255,.65)}
+.mapdex-rubo-tip{display:none!important}
+@media(max-width:720px){
+  .top-right-hud{gap:8px;right:10px;top:calc(env(safe-area-inset-top,0px) + 10px)}
+  .coin-hud{min-width:76px;height:44px;padding:0 10px}
+  .coin-hud-icon{width:24px;height:24px}
+  .chat-toggle.icon-only{width:44px!important;height:44px!important}
+  .player-hud{min-width:122px;height:48px;padding:0 10px 0 8px}
+  .player-hud-frame{width:42px;height:42px}
+  .player-hud-meta b{font-size:11px;max-width:58px}
+  .player-hud-meta small{font-size:11px}
+}
