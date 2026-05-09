@@ -2164,3 +2164,7 @@ html,body,#app{
 .modal.hidden,.game-menu-modal.hidden,.mapdex-modal.hidden,.arrival-popup.hidden,#navCenterBanner.hidden{display:none !important;pointer-events:none !important;}
 .modal:not(.hidden),.game-menu-modal:not(.hidden),.mapdex-modal:not(.hidden){pointer-events:auto !important;}
 .maplibregl-canvas{touch-action:none;}
+
+/* ==== v80 manual movement unlocked with GPS ==== */
+.rubo-assistant{right:92px !important; bottom:104px !important; transform:scale(.92); transform-origin:right bottom;}
+@media(max-width:720px){.rubo-assistant{right:88px !important; bottom:92px !important; max-width:230px !important; transform:scale(.82);}}
