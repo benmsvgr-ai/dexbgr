@@ -2793,15 +2793,35 @@ function closeCharacterProfile(){
   modal.classList.add('hidden');
   modal.classList.remove('show');
 }
+
 function setupTouchDragMovement(){
-  const area = document.getElementById('app');
-  if(!area) return;
-  const isInteractive = (target) => !!target.closest('button, a, input, textarea, select, .modal-card, .game-menu-card, .mapdex-phone, .bottom-sheet, .npc-dialog-card, .quest-card, .report-card, .sheet-content, .anime-chat-dock');
-  const clearMove = () => { state.move.up = false; state.move.down = false; state.move.left = false; state.move.right = false; state.touchDragMove = null; };
+  const area = document.getElementById('map') || document.getElementById('app');
+  if(!area || state.__touchDragBound) return;
+  state.__touchDragBound = true;
+
+  const isInteractive = (target) => !!target.closest(
+    'button, a, input, textarea, select, .modal, .modal-card, .game-menu-modal, .game-menu-card, .mapdex-modal, .mapdex-phone, .bottom-sheet, .npc-dialog-card, .quest-card, .report-card, .sheet-content, .anime-chat-dock, .rubo-assistant, .nav-center-banner, .top-weather, .weather-chip, .right-actions, .side-actions, .floating-actions'
+  );
+
+  const clearMove = () => {
+    state.move.up = false;
+    state.move.down = false;
+    state.move.left = false;
+    state.move.right = false;
+    state.touchDragMove = null;
+    state.touchDragActive = false;
+  };
+
   const applyFromDelta = (dx, dy) => {
-    clearMove();
+    state.move.up = false;
+    state.move.down = false;
+    state.move.left = false;
+    state.move.right = false;
     const ax = Math.abs(dx), ay = Math.abs(dy);
-    if(Math.max(ax, ay) < 18) return;
+    if(Math.max(ax, ay) < 14){
+      state.touchDragMove = null;
+      return;
+    }
     if(ax > ay){
       state.move.left = dx < 0;
       state.move.right = dx > 0;
@@ -2811,24 +2831,41 @@ function setupTouchDragMovement(){
       state.move.down = dy > 0;
       state.touchDragMove = dy < 0 ? 'up' : 'down';
     }
+    state.touchDragActive = true;
   };
-  let startX = 0, startY = 0, active = false;
-  area.addEventListener('touchstart', (e) => {
-    if(!('ontouchstart' in window) || !e.touches || !e.touches[0]) return;
+
+  let startX = 0, startY = 0, active = false, pointerId = null;
+
+  area.addEventListener('pointerdown', (e) => {
+    if(e.button != null && e.button !== 0) return;
     if(isInteractive(e.target)) return;
-    const t = e.touches[0];
-    startX = t.clientX; startY = t.clientY; active = true;
+    active = true;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+    try{ area.setPointerCapture(pointerId); }catch(err){}
   }, { passive:true });
-  area.addEventListener('touchmove', (e) => {
-    if(!active || !e.touches || !e.touches[0]) return;
-    if(isInteractive(e.target)) return;
-    const t = e.touches[0];
-    applyFromDelta(t.clientX - startX, t.clientY - startY);
+
+  area.addEventListener('pointermove', (e) => {
+    if(!active || (pointerId !== null && e.pointerId !== pointerId)) return;
+    applyFromDelta(e.clientX - startX, e.clientY - startY);
     if(state.touchDragMove) e.preventDefault();
   }, { passive:false });
-  area.addEventListener('touchend', () => { active = false; clearMove(); }, { passive:true });
-  area.addEventListener('touchcancel', () => { active = false; clearMove(); }, { passive:true });
+
+  const endPointer = (e) => {
+    if(pointerId !== null && e && e.pointerId !== pointerId) return;
+    active = false;
+    pointerId = null;
+    clearMove();
+  };
+  area.addEventListener('pointerup', endPointer, { passive:true });
+  area.addEventListener('pointercancel', endPointer, { passive:true });
+  area.addEventListener('pointerleave', endPointer, { passive:true });
+
+  // Safety: if a modal closes while pointer is active, release movement.
+  document.addEventListener('visibilitychange', () => { if(document.hidden) clearMove(); });
 }
+
 
 function getMapDexItems(){
   const items = [];
