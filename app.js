@@ -900,12 +900,78 @@ async function refreshEnvironment(force=false){
 
 setInterval(updateWeatherClock, 30000);
 function syncMiniButton(){}
+
+function reportRelativeTime(iso){
+  const t = new Date(iso || Date.now()).getTime();
+  const diff = Math.max(0, Date.now() - t);
+  const m = Math.floor(diff / 60000);
+  if(m < 1) return "baru saja";
+  if(m < 60) return m + " menit lalu";
+  const h = Math.floor(m / 60);
+  if(h < 24) return h + " jam lalu";
+  return Math.floor(h / 24) + " hari lalu";
+}
+function getUserReportById(id){
+  return (state.userReports || []).find(r => String(r.id) === String(id));
+}
+function setReportStatus(id, status){
+  const r = getUserReportById(id);
+  if(!r) return;
+  r.status = status;
+  r.updatedAt = new Date().toISOString();
+  saveUserReports();
+  renderUserReports();
+  if(state.lastPoi && String(state.lastPoi.id) === String(id)){
+    openSheet(state.lastPoi, "manual");
+  }
+  showRubo(status === "benar" ? "kaget" : status === "salah" ? "kecewa" : "serius", status === "benar" ? "Status diperbarui" : status === "salah" ? "Dicek ulang ya" : "Laporan diperbarui", status === "benar" ? "Terima kasih, info ini ditandai sudah benar." : status === "salah" ? "Info ditandai belum sesuai." : "Status laporan sudah diperbarui.");
+  showAnimeToast("event", "Status laporan diperbarui", status === "benar" ? "Ditandai sudah benar" : status === "salah" ? "Ditandai belum benar" : "Menunggu verifikasi");
+}
+function deleteUserReportById(id){
+  state.userReports = (state.userReports || []).filter(r => String(r.id) !== String(id));
+  saveUserReports();
+  renderUserReports();
+  closeSheet(true, true);
+  showRubo("sedih", "Laporan dihapus", "Info titik sudah dihapus dari map kamu.");
+  showAnimeToast("event", "Laporan dihapus", "Info titik tidak tampil lagi di map.");
+}
+function renderUserReportSheet(poi){
+  const report = getUserReportById(poi.id) || {};
+  const status = report.status || "menunggu";
+  const statusLabel = status === "benar" ? "Sudah benar" : status === "salah" ? "Belum sesuai" : "Menunggu verifikasi";
+  const category = report.category || "lainnya";
+  document.getElementById("sheetContent").innerHTML = `
+    <div class="report-sheet-card">
+      <div class="report-sheet-head">
+        <div class="report-sheet-icon">${reportEmoji(category)}</div>
+        <div><span class="section-kicker">Laporan Saya</span><h3>${report.note || poi.desc || "Info titik dari user"}</h3><p>${reportRelativeTime(report.createdAt)} ${report.updatedAt ? "• update " + reportRelativeTime(report.updatedAt) : ""}</p></div>
+      </div>
+      <div class="report-status-row"><span class="report-status-pill ${status}">${statusLabel}</span><span class="report-status-location">📍 Posisi karakter saat laporan dibuat</span></div>
+      <div class="report-action-grid">
+        <button id="reportStatusRefresh" class="report-manage-btn blue">↻ Perbarui Status</button>
+        <button id="reportStatusCorrect" class="report-manage-btn green">✓ Tandai Benar</button>
+        <button id="reportStatusWrong" class="report-manage-btn orange">× Tandai Salah</button>
+        <button id="reportDeleteBtn" class="report-manage-btn red">🗑 Hapus Laporan</button>
+      </div>
+    </div>`;
+  document.getElementById("reportStatusRefresh")?.addEventListener("click", () => setReportStatus(poi.id, "menunggu"));
+  document.getElementById("reportStatusCorrect")?.addEventListener("click", () => setReportStatus(poi.id, "benar"));
+  document.getElementById("reportStatusWrong")?.addEventListener("click", () => setReportStatus(poi.id, "salah"));
+  document.getElementById("reportDeleteBtn")?.addEventListener("click", () => deleteUserReportById(poi.id));
+}
+
 function openSheet(poi, mode="manual"){
   sheetEl().classList.remove("hidden-sheet");
   sheetEl().classList.remove("collapsed");
   state.activePoiId = poi.id || null;
   state.activePoiMode = mode;
   state.lastPoi = poi;
+  if(poi.group === "CITIZEN REPORT"){
+    renderUserReportSheet(poi);
+    syncMiniButton();
+    updateStatus(poi.name || "Info Warga");
+    return;
+  }
   const quest = getQuestById(poi.questId);
   const rewardText = poiRewardText(poi);
   const questReward = questRewardText(quest);
@@ -1680,6 +1746,12 @@ function showQuestPopup(poi, dist){
   markPortalPopupDone(poi.id);
   state.activeQuestPoiId = poi.id;
   state.lastPoi = poi;
+  if(poi.group === "CITIZEN REPORT"){
+    renderUserReportSheet(poi);
+    syncMiniButton();
+    updateStatus(poi.name || "Info Warga");
+    return;
+  }
   const quest = getQuestById(poi.questId);
   document.getElementById("questPortalName").textContent = poi.name;
   document.getElementById("questPortalType").textContent = poi.group || "Portal BogorDex";
@@ -2506,7 +2578,7 @@ function closeReportModal(){ document.getElementById("reportModal").classList.ad
 function saveCurrentPointReport(){
   const category = document.getElementById("reportCategory").value || "lainnya";
   const note = (document.getElementById("reportNote").value || "").trim();
-  const report = { id:"RPT-" + Date.now(), category, note: note || "Info titik dari user", coords:[state.playerWorld[0], state.playerWorld[1]], createdAt:new Date().toISOString(), reward_exp:30, reward_coin:5 };
+  const report = { id:"RPT-" + Date.now(), category, note: note || "Info titik dari user", coords:[state.playerWorld[0], state.playerWorld[1]], createdAt:new Date().toISOString(), updatedAt:"", status:"menunggu", reward_exp:30, reward_coin:5 };
   state.userReports.push(report);
   state.playerProgress.exp += Number(report.reward_exp || 0);
   state.playerProgress.coin += Number(report.reward_coin || 0);
