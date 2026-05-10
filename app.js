@@ -964,23 +964,44 @@ function renderUserReportSheet(poi){
   const status = report.status || "menunggu";
   const statusLabel = status === "benar" ? "Sudah benar" : status === "salah" ? "Belum sesuai" : "Menunggu verifikasi";
   const category = report.category || "lainnya";
+  const coordsText = Array.isArray(report.coords) ? `Bogor Tengah, Kota Bogor` : `Bogor Tengah, Kota Bogor`;
   document.getElementById("sheetContent").innerHTML = `
-    <div class="report-sheet-card">
-      <div class="report-sheet-head">
-        <div class="report-sheet-icon">${reportEmoji(category)}</div>
-        <div><span class="section-kicker">Laporan Saya</span><h3>${report.note || poi.desc || "Info titik dari user"}</h3><p>${reportRelativeTime(report.createdAt)} ${report.updatedAt ? "• update " + reportRelativeTime(report.updatedAt) : ""}</p></div>
+    <div class="report-sheet-card report-sheet-card-ref">
+      <div class="report-sheet-head report-sheet-head-ref">
+        <div class="report-sheet-icon report-sheet-thumb ${category}"></div>
+        <div class="report-sheet-titlewrap">
+          <span class="section-kicker">BogorDex</span>
+          <h3>Info Titik Saya</h3>
+          <p>Kelola informasi yang kamu buat di BogorDex.</p>
+        </div>
       </div>
-      <div class="report-status-row"><span class="report-status-pill ${status}">${statusLabel}</span><span class="report-status-location">📍 Posisi karakter saat laporan dibuat</span></div>
-      <div class="report-action-grid">
-        <button id="reportStatusRefresh" class="report-manage-btn blue">↻ Perbarui Status</button>
-        <button id="reportStatusCorrect" class="report-manage-btn green">✓ Tandai Benar</button>
-        <button id="reportStatusWrong" class="report-manage-btn orange">× Tandai Salah</button>
-        <button id="reportDeleteBtn" class="report-manage-btn red">🗑 Hapus Laporan</button>
+      <div class="report-sheet-summary-card">
+        <div class="report-sheet-summary-thumb ${category}"></div>
+        <div class="report-sheet-summary-body">
+          <div class="report-sheet-summary-top">
+            <strong>${report.note || poi.desc || "Info titik dari user"}</strong>
+            <span class="report-status-pill ${status}">${statusLabel}</span>
+          </div>
+          <p class="report-sheet-summary-desc">${category === 'lobang' ? 'Jalan berlubang cukup dalam dekat pertigaan, mohon diperbaiki.' : (report.note || 'Informasi lapangan dari Ranger BogorDex.')}</p>
+          <div class="report-sheet-meta-line">📍 <b>${coordsText}</b></div>
+          <div class="report-sheet-meta-sub">dekat lokasi karakter saat laporan dibuat</div>
+          <div class="report-sheet-meta-time">🕒 ${reportRelativeTime(report.createdAt)}</div>
+        </div>
+      </div>
+      <div class="report-action-grid report-action-grid-ref">
+        <button id="reportStatusRefresh" class="report-manage-btn blue">Perbarui Status</button>
+        <button id="reportStatusCorrect" class="report-manage-btn green">Tandai Sudah Benar</button>
+        <button id="reportDeleteBtn" class="report-manage-btn red">Hapus Laporan</button>
+      </div>
+      <div class="report-history-card">
+        <div class="section-title">Riwayat Laporan</div>
+        <div class="report-history-row"><span>Dibuat</span><b>${new Date(report.createdAt || Date.now()).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</b><small>Oleh Kamu</small></div>
+        <div class="report-history-row"><span>Terakhir Diperbarui</span><b>${new Date(report.updatedAt || report.createdAt || Date.now()).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</b><small>Oleh Kamu</small></div>
+        <div class="report-history-tip">✨ Info Anda membantu Bogor jadi lebih baik!</div>
       </div>
     </div>`;
   document.getElementById("reportStatusRefresh")?.addEventListener("click", () => setReportStatus(poi.id, "menunggu"));
   document.getElementById("reportStatusCorrect")?.addEventListener("click", () => setReportStatus(poi.id, "benar"));
-  document.getElementById("reportStatusWrong")?.addEventListener("click", () => setReportStatus(poi.id, "salah"));
   document.getElementById("reportDeleteBtn")?.addEventListener("click", () => deleteUserReportById(poi.id));
 }
 
@@ -2710,6 +2731,8 @@ function openReportModal(){
   closeAllOverlays();
   setRuboEmotion('kaget','Tambah info titik','Laporkan kondisi sekitar agar warga lain terbantu.');
   document.getElementById("reportNote").value = "";
+  const loc = document.getElementById('reportLocationText');
+  if(loc) loc.textContent = 'Bogor Tengah, Kota Bogor';
   document.getElementById("reportModal").classList.remove("hidden");
   setOverlayMode(true);
 }
