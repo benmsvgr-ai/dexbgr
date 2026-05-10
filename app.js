@@ -540,7 +540,10 @@ function updateNavigationUi(){
   const dist = Math.max(1, Math.round(haversineMeters(state.playerWorld, state.navigationTarget.coords)));
   const turn = getRouteTurnText();
   document.getElementById('navCenterTitle').textContent = state.navigationTarget.title || state.navigationTarget.name || 'Tujuan';
-  document.getElementById('navCenterMeta').textContent = dist <= 18 ? `Tujuan sudah sampai` : `Sisa ${dist} m • ${turn}`;
+  document.getElementById('navCenterSub').textContent = portalLocationForPoi(state.navigationTarget);
+  document.getElementById('navCenterMeta').textContent = dist <= 18 ? '0 m' : `${dist} m`;
+  document.getElementById('navCenterTurn').textContent = dist <= 18 ? 'Tujuan sudah sampai' : turn;
+  navigationIconForTarget(state.navigationTarget);
   box.classList.remove('hidden');
   if(dist <= 18 && !state.navigationArrived){
     state.navigationArrived = true;
@@ -552,7 +555,10 @@ function updateNavigationUi(){
 function showNavigationBanner(target, subtitle='Rute aktif'){
   if(!target) return;
   document.getElementById('navCenterTitle').textContent = target.title || target.name || 'Tujuan';
-  document.getElementById('navCenterMeta').textContent = subtitle;
+  document.getElementById('navCenterSub').textContent = portalLocationForPoi(target);
+  document.getElementById('navCenterMeta').textContent = '-- m';
+  document.getElementById('navCenterTurn').textContent = subtitle;
+  navigationIconForTarget(target);
   navBannerEl()?.classList.remove('hidden');
 }
 
@@ -1021,6 +1027,17 @@ function portalStatusForPoi(poi){
   if(st) return st.charAt(0).toUpperCase() + st.slice(1);
   return 'Siap dijelajahi';
 }
+function portalLocationForPoi(poi){
+  const raw = String(poi.address || poi.alamat || poi.lokasi || '').trim();
+  if(!raw) return 'Kota Bogor, Jawa Barat';
+  return raw.length > 54 ? raw.slice(0, 51) + '...' : raw;
+}
+function navigationIconForTarget(target){
+  const holder = document.getElementById('navCenterIcon');
+  if(!holder) return;
+  const src = portalIconForPoi(target || {});
+  holder.innerHTML = `<img src="${src}" alt="icon tujuan">`;
+}
 function renderPortalModal(poi){
   const card = document.querySelector('#portalModal .portal-modal-card');
   if(card && !card.querySelector('.portal-hud-line')){
@@ -1086,12 +1103,14 @@ function openSheet(poi, mode="manual"){
   state.lastPoi = poi;
   if(poi.group === "CITIZEN REPORT"){
     closePortalModal(false);
+    setOverlayMode(true);
     sheetEl().classList.add("report-center");
     renderUserReportSheet(poi);
     syncMiniButton();
     updateStatus(poi.name || "Info Warga");
     return;
   }
+  setOverlayMode(false);
   closeSheet(false, true);
   openPortalModal(poi);
   syncMiniButton();
@@ -1101,6 +1120,7 @@ function closeSheet(resetStatus=true, fullyHide=true){
   if(fullyHide){
     sheetEl().classList.add("hidden-sheet");
     sheetEl().classList.remove("collapsed");
+    setOverlayMode(false);
   }else{
     sheetEl().classList.remove("hidden-sheet");
     sheetEl().classList.add("collapsed");
@@ -1704,10 +1724,23 @@ function setupPoiLayers(){
   if(!map.getSource("pois")){
     map.addSource("pois", { type:"geojson", data:{ type:"FeatureCollection", features:[] }});
   }
-  if(!map.hasImage("gov-marker")) map.addImage("gov-marker", makePortalIcon("#ff6475","gov"), {pixelRatio:2});
-  if(!map.hasImage("halte-marker")) map.addImage("halte-marker", makePortalIcon("#4b84ff","halte"), {pixelRatio:2});
-  if(!map.hasImage("health-marker")) map.addImage("health-marker", makePortalIcon("#8d7bff","health"), {pixelRatio:2});
-  if(!map.hasImage("umkm-marker")) map.addImage("umkm-marker", makePortalIcon("#ffbf5e","umkm"), {pixelRatio:2});
+  const ensurePortalMarkerImage = (name, src, fallbackColor, fallbackCategory) => {
+    if(map.hasImage(name)) return;
+    map.loadImage(src, (err, img) => {
+      if(!map || map.hasImage(name)) return;
+      if(err || !img){
+        try{ map.addImage(name, makePortalIcon(fallbackColor, fallbackCategory), {pixelRatio:2}); }catch(e){}
+        return;
+      }
+      try{ map.addImage(name, img, {pixelRatio:2}); }catch(e){
+        try{ if(!map.hasImage(name)) map.addImage(name, makePortalIcon(fallbackColor, fallbackCategory), {pixelRatio:2}); }catch(_e){}
+      }
+    });
+  };
+  ensurePortalMarkerImage("gov-marker", "assets/ui/portopd.png", "#ff6475", "gov");
+  ensurePortalMarkerImage("halte-marker", "assets/ui/porthalte.png", "#4b84ff", "halte");
+  ensurePortalMarkerImage("health-marker", "assets/ui/portrs.png", "#8d7bff", "health");
+  ensurePortalMarkerImage("umkm-marker", "assets/ui/portumkm.png", "#ffbf5e", "umkm");
 
   if(!map.getLayer("poi-glow")){
     map.addLayer({
@@ -1948,13 +1981,23 @@ function clearEventMarkers(){
   (state.eventMarkers||[]).forEach(m => { try{m.remove();}catch(e){} });
   state.eventMarkers=[];
 }
+function eventPortalAsset(event){
+  const title = String(event?.title || '').toLowerCase();
+  const kind = String(event?.kind || '').toLowerCase();
+  if(title.includes('halte') || title.includes('biskita')) return 'assets/ui/porthalte.png';
+  if(title.includes('umkm') || title.includes('kuliner')) return 'assets/ui/portumkm.png';
+  if(title.includes('rs') || title.includes('puskesmas') || kind.includes('health')) return 'assets/ui/portrs.png';
+  return 'assets/ui/portopd.png';
+}
 function eventPortalElement(event){
   const el = document.createElement('button');
   el.type = 'button';
   el.className = 'event-portal-marker single-event ' + (event.kind || 'macet');
+  const asset = eventPortalAsset(event);
   el.innerHTML = `
-    <span class="event-portal-core"></span>
-    <span class="event-portal-img"></span>
+    <span class="event-portal-laser"></span>
+    <span class="event-portal-base"></span>
+    <span class="event-portal-core"><span class="event-portal-img" style="background-image:url('${asset}')"></span></span>
     <span class="event-portal-label">${event.title}</span>
   `;
   el.addEventListener('click', (ev) => {
