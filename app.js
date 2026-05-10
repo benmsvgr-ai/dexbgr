@@ -3064,3 +3064,150 @@ function bindIconHoverFx(){
   });
 }
 setTimeout(bindIconHoverFx,200);
+
+/* ===== v105 concept-like UI behavior overrides ===== */
+function openUserReportModal(){ document.getElementById('userReportModal')?.classList.remove('hidden'); setOverlayMode(true); }
+function closeUserReportModal(){ document.getElementById('userReportModal')?.classList.add('hidden'); setOverlayMode(false); }
+function renderUserReportSheet(poi){
+  const report = getUserReportById(poi.id) || {};
+  const body = document.getElementById('userReportModalBody');
+  if(!body) return;
+  const status = report.status || 'menunggu';
+  const statusLabel = status === 'benar' ? 'Sudah benar' : status === 'salah' ? 'Belum sesuai' : 'Menunggu verifikasi';
+  const category = report.category || 'lainnya';
+  body.innerHTML = `
+    <div class="report-sheet-summary-card">
+      <div class="report-sheet-summary-thumb ${category}"></div>
+      <div class="report-sheet-summary-body">
+        <div class="report-sheet-summary-top">
+          <strong>${report.note || poi.desc || 'Info titik dari user'}</strong>
+          <span class="report-status-pill ${status}">${statusLabel}</span>
+        </div>
+        <p class="report-sheet-summary-desc">${category === 'lobang' ? 'Jalan berlubang cukup dalam dekat pertigaan, mohon diperbaiki.' : (report.note || 'Informasi lapangan dari Ranger BogorDex.')}</p>
+        <div class="report-sheet-meta-line">📍 <b>Bogor Tengah, Kota Bogor</b></div>
+        <div class="report-sheet-meta-sub">dekat lokasi karakter saat laporan dibuat</div>
+        <div class="report-sheet-meta-time">🕒 ${reportRelativeTime(report.createdAt)}</div>
+      </div>
+    </div>
+    <div class="report-action-grid report-action-grid-ref">
+      <button id="reportStatusRefresh" class="report-manage-btn blue">Perbarui Status</button>
+      <button id="reportStatusCorrect" class="report-manage-btn green">Tandai Sudah Benar</button>
+      <button id="reportDeleteBtn" class="report-manage-btn red">Hapus Laporan</button>
+    </div>
+    <div class="report-history-card">
+      <div class="section-title">Riwayat Laporan</div>
+      <div class="report-history-row"><span>Dibuat</span><b>${new Date(report.createdAt || Date.now()).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</b><small>Oleh Kamu</small></div>
+      <div class="report-history-row"><span>Terakhir Diperbarui</span><b>${new Date(report.updatedAt || report.createdAt || Date.now()).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</b><small>Oleh Kamu</small></div>
+      <div class="report-history-tip">✨ Info Anda membantu Bogor jadi lebih baik!</div>
+    </div>`;
+  document.getElementById('reportStatusRefresh')?.addEventListener('click', () => setReportStatus(poi.id, 'menunggu'));
+  document.getElementById('reportStatusCorrect')?.addEventListener('click', () => setReportStatus(poi.id, 'benar'));
+  document.getElementById('reportDeleteBtn')?.addEventListener('click', () => deleteUserReportById(poi.id));
+}
+function openSheet(poi, mode='manual'){
+  state.activePoiId = poi.id || null;
+  state.activePoiMode = mode;
+  state.lastPoi = poi;
+  if(poi.group === 'CITIZEN REPORT'){
+    closePortalModal(false);
+    closeSheet(false, true);
+    renderUserReportSheet(poi);
+    openUserReportModal();
+    updateStatus(poi.name || 'Info Warga');
+    return;
+  }
+  closeUserReportModal();
+  setOverlayMode(false);
+  closeSheet(false, true);
+  openPortalModal(poi);
+  syncMiniButton();
+}
+function closeAllOverlays(){
+  document.getElementById('mainMenuModal')?.classList.add('hidden');
+  document.getElementById('mapDexModal')?.classList.add('hidden');
+  document.getElementById('dexModal')?.classList.add('hidden');
+  document.getElementById('reportModal')?.classList.add('hidden');
+  document.getElementById('inventoryModal')?.classList.add('hidden');
+  document.getElementById('userReportModal')?.classList.add('hidden');
+  document.getElementById('npcDialog')?.classList.add('hidden');
+  document.getElementById('questPopup')?.classList.add('hidden');
+  closeSheet?.(true, true);
+  setOverlayMode(false);
+}
+function renderMapDex(){
+  const canvas = document.getElementById('mapDexCanvas');
+  const list = document.getElementById('mapDexList');
+  if(!canvas || !list) return;
+  canvas.querySelectorAll('.mapdex-pin').forEach(n => n.remove());
+  list.innerHTML = '';
+  const items = getMapDexItems();
+  const radarPts = distributeRadarPoints(items.slice(0,14), 1200, 34);
+  radarPts.forEach(({item,x,y}) => {
+    const btn = document.createElement('button');
+    btn.className = 'mapdex-pin ' + item.type;
+    btn.style.left = x + '%';
+    btn.style.top = y + '%';
+    btn.title = item.name;
+    btn.innerHTML = `<i><span></span></i>`;
+    btn.addEventListener('click', () => focusMapDexItem(item));
+    canvas.appendChild(btn);
+  });
+  items.forEach(item => {
+    const row = document.createElement('button');
+    row.className = 'mapdex-row';
+    const label = item.type === 'portal' ? 'Portal' : item.type === 'npc' ? 'NPC' : 'Laporan';
+    const desc = item.type === 'portal' ? 'Gerbang menuju lokasi penting' : item.type === 'npc' ? (item.ref?.role || 'Warga & penjaga BogorDex') : (item.ref?.category ? String(item.ref.category).replace(/_/g,' ') : 'Info warga di sekitar kamu');
+    row.innerHTML = `
+      <span class="mapdex-row-left">
+        <i class="mapdex-row-ico ${item.type}"></i>
+        <span class="mapdex-row-copy">
+          <strong>${item.name || (item.type === 'report' ? 'Info titik dari user' : 'Titik BogorDex')}</strong>
+          <small><em class="type-chip ${item.type}">${label}</em><label>${desc}</label></small>
+        </span>
+      </span>
+      <b>${Math.round(item.dist)} m <u>›</u></b>`;
+    row.addEventListener('click', () => focusMapDexItem(item));
+    list.appendChild(row);
+  });
+}
+function renderPortalModal(poi){
+  const card = document.querySelector('#portalModal .portal-modal-card');
+  if(card && !card.querySelector('.portal-hud-line')){
+    const line = document.createElement('div'); line.className = 'portal-hud-line';
+    const sheen = document.createElement('div'); sheen.className = 'portal-grid-sheen';
+    card.prepend(sheen); card.prepend(line);
+  }
+  const icon = document.getElementById('portalModalIcon');
+  const title = document.getElementById('portalModalTitle');
+  const kicker = document.getElementById('portalModalKicker');
+  const chips = document.getElementById('portalModalChips');
+  const status = document.getElementById('portalModalStatus');
+  const func = document.getElementById('portalModalFunction');
+  const loc = document.getElementById('portalModalLocation');
+  const note = document.getElementById('portalModalNote');
+  if(!icon || !title) return;
+  const iconUrl = portalIconForPoi(poi);
+  icon.innerHTML = `<img src="${iconUrl}" alt="${poi.name || 'Portal'}">`;
+  title.textContent = poi.name || 'BogorDex Portal';
+  kicker.textContent = 'Portal';
+  const chipList = [poi.group, poi.subkategori, state.discovered.has(poi.id) ? 'Sudah ditemukan' : 'Belum ditemukan'].filter(Boolean);
+  chips.innerHTML = chipList.map(v=>`<span>${v}</span>`).join('');
+  status.textContent = portalStatusForPoi(poi);
+  func.textContent = poi.fungsi || poi.tupoksi || 'Belum diisi';
+  loc.textContent = poi.address || poi.alamat || 'Kota Bogor, Jawa Barat';
+  note.textContent = poi.desc || poi.deskripsi || 'Portal BogorDex untuk membuka info lokasi, reward, dan navigasi.';
+  document.getElementById('portalNavigateBtn').onclick = () => { if(Array.isArray(poi.coords)) setNavigationTarget({ title: poi.name, coords: poi.coords }); closePortalModal(); };
+  document.getElementById('portalScanBtn').onclick = () => { closePortalModal(); map.flyTo({ center: poi.coords || state.playerWorld, zoom: Math.max(map.getZoom(), 16.2), pitch: 58, bearing: map.getBearing(), duration: 950 }); updateStatus('Portal disorot • ' + (poi.name || 'BogorDex Portal')); };
+}
+function updateNavigationBanner(title='Tujuan', meta='-- m', subtitle='Ikuti jalur biru', target=null){
+  const box = navBannerEl(); if(!box) return;
+  document.getElementById('navCenterTitle').textContent = title;
+  document.getElementById('navCenterSub').textContent = target?.address || 'Kota Bogor, Jawa Barat';
+  document.getElementById('navCenterMeta').textContent = meta;
+  document.getElementById('navCenterTurn').textContent = subtitle;
+  navigationIconForTarget(target);
+  box.classList.remove('hidden');
+}
+function openMapDex(){ closeAllOverlays(); renderMapDex(); document.getElementById('mapDexModal').classList.remove('hidden'); setOverlayMode(true); }
+document.getElementById('closeUserReportBtn')?.addEventListener('click', closeUserReportModal);
+document.getElementById('userReportModal')?.addEventListener('click', (e)=>{ if(e.target.id === 'userReportModal') closeUserReportModal(); });
