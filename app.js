@@ -1006,12 +1006,14 @@ function renderUserReportSheet(poi){
 }
 
 function openSheet(poi, mode="manual"){
+  sheetEl().classList.remove("report-center");
   sheetEl().classList.remove("hidden-sheet");
   sheetEl().classList.remove("collapsed");
   state.activePoiId = poi.id || null;
   state.activePoiMode = mode;
   state.lastPoi = poi;
   if(poi.group === "CITIZEN REPORT"){
+    sheetEl().classList.add("report-center");
     renderUserReportSheet(poi);
     syncMiniButton();
     updateStatus(poi.name || "Info Warga");
@@ -1054,6 +1056,7 @@ function openSheet(poi, mode="manual"){
   updateStatus(poi.name);
 }
 function closeSheet(resetStatus=true, fullyHide=true){
+  sheetEl().classList.remove("report-center");
   if(fullyHide){
     sheetEl().classList.add("hidden-sheet");
     sheetEl().classList.remove("collapsed");
@@ -1798,6 +1801,7 @@ function showQuestPopup(poi, dist){
   state.activeQuestPoiId = poi.id;
   state.lastPoi = poi;
   if(poi.group === "CITIZEN REPORT"){
+    sheetEl().classList.add("report-center");
     renderUserReportSheet(poi);
     syncMiniButton();
     updateStatus(poi.name || "Info Warga");
