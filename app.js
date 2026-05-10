@@ -1005,6 +1005,69 @@ function renderUserReportSheet(poi){
   document.getElementById("reportDeleteBtn")?.addEventListener("click", () => deleteUserReportById(poi.id));
 }
 
+
+function portalIconForPoi(poi){
+  const group = String(poi.group || '').toUpperCase();
+  const sub = String(poi.subkategori || '').toUpperCase();
+  if(group.includes('KESEHATAN') || sub.includes('PUSKESMAS') || sub.includes('RUMAH_SAKIT')) return 'assets/ui/portrs.png';
+  if(group.includes('HALTE') || sub.includes('HALTE') || sub.includes('BISKITA')) return 'assets/ui/porthalte.png';
+  if(group.includes('UMKM') || sub.includes('UMKM') || sub.includes('KULINER')) return 'assets/ui/portumkm.png';
+  return 'assets/ui/portopd.png';
+}
+function portalStatusForPoi(poi){
+  if(state.discovered.has(poi.id)) return 'Sudah ditemukan';
+  const st = String(poi.status_tampil || poi.status || '').toLowerCase();
+  if(st.includes('aktif')) return 'Aktif operasional';
+  if(st) return st.charAt(0).toUpperCase() + st.slice(1);
+  return 'Siap dijelajahi';
+}
+function renderPortalModal(poi){
+  const icon = document.getElementById('portalModalIcon');
+  const title = document.getElementById('portalModalTitle');
+  const kicker = document.getElementById('portalModalKicker');
+  const chips = document.getElementById('portalModalChips');
+  const status = document.getElementById('portalModalStatus');
+  const func = document.getElementById('portalModalFunction');
+  const loc = document.getElementById('portalModalLocation');
+  const note = document.getElementById('portalModalNote');
+  if(!icon || !title) return;
+  const iconUrl = portalIconForPoi(poi);
+  icon.innerHTML = `<img src="${iconUrl}" alt="${poi.name || 'Portal'}">`;
+  title.textContent = poi.name || 'BogorDex Portal';
+  kicker.textContent = poi.group === 'HALTE' ? 'Portal Halte' : poi.group === 'UMKM' ? 'Portal UMKM' : poi.group === 'KESEHATAN' ? 'Portal Kesehatan' : 'Portal Instansi';
+  const chipList = [poi.group, poi.subkategori, state.discovered.has(poi.id) ? 'Sudah ditemukan' : 'Belum ditemukan'].filter(Boolean);
+  chips.innerHTML = chipList.map(v=>`<span>${v}</span>`).join('');
+  status.textContent = portalStatusForPoi(poi);
+  func.textContent = poi.fungsi || poi.tupoksi || 'Belum diisi';
+  loc.textContent = poi.address || poi.alamat || '-';
+  note.textContent = poi.desc || poi.deskripsi || 'Portal BogorDex untuk membuka info lokasi, reward, dan navigasi.';
+
+  document.getElementById('portalNavigateBtn').onclick = () => {
+    if(Array.isArray(poi.coords)) setNavigationTarget({ title: poi.name, coords: poi.coords });
+    closePortalModal();
+  };
+  document.getElementById('portalScanBtn').onclick = () => {
+    closePortalModal();
+    map.flyTo({ center: poi.coords || state.playerWorld, zoom: Math.max(map.getZoom(), 16.2), pitch: 58, bearing: map.getBearing(), duration: 950 });
+    updateStatus('Portal disorot • ' + (poi.name || 'BogorDex Portal'));
+  };
+}
+function openPortalModal(poi){
+  state.lastPoi = poi;
+  state.activePoiId = poi.id || null;
+  renderPortalModal(poi);
+  document.getElementById('portalModal')?.classList.remove('hidden');
+  updateStatus(poi.name || 'Portal');
+}
+function closePortalModal(resetStatus=true){
+  document.getElementById('portalModal')?.classList.add('hidden');
+  if(resetStatus) updateStatus(state.hasRealGps ? 'Lokasi aktif' : 'Lokasi simulasi');
+}
+
+document.getElementById('portalModalClose')?.addEventListener('click', () => closePortalModal());
+document.getElementById('portalCloseBtn2')?.addEventListener('click', () => closePortalModal());
+document.querySelector('#portalModal .portal-modal-backdrop')?.addEventListener('click', () => closePortalModal());
+
 function openSheet(poi, mode="manual"){
   sheetEl().classList.remove("report-center");
   sheetEl().classList.remove("hidden-sheet");
@@ -1013,47 +1076,16 @@ function openSheet(poi, mode="manual"){
   state.activePoiMode = mode;
   state.lastPoi = poi;
   if(poi.group === "CITIZEN REPORT"){
+    closePortalModal(false);
     sheetEl().classList.add("report-center");
     renderUserReportSheet(poi);
     syncMiniButton();
     updateStatus(poi.name || "Info Warga");
     return;
   }
-  const quest = getQuestById(poi.questId);
-  const rewardText = poiRewardText(poi);
-  const questReward = questRewardText(quest);
-  const badgeText = poi.rewardBadgeId ? badgeLabel(poi.rewardBadgeId) : "";
-  document.getElementById("sheetContent").innerHTML = `
-    <div class="chips">
-      <span>${poi.group || "POI"}</span>
-      ${poi.subkategori ? `<span>${poi.subkategori}</span>` : ""}
-      ${state.discovered.has(poi.id) ? `<span>Sudah ditemukan</span>` : ""}
-    </div>
-    <h3>${poi.name}</h3>
-    <p>${poi.desc || "Tidak ada deskripsi."}</p>
-    <div class="section">
-      <div class="section-title">Fungsi</div>
-      <p>${poi.fungsi || "Belum diisi."}</p>
-    </div>
-    <div class="section">
-      <div class="section-title">Info Lokasi</div>
-      <p>${poi.address || poi.tupoksi || "Belum ada alamat/detail tambahan."}</p>
-    </div>
-    ${quest ? `<div class="section"><div class="section-title">Quest Terkait</div><p><b>${quest.name}</b><br>${quest.desc || ""}</p></div>` : ""}
-    ${(rewardText || questReward || badgeText) ? `<div class="section"><div class="section-title">Reward</div><p>${[rewardText, questReward ? `Reward Quest: ${questReward}` : "", badgeText ? `Badge Lokasi: ${badgeText}` : ""].filter(Boolean).join("<br>")}</p></div>` : ""}
-    <div class="tag-row">
-      <span class="tag">${poi.group || "POI"}</span>
-      ${poi.subkategori ? `<span class="tag">${poi.subkategori}</span>` : ""}
-      ${state.discovered.has(poi.id) ? '<span class="tag">Sudah ditemukan</span>' : ""}
-    </div>
-    ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">✨ Arahkan</button>' : ''}
-  `;
-  const routeBtn = document.getElementById("sheetRouteBtn");
-  if(routeBtn && Array.isArray(poi.coords)){
-    routeBtn.addEventListener("click", () => setNavigationTarget({ title:poi.name, coords:poi.coords }));
-  }
+  closeSheet(false, true);
+  openPortalModal(poi);
   syncMiniButton();
-  updateStatus(poi.name);
 }
 function closeSheet(resetStatus=true, fullyHide=true){
   sheetEl().classList.remove("report-center");
