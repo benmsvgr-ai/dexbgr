@@ -869,7 +869,7 @@ html,body,#app{
 .mapdex-pin{position:absolute;z-index:4;transform:translate(-50%,-100%);border:0;background:transparent;padding:0;cursor:pointer;color:#102c57;}
 .mapdex-pin i{display:flex;width:31px;height:31px;border-radius:50% 50% 50% 7px;transform:rotate(-45deg);align-items:center;justify-content:center;box-shadow:0 8px 16px rgba(21,53,100,.25);border:2px solid rgba(255,255,255,.9);}
 .mapdex-pin i span{transform:rotate(45deg);font-size:14px;}
-.mapdex-pin.pin-portal i{background:#ff5e80}.mapdex-pin.pin-npc i{background:#ffd84f}.mapdex-pin.pin-report i{background:#6df0ad}
+.mapdex-pin.portal i{background:#ff5e80}.mapdex-pin.npc i{background:#ffd84f}.mapdex-pin.report i{background:#6df0ad}
 .mapdex-legend{display:flex;gap:10px;align-items:center;justify-content:center;margin:12px 0 10px;color:#1c3760;font-size:11px;font-weight:900;}
 .mapdex-legend span{display:flex;align-items:center;gap:5px;}.mapdex-legend .pin{width:10px;height:10px;border-radius:50%;display:inline-block}.pin.portal{background:#ff5e80}.pin.npc{background:#ffd84f}.pin.report{background:#6df0ad}
 .mapdex-list{height:calc(100% - 458px);overflow:auto;padding-right:3px;display:grid;gap:8px;}
@@ -2601,9 +2601,9 @@ body{background:#dff1ff;}
 }
 .mapdex-row-left{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important;}
 .mapdex-row-ico{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:22px;font-weight:900;flex:0 0 auto;box-shadow:0 8px 18px rgba(0,0,0,.20);}
-.mapdex-row-ico.row-portal{background:linear-gradient(180deg,#b456ff,#7d68ff)!important;}
-.mapdex-row-ico.row-npc{background:linear-gradient(180deg,#70df86,#39b96e)!important;}
-.mapdex-row-ico.row-report{background:linear-gradient(180deg,#ffcf62,#ff9d32)!important;}
+.mapdex-row-ico.portal{background:linear-gradient(180deg,#b456ff,#7d68ff)!important;}
+.mapdex-row-ico.npc{background:linear-gradient(180deg,#70df86,#39b96e)!important;}
+.mapdex-row-ico.report{background:linear-gradient(180deg,#ffcf62,#ff9d32)!important;}
 .mapdex-row-copy{display:flex;flex-direction:column;gap:4px;min-width:0;}
 .mapdex-row-copy strong{font-size:16px!important;line-height:1.2!important;color:#fff!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;}
 .mapdex-row-copy small{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:rgba(231,244,255,.88)!important;}
@@ -2611,9 +2611,9 @@ body{background:#dff1ff;}
 .mapdex-row b{font-size:18px!important;color:#fff!important;white-space:nowrap;}
 .mapdex-row b u{text-decoration:none!important;font-size:22px!important;margin-left:4px;color:#9fe5ff!important;}
 .type-chip{display:inline-flex!important;align-items:center!important;justify-content:center!important;padding:4px 10px!important;border-radius:999px!important;font-style:normal!important;font-weight:900!important;font-size:11px!important;letter-spacing:.02em;}
-.type-chip.type-portal{background:rgba(191,105,255,.18)!important;color:#f0c6ff!important;border:1px solid rgba(206,133,255,.35)!important;}
-.type-chip.type-npc{background:rgba(91,221,131,.16)!important;color:#bff6c8!important;border:1px solid rgba(101,230,143,.30)!important;}
-.type-chip.type-report{background:rgba(255,193,84,.16)!important;color:#ffe1a4!important;border:1px solid rgba(255,197,93,.30)!important;}
+.type-chip.portal{background:rgba(191,105,255,.18)!important;color:#f0c6ff!important;border:1px solid rgba(206,133,255,.35)!important;}
+.type-chip.npc{background:rgba(91,221,131,.16)!important;color:#bff6c8!important;border:1px solid rgba(101,230,143,.30)!important;}
+.type-chip.report{background:rgba(255,193,84,.16)!important;color:#ffe1a4!important;border:1px solid rgba(255,197,93,.30)!important;}
 .fab-compass{display:flex!important;}
 .bottom-nav{background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(233,242,255,.92))!important;box-shadow:0 16px 42px rgba(33,68,125,.22)!important;}
 .bottom-nav-item.active small{color:#2674ff!important;}
@@ -2869,7 +2869,7 @@ body.overlay-open .nav-center-banner{
 #dexModal .character-hero-meta h4{font-size:20px !important;}
 #dexModal .character-stat-grid{grid-template-columns:repeat(2,1fr) !important;}
 #dexModal .profile-badge-grid{grid-template-columns:repeat(2,1fr) !important; gap:8px !important;}
-body.overlay-open .fab-locate, body.overlay-open .fab-compass, body.overlay-open .mapdex-action, body.overlay-open .report-action, body.overlay-open #bottomGameNav, body.overlay-open .move-pad{display:none !important;}
+body.overlay-open .top-right-hud, body.overlay-open .fab-locate, body.overlay-open .fab-compass, body.overlay-open .mapdex-action, body.overlay-open .report-action, body.overlay-open #bottomGameNav, body.overlay-open .move-pad, body.overlay-open .top-status, body.overlay-open #weatherChip{display:none !important;}
 
 
 /* ==== V95 professional cleanup ==== */
@@ -2993,12 +2993,12 @@ body.overlay-open .fab-locate, body.overlay-open .fab-compass, body.overlay-open
 .mapdex-row{padding:10px 12px!important;border-radius:20px!important;background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05))!important;align-items:center!important;}
 .mapdex-row-left{display:flex!important;align-items:center!important;gap:10px!important;min-width:0!important;}
 .mapdex-row-ico{width:34px!important;height:34px!important;border-radius:12px!important;box-shadow:none!important;background-position:center!important;background-repeat:no-repeat!important;background-size:22px 22px!important;font-size:0!important;}
-.mapdex-row-ico.row-portal{background:linear-gradient(180deg,#ff7ca4,#ff517e)!important;}
-.mapdex-row-ico.row-portal::before{content:'';display:block;width:22px;height:22px;background:url('assets/ui/event-portal.png') center/contain no-repeat;filter:saturate(1.1);}
-.mapdex-row-ico.row-npc{background:linear-gradient(180deg,#ffe06f,#ffc233)!important;}
-.mapdex-row-ico.row-npc::before{content:'!';display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:18px;color:#5b4200;font-weight:1000;}
-.mapdex-row-ico.row-report{background:linear-gradient(180deg,#67efaa,#2dca79)!important;}
-.mapdex-row-ico.row-report::before{content:'';display:block;width:22px;height:22px;background:url('assets/ui/iconlaporan.png') center/contain no-repeat;filter:brightness(0) invert(1);}
+.mapdex-row-ico.portal{background:linear-gradient(180deg,#ff7ca4,#ff517e)!important;}
+.mapdex-row-ico.portal::before{content:'';display:block;width:22px;height:22px;background:url('assets/ui/event-portal.png') center/contain no-repeat;filter:saturate(1.1);}
+.mapdex-row-ico.npc{background:linear-gradient(180deg,#ffe06f,#ffc233)!important;}
+.mapdex-row-ico.npc::before{content:'!';display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:18px;color:#5b4200;font-weight:1000;}
+.mapdex-row-ico.report{background:linear-gradient(180deg,#67efaa,#2dca79)!important;}
+.mapdex-row-ico.report::before{content:'';display:block;width:22px;height:22px;background:url('assets/ui/iconlaporan.png') center/contain no-repeat;filter:brightness(0) invert(1);}
 .mapdex-row-copy{min-width:0!important;display:block!important;}
 .mapdex-row strong{font-size:14px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:170px!important;}
 .mapdex-row small{display:flex!important;align-items:center!important;gap:6px!important;margin-top:3px!important;color:#c7dcff!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}
@@ -3045,16 +3045,21 @@ body.overlay-open .fab-locate, body.overlay-open .fab-compass, body.overlay-open
 }
 
 /* keep HUD visible like reference */
+body.overlay-open .top-right-hud,
 body.overlay-open .fab-locate,
 body.overlay-open .fab-compass,
 body.overlay-open .mapdex-action,
 body.overlay-open .report-action,
 body.overlay-open #bottomGameNav,
-body.overlay-open .move-pad{display:none!important;}
 body.overlay-open .top-status,
 body.overlay-open #weatherChip,
-body.overlay-open .top-right-hud{display:flex!important;}
-body.overlay-open .rubo-assistant{display:none!important;}
+body.overlay-open .move-pad,
+body.overlay-open .rubo-assistant{display:flex!important;}
+body.overlay-open .fab-locate,
+body.overlay-open .fab-compass,
+body.overlay-open .mapdex-action,
+body.overlay-open .report-action{display:grid!important;}
+body.overlay-open #bottomGameNav{display:flex!important;}
 
 /* modal backdrops */
 .report-modal,
@@ -3243,56 +3248,147 @@ body.overlay-open .rubo-assistant{display:none!important;}
   .report-action{top:calc(env(safe-area-inset-top,0px) + 388px)!important;}
 }
 
+/* =========================================================
+   v100 — balik ke rasa v98, cuma dirapihin (bukan redesign)
+   Fokus: MapDex & Inventori tidak pucat/berantakan, profile badge muncul,
+   marker radar nempel, weather lebih kecil, modal nyaman di HP.
+   ========================================================= */
+:root{
+  --v100-navy:#123569;
+  --v100-muted:#5f7395;
+  --v100-line:rgba(188,211,244,.82);
+  --v100-card:rgba(255,255,255,.94);
+  --v100-card2:rgba(239,248,255,.93);
+  --v100-shadow:0 22px 58px rgba(31,67,127,.24), inset 0 1px 0 rgba(255,255,255,.95);
+}
 
-/* v99 bug + readability cleanup */
-.report-mascot-wrap img{content:url("assets/rubo/KAGET-RUBO.png") !important;width:88px!important;height:88px!important;object-fit:contain!important;}
-.report-card-clean{padding-top:14px!important;}
-.report-card-clean .report-mascot-wrap{margin-top:0!important;margin-bottom:4px!important;}
-.report-card-clean .report-intro{font-size:14px!important;max-width:100%!important;}
-#dexModal .character-avatar-big{background:linear-gradient(180deg,rgba(221,246,255,.9),rgba(236,245,255,.88)),url("assets/player/player-front.png") center 16px/86px auto no-repeat!important;}
-#dexModal .character-profile-hero{align-items:center!important;}
-#dexModal .character-hero-meta h4{line-height:1.05!important;}
-#dexModal .profile-badge-grid{grid-template-columns:repeat(4,1fr)!important;}
-#dexModal .profile-badge-card{min-height:118px!important;}
-#dexModal .profile-badge-icon{background-image:url("assets/ui/sprite_badges.png")!important;background-size:600% 500%!important;background-repeat:no-repeat!important;background-color:#fff!important;color:transparent!important;font-size:0!important;}
-#dexModal .profile-badge-card:nth-child(1) .profile-badge-icon{background-position:0% 0%!important;}
-#dexModal .profile-badge-card:nth-child(2) .profile-badge-icon{background-position:20% 0%!important;}
-#dexModal .profile-badge-card:nth-child(3) .profile-badge-icon{background-position:40% 0%!important;}
-#dexModal .profile-badge-card:nth-child(4) .profile-badge-icon{background-position:60% 20%!important;}
-#dexModal .profile-badge-card:nth-child(5) .profile-badge-icon{background-position:80% 20%!important;}
-#dexModal .profile-badge-card:nth-child(6) .profile-badge-icon{background-position:0% 40%!important;}
-#dexModal .profile-badge-card:nth-child(7) .profile-badge-icon{background-position:20% 60%!important;}
-#dexModal .profile-badge-card:nth-child(8) .profile-badge-icon{background-position:80% 60%!important;}
-.mapdex-canvas{height:240px!important;border-radius:24px!important;}
-.mapdex-player-dot{width:56px!important;height:56px!important;font-size:12px!important;}
-.mapdex-pin{transform:translate(-50%,-50%)!important;}
-.mapdex-pin i{width:22px!important;height:22px!important;border-width:2px!important;box-shadow:0 6px 12px rgba(21,53,100,.18)!important;}
-.mapdex-pin i span{font-size:0!important;}
-.mapdex-row-left{align-items:center!important;}
-.mapdex-row{overflow:hidden!important;}
-.mapdex-row-ico{position:relative!important;left:auto!important;top:auto!important;transform:none!important;min-width:40px!important;min-height:40px!important;flex:0 0 40px!important;}
-.mapdex-row-ico.row-npc::before{content:"!"!important;font-size:16px!important;color:#5b4200!important;}
-.mapdex-row-ico.row-portal::before,.mapdex-row-ico.row-report::before{width:18px!important;height:18px!important;}
-.type-chip{font-size:11px!important;}
-.mapdex-rubo-tip span{display:block!important;line-height:1.35!important;}
-.mapdex-phone::after{display:none!important;}
-#mapDexList{max-height:240px!important;}
-#mapDexModal .close-btn,#dexModal .close-btn,#reportModal .close-btn{background:rgba(255,255,255,.86)!important;color:#35548c!important;box-shadow:0 8px 18px rgba(61,90,145,.10)!important;}
-#weatherChip .weather-main{gap:8px!important;}
-#weatherChip .weather-icon{font-size:21px!important;opacity:.95!important;}
-#weatherChip .weather-info div{font-size:13px!important;}
-#weatherChip .weather-info small{font-size:10px!important;}
-#weatherChip{padding:10px 14px!important;min-height:auto!important;}
+/* weather dibuat lebih mirip referensi: compact, icon tidak kegedean */
+#weatherChip,.weather-chip{
+  min-width:166px!important;width:auto!important;max-width:210px!important;
+  padding:10px 14px!important;border-radius:22px!important;
+  gap:10px!important;background:rgba(255,255,255,.90)!important;
+  box-shadow:0 12px 26px rgba(38,75,128,.16), inset 0 1px 0 #fff!important;
+}
+.weather-icon{font-size:22px!important;line-height:1!important;filter:none!important;}
+.weather-info div{font-size:18px!important;line-height:1.12!important;color:var(--v100-navy)!important;}
+.weather-info small{font-size:12px!important;color:#59729b!important;}
+
+/* modal wrapper: blur tetap, tapi tidak bikin isi pucat */
+.modal,.mapdex-modal,.report-modal{
+  background:rgba(22,42,71,.18)!important;
+  backdrop-filter:blur(8px)!important;
+  -webkit-backdrop-filter:blur(8px)!important;
+}
+.mapdex-phone,#dexModal .character-modal-card,.inventory-modal-card,.report-card{
+  color:var(--v100-navy)!important;
+  background:linear-gradient(160deg,rgba(255,255,255,.97),rgba(239,249,255,.95) 58%,rgba(255,236,249,.93))!important;
+  border:1px solid rgba(255,255,255,.86)!important;
+  box-shadow:var(--v100-shadow)!important;
+  opacity:1!important;
+  filter:none!important;
+}
+.mapdex-phone *,.inventory-modal-card *,#dexModal .character-modal-card *,.report-card *{
+  text-shadow:none!important;
+}
+
+/* MapDex: light card seperti v98/reference, pin tidak melayang */
+.mapdex-phone{
+  width:min(92vw,520px)!important;
+  height:auto!important;
+  max-height:78dvh!important;
+  overflow:auto!important;
+  padding:22px 20px 18px!important;
+  border-radius:34px!important;
+}
+.mapdex-head{
+  height:auto!important;padding:0 0 12px!important;color:var(--v100-navy)!important;
+  display:flex!important;align-items:flex-start!important;gap:12px!important;
+}
+.mapdex-kicker{color:#65c9e8!important;font-size:11px!important;letter-spacing:.22em!important;font-weight:1000!important;}
+.mapdex-head h3{font-size:32px!important;line-height:1.05!important;color:var(--v100-navy)!important;margin:3px 0 6px!important;}
+.mapdex-desc{display:block!important;margin:0!important;color:var(--v100-muted)!important;font-weight:750!important;font-size:14px!important;line-height:1.35!important;}
+.mapdex-phone .close-btn{flex:0 0 auto!important;width:46px!important;height:46px!important;border-radius:50%!important;background:rgba(255,255,255,.72)!important;color:var(--v100-navy)!important;box-shadow:0 8px 18px rgba(37,74,130,.14)!important;}
+.mapdex-canvas{
+  height:238px!important;max-height:34vh!important;border-radius:28px!important;
+  position:relative!important;overflow:hidden!important;margin-top:4px!important;
+  background:
+    linear-gradient(90deg,rgba(255,255,255,.20) 1px,transparent 1px),
+    linear-gradient(0deg,rgba(255,255,255,.20) 1px,transparent 1px),
+    radial-gradient(circle at 50% 50%,rgba(255,255,255,.42),rgba(255,255,255,0) 32%),
+    linear-gradient(135deg,#a8ebff,#7dd3ff 58%,#92e6ff)!important;
+  background-size:34px 34px,34px 34px,auto,auto!important;
+  border:1px solid rgba(255,255,255,.85)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 14px 32px rgba(52,118,191,.13)!important;
+}
+.mapdex-canvas::before{content:""!important;position:absolute!important;inset:18%!important;border:2px dashed rgba(255,255,255,.62)!important;border-radius:50%!important;animation:none!important;}
+.mapdex-canvas::after{content:""!important;position:absolute!important;left:50%!important;top:50%!important;width:34%!important;height:34%!important;transform-origin:left top!important;background:linear-gradient(45deg,rgba(255,255,255,.46),transparent 70%)!important;clip-path:polygon(0 0,100% 0,0 100%)!important;opacity:.70!important;animation:bdxRadarSweep 3.4s linear infinite!important;}
+.mapdex-player-dot{z-index:8!important;width:54px!important;height:54px!important;background:linear-gradient(180deg,#fff,#e8f9ff)!important;color:#2a5bc4!important;font-size:11px!important;font-weight:1000!important;border:2px solid rgba(255,255,255,.9)!important;box-shadow:0 10px 20px rgba(31,78,146,.18)!important;}
+.mapdex-pin{position:absolute!important;z-index:7!important;transform:translate(-50%,-50%)!important;width:34px!important;height:34px!important;border:0!important;background:transparent!important;padding:0!important;}
+.mapdex-pin i{width:28px!important;height:28px!important;border-radius:50%!important;transform:none!important;display:flex!important;align-items:center!important;justify-content:center!important;border:3px solid rgba(255,255,255,.88)!important;box-shadow:0 8px 14px rgba(31,71,130,.20)!important;}
+.mapdex-pin i::after{content:"";width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2px rgba(25,65,130,.18);}
+.mapdex-pin i span{display:none!important;}
+.mapdex-pin.portal i{background:#ff5b85!important;}
+.mapdex-pin.npc i{background:#ffd952!important;}
+.mapdex-pin.report i{background:#5fe0a2!important;}
+.mapdex-legend{margin:10px 0!important;color:#2a426c!important;font-size:12px!important;font-weight:900!important;opacity:1!important;}
+.mapdex-rubo-tip{margin:8px 0 10px!important;border-radius:20px!important;background:rgba(255,255,255,.88)!important;border:1px solid var(--v100-line)!important;color:#385176!important;box-shadow:0 8px 16px rgba(55,92,150,.07)!important;padding:10px 12px!important;}
+.mapdex-rubo-tip img{width:42px!important;height:42px!important;object-fit:contain!important;}
+.mapdex-rubo-tip span{font-size:13px!important;font-weight:900!important;color:#385176!important;}
+.mapdex-list{height:auto!important;max-height:250px!important;overflow:auto!important;display:grid!important;gap:9px!important;margin-top:0!important;padding:0 4px 4px 0!important;}
+.mapdex-row{position:relative!important;display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;min-height:66px!important;padding:10px 12px!important;border-radius:20px!important;background:rgba(255,255,255,.92)!important;color:var(--v100-navy)!important;border:1px solid var(--v100-line)!important;box-shadow:0 8px 18px rgba(48,86,148,.08)!important;overflow:hidden!important;}
+.mapdex-row-left{display:grid!important;grid-template-columns:44px minmax(0,1fr)!important;align-items:center!important;gap:10px!important;min-width:0!important;}
+.mapdex-row-ico{width:42px!important;height:42px!important;border-radius:50%!important;display:block!important;position:relative!important;box-shadow:0 8px 14px rgba(40,83,150,.12)!important;}
+.mapdex-row-ico::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 2px rgba(20,60,120,.16);}
+.mapdex-row-ico.portal{background:#ff5b85!important}.mapdex-row-ico.npc{background:#ffd952!important}.mapdex-row-ico.report{background:#5fe0a2!important}
+.mapdex-row-copy{min-width:0!important;display:block!important;}
+.mapdex-row strong{font-size:14px!important;color:var(--v100-navy)!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:240px!important;}
+.mapdex-row small{display:flex!important;gap:8px!important;align-items:center!important;margin-top:4px!important;color:#637895!important;font-size:12px!important;font-weight:750!important;min-width:0!important;}
+.mapdex-row small label{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:180px!important;}
+.type-chip{font-style:normal!important;border-radius:999px!important;padding:3px 9px!important;font-size:11px!important;font-weight:1000!important;line-height:1!important;}
+.type-chip.portal{background:#ffe0ec!important;color:#c92860!important}.type-chip.npc{background:#fff1bd!important;color:#9b7800!important}.type-chip.report{background:#dffce9!important;color:#16834e!important}
+.mapdex-row b{color:#54bde8!important;font-size:15px!important;font-weight:1000!important;white-space:nowrap!important;margin-left:8px!important;}
+.mapdex-row b u{text-decoration:none!important;color:#8bcfec!important;}
+
+/* Inventory: jangan pucat, jangan terlalu panjang */
+.inventory-modal-card{width:min(92vw,520px)!important;max-height:78dvh!important;overflow:auto!important;border-radius:34px!important;padding:22px 20px!important;}
+.inventory-modal-card .modal-head h3{font-size:30px!important;color:var(--v100-navy)!important;opacity:1!important;}
+.inventory-hero{background:linear-gradient(135deg,rgba(200,244,255,.65),rgba(255,255,255,.9),rgba(255,226,247,.62))!important;border:1px solid var(--v100-line)!important;border-radius:24px!important;padding:14px!important;display:grid!important;grid-template-columns:64px 1fr!important;gap:14px!important;align-items:center!important;color:var(--v100-navy)!important;box-shadow:0 10px 20px rgba(48,90,150,.07)!important;}
+.inventory-hero-icon{width:60px!important;height:60px!important;background:url('assets/ui/inventorycon.png') center/contain no-repeat,rgba(255,255,255,.65)!important;border-radius:18px!important;}
+.inventory-hero b{font-size:16px!important;color:var(--v100-navy)!important;opacity:1!important;}
+.inventory-hero p{font-size:13px!important;line-height:1.35!important;color:#526b91!important;margin:3px 0 0!important;opacity:1!important;}
+.inventory-stat-grid{grid-template-columns:repeat(4,1fr)!important;gap:9px!important;margin:12px 0!important;}
+.inventory-stat{min-height:76px!important;background:rgba(255,255,255,.88)!important;border:1px solid var(--v100-line)!important;border-radius:20px!important;box-shadow:0 8px 16px rgba(48,86,148,.06)!important;color:var(--v100-navy)!important;}
+.inventory-stat span{color:#7288a8!important;font-size:11px!important;font-weight:950!important;opacity:1!important;}
+.inventory-stat strong{color:var(--v100-navy)!important;font-size:24px!important;opacity:1!important;}
+.inventory-section{background:rgba(255,255,255,.82)!important;border:1px solid var(--v100-line)!important;border-radius:24px!important;padding:14px!important;color:var(--v100-navy)!important;}
+.inventory-section .section-title{color:var(--v100-navy)!important;font-size:16px!important;font-weight:1000!important;opacity:1!important;}
+.inventory-chip-list{display:flex!important;flex-wrap:wrap!important;gap:8px!important;max-height:310px!important;overflow:auto!important;}
+.inventory-chip{color:#1f437b!important;background:rgba(255,255,255,.92)!important;border:1px solid var(--v100-line)!important;border-radius:999px!important;padding:8px 12px!important;font-size:13px!important;font-weight:900!important;opacity:1!important;}
+.inventory-gallery-block{width:100%!important;margin-top:10px!important;background:rgba(246,250,255,.92)!important;border:1px solid var(--v100-line)!important;border-radius:18px!important;padding:10px!important;}
+.inventory-gallery-sheet{display:block!important;width:100%!important;max-height:175px!important;object-fit:contain!important;filter:drop-shadow(0 8px 12px rgba(36,75,130,.12))!important;}
+
+/* Profile: portrait pas, badge pakai sprite asli */
+#dexModal .character-modal-card{max-height:78dvh!important;overflow:auto!important;}
+#dexModal .character-profile-hero{grid-template-columns:180px 1fr!important;min-height:230px!important;padding:18px!important;}
+#dexModal .character-avatar-big{width:170px!important;height:205px!important;background:linear-gradient(180deg,rgba(255,255,255,.50),rgba(129,223,255,.22)),url('assets/player/player-front.png') center bottom 12px/126px auto no-repeat!important;}
+#dexModal .character-hero-meta h4{font-size:32px!important;}
+.badge-sprite-icon{display:block!important;width:58px!important;height:58px!important;background-image:url('assets/ui/sprite_badges.png')!important;background-size:600% 600%!important;background-position:calc(var(--badge-col) * 20%) calc(var(--badge-row) * 20%)!important;background-repeat:no-repeat!important;filter:drop-shadow(0 8px 10px rgba(36,78,140,.18));}
+.profile-badge-icon{display:flex!important;align-items:center!important;justify-content:center!important;background:linear-gradient(180deg,#ffffff,#eef6ff)!important;}
+.profile-badge-card.locked{opacity:.72!important;}
+
+/* Report: gambar atas pakai RUBO, bukan sprite sheet / karakter berhamburan */
+.report-card::before{content:""!important;position:absolute!important;left:50%!important;top:-58px!important;transform:translateX(-50%)!important;width:122px!important;height:112px!important;background:url('assets/rubo/KAGET-RUBO.png') center/contain no-repeat!important;filter:drop-shadow(0 16px 20px rgba(44,98,160,.22))!important;animation:bdxFloat 1.8s ease-in-out infinite alternate!important;}
+.report-card{padding-top:70px!important;max-height:78dvh!important;overflow:auto!important;}
+.report-card h3{font-size:31px!important;}
+.report-card p{font-size:15px!important;color:#526b91!important;}
+.report-card select,.report-card textarea{color:var(--v100-navy)!important;background:rgba(255,255,255,.92)!important;}
+
+/* HP kecil: lebih compact, tetap v98 look */
 @media(max-width:720px){
-  #mapDexModal .mapdex-phone{width:min(92vw,420px)!important;max-height:74dvh!important;padding:14px!important;}
-  .mapdex-head h3{font-size:22px!important;}
-  .mapdex-desc{font-size:14px!important;}
-  #dexModal .character-modal-card,.report-card-clean{width:min(92vw,420px)!important;max-height:74dvh!important;padding:16px!important;}
-  #dexModal .character-profile-hero{grid-template-columns:96px 1fr!important;gap:12px!important;padding:14px!important;}
-  #dexModal .character-avatar-big{width:92px!important;height:118px!important;background-size:64px auto!important;}
-  #dexModal #profileName{font-size:24px!important;}
-  #dexModal .character-stat-grid{grid-template-columns:repeat(2,1fr)!important;}
-  #dexModal .profile-badge-grid{grid-template-columns:repeat(3,1fr)!important;gap:10px!important;}
-  #dexModal .character-badge-showcase{padding:14px!important;}
-  .report-card-clean textarea{min-height:112px!important;}
+  .mapdex-phone,.inventory-modal-card,#dexModal .character-modal-card,.report-card{width:min(92vw,430px)!important;max-height:76dvh!important;padding:18px 16px!important;border-radius:30px!important;}
+  .mapdex-head h3{font-size:28px!important}.mapdex-desc{font-size:13px!important}.mapdex-canvas{height:210px!important}.mapdex-list{max-height:230px!important}.mapdex-row{min-height:58px!important;padding:8px 10px!important}.mapdex-row-left{grid-template-columns:38px minmax(0,1fr)!important}.mapdex-row-ico{width:36px!important;height:36px!important}.mapdex-row strong{font-size:13px!important;max-width:190px!important}.mapdex-row small label{max-width:130px!important}.mapdex-row b{font-size:13px!important}
+  .inventory-stat-grid{grid-template-columns:repeat(2,1fr)!important}.inventory-gallery-sheet{max-height:145px!important;}
+  #dexModal .character-profile-hero{grid-template-columns:1fr!important;text-align:center!important}.character-hero-meta .profile-badges{justify-content:center!important}#dexModal .character-avatar-big{margin:auto!important;width:150px!important;height:184px!important;background-size:112px auto!important}.profile-badge-grid{grid-template-columns:repeat(3,1fr)!important}.badge-sprite-icon{width:52px!important;height:52px!important}
+  .report-card{padding-top:62px!important}.report-card::before{top:-52px!important;width:106px!important;height:100px!important}.report-card h3{font-size:27px!important}
+  #weatherChip,.weather-chip{top:14px!important;min-width:150px!important;padding:9px 12px!important}.weather-icon{font-size:20px!important}.weather-info div{font-size:16px!important}.weather-info small{font-size:11px!important}
 }
