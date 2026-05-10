@@ -1022,6 +1022,15 @@ function portalStatusForPoi(poi){
   return 'Siap dijelajahi';
 }
 function renderPortalModal(poi){
+  const card = document.querySelector('#portalModal .portal-modal-card');
+  if(card && !card.querySelector('.portal-hud-line')){
+    const line = document.createElement('div');
+    line.className = 'portal-hud-line';
+    const sheen = document.createElement('div');
+    sheen.className = 'portal-grid-sheen';
+    card.prepend(sheen);
+    card.prepend(line);
+  }
   const icon = document.getElementById('portalModalIcon');
   const title = document.getElementById('portalModalTitle');
   const kicker = document.getElementById('portalModalKicker');
@@ -1744,6 +1753,21 @@ function setupPoiLayers(){
       }
     });
   }
+  if(!map.getLayer("poi-ring-pulse")){
+    map.addLayer({
+      id:"poi-ring-pulse",
+      type:"circle",
+      source:"pois",
+      paint:{
+        "circle-radius":["interpolate",["linear"],["zoom"],16.4,34,19.3,72],
+        "circle-color":"rgba(255,255,255,0)",
+        "circle-stroke-color":["match",["get","category"],"gov","#6be8ff","halte","#7cb5ff","health","#b98eff","umkm","#ffd470","#6be8ff"],
+        "circle-stroke-width":2,
+        "circle-stroke-opacity":0.55,
+        "circle-blur":0.02
+      }
+    });
+  }
 
   if(!map.getLayer("poi-symbols")){
     map.addLayer({
@@ -1786,6 +1810,7 @@ function setupPoiLayers(){
   }
 
   applyLayerFilters();
+  startPoiPulseAnimation();
 
   map.on("click", "poi-symbols", (e) => {
     const feature = e.features && e.features[0];
@@ -1800,6 +1825,26 @@ function setupPoiLayers(){
   map.on("mouseenter", "poi-symbols", () => { map.getCanvas().style.cursor = "pointer"; });
   map.on("mouseleave", "poi-symbols", () => { map.getCanvas().style.cursor = ""; });
 }
+let poiPulseRaf = null;
+function startPoiPulseAnimation(){
+  if(poiPulseRaf) return;
+  const tick = () => {
+    if(!map || !map.getLayer("poi-ring-pulse")) { poiPulseRaf = null; return; }
+    const t = Date.now() * 0.0018;
+    const phase = (Math.sin(t) + 1) / 2;
+    const outerMin = 30 + phase * 8;
+    const outerMax = 68 + phase * 16;
+    try {
+      map.setPaintProperty("poi-ring-pulse", "circle-radius", ["interpolate",["linear"],["zoom"],16.4, outerMin,19.3, outerMax]);
+      map.setPaintProperty("poi-ring-pulse", "circle-stroke-opacity", 0.22 + phase * 0.42);
+      map.setPaintProperty("poi-glow", "circle-opacity", 0.14 + phase * 0.10);
+      map.setPaintProperty("poi-ring-outer", "circle-stroke-opacity", 0.55 + phase * 0.20);
+    } catch(e) {}
+    poiPulseRaf = requestAnimationFrame(tick);
+  };
+  poiPulseRaf = requestAnimationFrame(tick);
+}
+
 function refreshPoiSource(){
   const source = map.getSource("pois");
   if(!source) return;
@@ -1818,6 +1863,7 @@ function applyLayerFilters(){
   if(map.getLayer("poi-glow")) map.setFilter("poi-glow", filter);
   if(map.getLayer("poi-ring-outer")) map.setFilter("poi-ring-outer", filter);
   if(map.getLayer("poi-ring-inner")) map.setFilter("poi-ring-inner", filter);
+  if(map.getLayer("poi-ring-pulse")) map.setFilter("poi-ring-pulse", filter);
   if(map.getLayer("poi-symbols")) map.setFilter("poi-symbols", filter);
   if(map.getLayer("poi-label")) map.setFilter("poi-label", filter);
 }
