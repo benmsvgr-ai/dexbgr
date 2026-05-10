@@ -540,10 +540,7 @@ function updateNavigationUi(){
   const dist = Math.max(1, Math.round(haversineMeters(state.playerWorld, state.navigationTarget.coords)));
   const turn = getRouteTurnText();
   document.getElementById('navCenterTitle').textContent = state.navigationTarget.title || state.navigationTarget.name || 'Tujuan';
-  document.getElementById('navCenterSub').textContent = portalLocationForPoi(state.navigationTarget);
-  document.getElementById('navCenterMeta').textContent = dist <= 18 ? '0 m' : `${dist} m`;
-  document.getElementById('navCenterTurn').textContent = dist <= 18 ? 'Tujuan sudah sampai' : turn;
-  navigationIconForTarget(state.navigationTarget);
+  document.getElementById('navCenterMeta').textContent = dist <= 18 ? `Tujuan sudah sampai` : `Sisa ${dist} m • ${turn}`;
   box.classList.remove('hidden');
   if(dist <= 18 && !state.navigationArrived){
     state.navigationArrived = true;
@@ -555,10 +552,7 @@ function updateNavigationUi(){
 function showNavigationBanner(target, subtitle='Rute aktif'){
   if(!target) return;
   document.getElementById('navCenterTitle').textContent = target.title || target.name || 'Tujuan';
-  document.getElementById('navCenterSub').textContent = portalLocationForPoi(target);
-  document.getElementById('navCenterMeta').textContent = '-- m';
-  document.getElementById('navCenterTurn').textContent = subtitle;
-  navigationIconForTarget(target);
+  document.getElementById('navCenterMeta').textContent = subtitle;
   navBannerEl()?.classList.remove('hidden');
 }
 
@@ -648,7 +642,7 @@ function updatePlayerUiMeta(){
     const shown = unlocked.length ? unlocked.map(id => all.find(b => b.id === id) || {id, name:id, icon:'🏅', desc:'Badge terbuka'}) : all.slice(0,4);
     badgeGrid.innerHTML = (shown.slice(0,8).map((b,idx)=>`
       <div class="profile-badge-card ${unlocked.includes(b.id) ? 'unlocked' : 'locked'}">
-        <div class="profile-badge-icon"><span class="badge-sprite-icon" style="--badge-col:${idx % 6};--badge-row:${Math.floor(idx / 6)}"></span></div>
+        <div class="profile-badge-icon">${b.icon || ['🏛️','🧭','🌿','⭐','📸','🤝','🚌','🚨'][idx%8]}</div>
         <b>${b.name || b.id || 'Badge'}</b>
         <small>${b.desc || b.category || 'Prestasi BogorDex'}</small>
       </div>`).join('')) || `
@@ -1011,116 +1005,58 @@ function renderUserReportSheet(poi){
   document.getElementById("reportDeleteBtn")?.addEventListener("click", () => deleteUserReportById(poi.id));
 }
 
-
-function portalIconForPoi(poi){
-  const group = String(poi.group || '').toUpperCase();
-  const sub = String(poi.subkategori || '').toUpperCase();
-  if(group.includes('KESEHATAN') || sub.includes('PUSKESMAS') || sub.includes('RUMAH_SAKIT')) return 'assets/ui/portrs.png';
-  if(group.includes('HALTE') || sub.includes('HALTE') || sub.includes('BISKITA')) return 'assets/ui/porthalte.png';
-  if(group.includes('UMKM') || sub.includes('UMKM') || sub.includes('KULINER')) return 'assets/ui/portumkm.png';
-  return 'assets/ui/portopd.png';
-}
-function portalStatusForPoi(poi){
-  if(state.discovered.has(poi.id)) return 'Sudah ditemukan';
-  const st = String(poi.status_tampil || poi.status || '').toLowerCase();
-  if(st.includes('aktif')) return 'Aktif operasional';
-  if(st) return st.charAt(0).toUpperCase() + st.slice(1);
-  return 'Siap dijelajahi';
-}
-function portalLocationForPoi(poi){
-  const raw = String(poi.address || poi.alamat || poi.lokasi || '').trim();
-  if(!raw) return 'Kota Bogor, Jawa Barat';
-  return raw.length > 54 ? raw.slice(0, 51) + '...' : raw;
-}
-function navigationIconForTarget(target){
-  const holder = document.getElementById('navCenterIcon');
-  if(!holder) return;
-  const src = portalIconForPoi(target || {});
-  holder.innerHTML = `<img src="${src}" alt="icon tujuan">`;
-}
-function renderPortalModal(poi){
-  const card = document.querySelector('#portalModal .portal-modal-card');
-  if(card && !card.querySelector('.portal-hud-line')){
-    const line = document.createElement('div');
-    line.className = 'portal-hud-line';
-    const sheen = document.createElement('div');
-    sheen.className = 'portal-grid-sheen';
-    card.prepend(sheen);
-    card.prepend(line);
-  }
-  const icon = document.getElementById('portalModalIcon');
-  const title = document.getElementById('portalModalTitle');
-  const kicker = document.getElementById('portalModalKicker');
-  const chips = document.getElementById('portalModalChips');
-  const status = document.getElementById('portalModalStatus');
-  const func = document.getElementById('portalModalFunction');
-  const loc = document.getElementById('portalModalLocation');
-  const note = document.getElementById('portalModalNote');
-  if(!icon || !title) return;
-  const iconUrl = portalIconForPoi(poi);
-  icon.innerHTML = `<img src="${iconUrl}" alt="${poi.name || 'Portal'}">`;
-  title.textContent = poi.name || 'BogorDex Portal';
-  kicker.textContent = poi.group === 'HALTE' ? 'Portal Halte' : poi.group === 'UMKM' ? 'Portal UMKM' : poi.group === 'KESEHATAN' ? 'Portal Kesehatan' : 'Portal Instansi';
-  const chipList = [poi.group, poi.subkategori, state.discovered.has(poi.id) ? 'Sudah ditemukan' : 'Belum ditemukan'].filter(Boolean);
-  chips.innerHTML = chipList.map(v=>`<span>${v}</span>`).join('');
-  status.textContent = portalStatusForPoi(poi);
-  func.textContent = poi.fungsi || poi.tupoksi || 'Belum diisi';
-  loc.textContent = poi.address || poi.alamat || '-';
-  note.textContent = poi.desc || poi.deskripsi || 'Portal BogorDex untuk membuka info lokasi, reward, dan navigasi.';
-
-  document.getElementById('portalNavigateBtn').onclick = () => {
-    if(Array.isArray(poi.coords)) setNavigationTarget({ title: poi.name, coords: poi.coords });
-    closePortalModal();
-  };
-  document.getElementById('portalScanBtn').onclick = () => {
-    closePortalModal();
-    map.flyTo({ center: poi.coords || state.playerWorld, zoom: Math.max(map.getZoom(), 16.2), pitch: 58, bearing: map.getBearing(), duration: 950 });
-    updateStatus('Portal disorot • ' + (poi.name || 'BogorDex Portal'));
-  };
-}
-function openPortalModal(poi){
-  state.lastPoi = poi;
-  state.activePoiId = poi.id || null;
-  renderPortalModal(poi);
-  document.getElementById('portalModal')?.classList.remove('hidden');
-  updateStatus(poi.name || 'Portal');
-}
-function closePortalModal(resetStatus=true){
-  document.getElementById('portalModal')?.classList.add('hidden');
-  if(resetStatus) updateStatus(state.hasRealGps ? 'Lokasi aktif' : 'Lokasi simulasi');
-}
-
-document.getElementById('portalModalClose')?.addEventListener('click', () => closePortalModal());
-document.getElementById('portalCloseBtn2')?.addEventListener('click', () => closePortalModal());
-document.querySelector('#portalModal .portal-modal-backdrop')?.addEventListener('click', () => closePortalModal());
-
 function openSheet(poi, mode="manual"){
-  sheetEl().classList.remove("report-center");
   sheetEl().classList.remove("hidden-sheet");
   sheetEl().classList.remove("collapsed");
   state.activePoiId = poi.id || null;
   state.activePoiMode = mode;
   state.lastPoi = poi;
   if(poi.group === "CITIZEN REPORT"){
-    closePortalModal(false);
-    setOverlayMode(true);
-    sheetEl().classList.add("report-center");
     renderUserReportSheet(poi);
     syncMiniButton();
     updateStatus(poi.name || "Info Warga");
     return;
   }
-  setOverlayMode(false);
-  closeSheet(false, true);
-  openPortalModal(poi);
+  const quest = getQuestById(poi.questId);
+  const rewardText = poiRewardText(poi);
+  const questReward = questRewardText(quest);
+  const badgeText = poi.rewardBadgeId ? badgeLabel(poi.rewardBadgeId) : "";
+  document.getElementById("sheetContent").innerHTML = `
+    <div class="chips">
+      <span>${poi.group || "POI"}</span>
+      ${poi.subkategori ? `<span>${poi.subkategori}</span>` : ""}
+      ${state.discovered.has(poi.id) ? `<span>Sudah ditemukan</span>` : ""}
+    </div>
+    <h3>${poi.name}</h3>
+    <p>${poi.desc || "Tidak ada deskripsi."}</p>
+    <div class="section">
+      <div class="section-title">Fungsi</div>
+      <p>${poi.fungsi || "Belum diisi."}</p>
+    </div>
+    <div class="section">
+      <div class="section-title">Info Lokasi</div>
+      <p>${poi.address || poi.tupoksi || "Belum ada alamat/detail tambahan."}</p>
+    </div>
+    ${quest ? `<div class="section"><div class="section-title">Quest Terkait</div><p><b>${quest.name}</b><br>${quest.desc || ""}</p></div>` : ""}
+    ${(rewardText || questReward || badgeText) ? `<div class="section"><div class="section-title">Reward</div><p>${[rewardText, questReward ? `Reward Quest: ${questReward}` : "", badgeText ? `Badge Lokasi: ${badgeText}` : ""].filter(Boolean).join("<br>")}</p></div>` : ""}
+    <div class="tag-row">
+      <span class="tag">${poi.group || "POI"}</span>
+      ${poi.subkategori ? `<span class="tag">${poi.subkategori}</span>` : ""}
+      ${state.discovered.has(poi.id) ? '<span class="tag">Sudah ditemukan</span>' : ""}
+    </div>
+    ${(Array.isArray(poi.coords) && poi.group !== "EVENT PORTAL") ? '<button class="sheet-route-btn" id="sheetRouteBtn">✨ Arahkan</button>' : ''}
+  `;
+  const routeBtn = document.getElementById("sheetRouteBtn");
+  if(routeBtn && Array.isArray(poi.coords)){
+    routeBtn.addEventListener("click", () => setNavigationTarget({ title:poi.name, coords:poi.coords }));
+  }
   syncMiniButton();
+  updateStatus(poi.name);
 }
 function closeSheet(resetStatus=true, fullyHide=true){
-  sheetEl().classList.remove("report-center");
   if(fullyHide){
     sheetEl().classList.add("hidden-sheet");
     sheetEl().classList.remove("collapsed");
-    setOverlayMode(false);
   }else{
     sheetEl().classList.remove("hidden-sheet");
     sheetEl().classList.add("collapsed");
@@ -1724,23 +1660,10 @@ function setupPoiLayers(){
   if(!map.getSource("pois")){
     map.addSource("pois", { type:"geojson", data:{ type:"FeatureCollection", features:[] }});
   }
-  const ensurePortalMarkerImage = (name, src, fallbackColor, fallbackCategory) => {
-    if(map.hasImage(name)) return;
-    map.loadImage(src, (err, img) => {
-      if(!map || map.hasImage(name)) return;
-      if(err || !img){
-        try{ map.addImage(name, makePortalIcon(fallbackColor, fallbackCategory), {pixelRatio:2}); }catch(e){}
-        return;
-      }
-      try{ map.addImage(name, img, {pixelRatio:2}); }catch(e){
-        try{ if(!map.hasImage(name)) map.addImage(name, makePortalIcon(fallbackColor, fallbackCategory), {pixelRatio:2}); }catch(_e){}
-      }
-    });
-  };
-  ensurePortalMarkerImage("gov-marker", "assets/ui/portopd.png", "#ff6475", "gov");
-  ensurePortalMarkerImage("halte-marker", "assets/ui/porthalte.png", "#4b84ff", "halte");
-  ensurePortalMarkerImage("health-marker", "assets/ui/portrs.png", "#8d7bff", "health");
-  ensurePortalMarkerImage("umkm-marker", "assets/ui/portumkm.png", "#ffbf5e", "umkm");
+  if(!map.hasImage("gov-marker")) map.addImage("gov-marker", makePortalIcon("#ff6475","gov"), {pixelRatio:2});
+  if(!map.hasImage("halte-marker")) map.addImage("halte-marker", makePortalIcon("#4b84ff","halte"), {pixelRatio:2});
+  if(!map.hasImage("health-marker")) map.addImage("health-marker", makePortalIcon("#8d7bff","health"), {pixelRatio:2});
+  if(!map.hasImage("umkm-marker")) map.addImage("umkm-marker", makePortalIcon("#ffbf5e","umkm"), {pixelRatio:2});
 
   if(!map.getLayer("poi-glow")){
     map.addLayer({
@@ -1786,21 +1709,6 @@ function setupPoiLayers(){
       }
     });
   }
-  if(!map.getLayer("poi-ring-pulse")){
-    map.addLayer({
-      id:"poi-ring-pulse",
-      type:"circle",
-      source:"pois",
-      paint:{
-        "circle-radius":["interpolate",["linear"],["zoom"],16.4,34,19.3,72],
-        "circle-color":"rgba(255,255,255,0)",
-        "circle-stroke-color":["match",["get","category"],"gov","#6be8ff","halte","#7cb5ff","health","#b98eff","umkm","#ffd470","#6be8ff"],
-        "circle-stroke-width":2,
-        "circle-stroke-opacity":0.55,
-        "circle-blur":0.02
-      }
-    });
-  }
 
   if(!map.getLayer("poi-symbols")){
     map.addLayer({
@@ -1843,7 +1751,6 @@ function setupPoiLayers(){
   }
 
   applyLayerFilters();
-  startPoiPulseAnimation();
 
   map.on("click", "poi-symbols", (e) => {
     const feature = e.features && e.features[0];
@@ -1858,26 +1765,6 @@ function setupPoiLayers(){
   map.on("mouseenter", "poi-symbols", () => { map.getCanvas().style.cursor = "pointer"; });
   map.on("mouseleave", "poi-symbols", () => { map.getCanvas().style.cursor = ""; });
 }
-let poiPulseRaf = null;
-function startPoiPulseAnimation(){
-  if(poiPulseRaf) return;
-  const tick = () => {
-    if(!map || !map.getLayer("poi-ring-pulse")) { poiPulseRaf = null; return; }
-    const t = Date.now() * 0.0018;
-    const phase = (Math.sin(t) + 1) / 2;
-    const outerMin = 30 + phase * 8;
-    const outerMax = 68 + phase * 16;
-    try {
-      map.setPaintProperty("poi-ring-pulse", "circle-radius", ["interpolate",["linear"],["zoom"],16.4, outerMin,19.3, outerMax]);
-      map.setPaintProperty("poi-ring-pulse", "circle-stroke-opacity", 0.22 + phase * 0.42);
-      map.setPaintProperty("poi-glow", "circle-opacity", 0.14 + phase * 0.10);
-      map.setPaintProperty("poi-ring-outer", "circle-stroke-opacity", 0.55 + phase * 0.20);
-    } catch(e) {}
-    poiPulseRaf = requestAnimationFrame(tick);
-  };
-  poiPulseRaf = requestAnimationFrame(tick);
-}
-
 function refreshPoiSource(){
   const source = map.getSource("pois");
   if(!source) return;
@@ -1896,7 +1783,6 @@ function applyLayerFilters(){
   if(map.getLayer("poi-glow")) map.setFilter("poi-glow", filter);
   if(map.getLayer("poi-ring-outer")) map.setFilter("poi-ring-outer", filter);
   if(map.getLayer("poi-ring-inner")) map.setFilter("poi-ring-inner", filter);
-  if(map.getLayer("poi-ring-pulse")) map.setFilter("poi-ring-pulse", filter);
   if(map.getLayer("poi-symbols")) map.setFilter("poi-symbols", filter);
   if(map.getLayer("poi-label")) map.setFilter("poi-label", filter);
 }
@@ -1912,7 +1798,6 @@ function showQuestPopup(poi, dist){
   state.activeQuestPoiId = poi.id;
   state.lastPoi = poi;
   if(poi.group === "CITIZEN REPORT"){
-    sheetEl().classList.add("report-center");
     renderUserReportSheet(poi);
     syncMiniButton();
     updateStatus(poi.name || "Info Warga");
@@ -1981,23 +1866,13 @@ function clearEventMarkers(){
   (state.eventMarkers||[]).forEach(m => { try{m.remove();}catch(e){} });
   state.eventMarkers=[];
 }
-function eventPortalAsset(event){
-  const title = String(event?.title || '').toLowerCase();
-  const kind = String(event?.kind || '').toLowerCase();
-  if(title.includes('halte') || title.includes('biskita')) return 'assets/ui/porthalte.png';
-  if(title.includes('umkm') || title.includes('kuliner')) return 'assets/ui/portumkm.png';
-  if(title.includes('rs') || title.includes('puskesmas') || kind.includes('health')) return 'assets/ui/portrs.png';
-  return 'assets/ui/portopd.png';
-}
 function eventPortalElement(event){
   const el = document.createElement('button');
   el.type = 'button';
   el.className = 'event-portal-marker single-event ' + (event.kind || 'macet');
-  const asset = eventPortalAsset(event);
   el.innerHTML = `
-    <span class="event-portal-laser"></span>
-    <span class="event-portal-base"></span>
-    <span class="event-portal-core"><span class="event-portal-img" style="background-image:url('${asset}')"></span></span>
+    <span class="event-portal-core"></span>
+    <span class="event-portal-img"></span>
     <span class="event-portal-label">${event.title}</span>
   `;
   el.addEventListener('click', (ev) => {
@@ -2984,7 +2859,7 @@ function renderMapDex(){
       <span class="mapdex-row-left">
         <i class="mapdex-row-ico ${item.type}"></i>
         <span class="mapdex-row-copy">
-          <strong>${item.name || (item.type === 'report' ? 'Info titik dari user' : 'Titik BogorDex')}</strong>
+          <strong>${item.name}</strong>
           <small><em class="type-chip ${item.type}">${label}</em><label>${desc}</label></small>
         </span>
       </span>
