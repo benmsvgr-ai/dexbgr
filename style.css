@@ -3525,6 +3525,26 @@ body.overlay-open #bottomGameNav{display:flex!important;}
 .portal-btn.secondary{background:linear-gradient(135deg,rgba(30,60,122,.95),rgba(13,32,76,.95));color:#d9efff;border:1px solid rgba(103,205,255,.22);}
 .portal-btn.ghost{background:rgba(255,255,255,.06);color:#d9efff;border:1px solid rgba(117,213,255,.18);}
 @keyframes portalFloat{0%{transform:translateY(0px) scale(1)}100%{transform:translateY(-8px) scale(1.02)}}
+
+.portal-modal-card{backdrop-filter:blur(20px);}
+.portal-modal-card .portal-hud-line{position:absolute;left:18px;right:18px;top:0;height:3px;border-radius:999px;background:linear-gradient(90deg,#58e3ff 0%,#7ab4ff 35%,#ff8fcb 70%,#ffd76b 100%);box-shadow:0 0 16px rgba(80,227,255,.55);} 
+.portal-modal-card .portal-grid-sheen{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 0%,rgba(111,220,255,.03) 49%,transparent 50%,rgba(111,220,255,.03) 51%,transparent 100%),linear-gradient(transparent 0%,rgba(111,220,255,.03) 49%,transparent 50%,rgba(111,220,255,.03) 51%,transparent 100%);background-size:48px 48px;mask-image:linear-gradient(180deg,rgba(0,0,0,.45),transparent 82%);} 
+.portal-modal-icon{position:relative;overflow:hidden;}
+.portal-modal-icon::before{content:'';position:absolute;inset:auto 18% -16px 18%;height:32px;border-radius:50%;background:radial-gradient(circle,rgba(43,191,255,.48),transparent 70%);filter:blur(6px);animation:portalHaloPulse 1.8s ease-in-out infinite alternate;} 
+.portal-modal-icon::after{content:'';position:absolute;left:50%;top:8px;transform:translateX(-50%);width:84px;height:84px;border-radius:50%;border:2px solid rgba(83,227,255,.32);box-shadow:0 0 0 10px rgba(62,161,255,.08),0 0 30px rgba(61,188,255,.16) inset;animation:portalRingSpin 8s linear infinite;}
+.portal-modal-headcopy h3{max-width:10ch;}
+.portal-modal-headcopy{position:relative;}
+.portal-modal-row b,.portal-modal-note p{font-weight:800;}
+.portal-modal-row{position:relative;overflow:hidden;}
+.portal-modal-row::after{content:'';position:absolute;right:-24px;top:-24px;width:86px;height:86px;border-radius:50%;background:radial-gradient(circle,rgba(67,174,255,.14),transparent 70%);} 
+.portal-btn{position:relative;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;}
+.portal-btn:hover{transform:translateY(-2px);filter:brightness(1.04);} 
+.portal-btn:active{transform:translateY(0) scale(.985);} 
+.portal-btn.primary::after{content:'';position:absolute;inset:-30% auto -30% -20%;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);animation:portalBtnSweep 2.6s ease-in-out infinite;}
+@keyframes portalBtnSweep{0%,15%{left:-45%;}60%,100%{left:115%;}}
+@keyframes portalHaloPulse{from{transform:scale(.92);opacity:.55}to{transform:scale(1.14);opacity:1}}
+@keyframes portalRingSpin{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(360deg)}}
+
 @media (max-width:720px){
   .portal-modal{padding:14px;}
   .portal-modal-card{width:min(100vw - 20px,560px);padding:18px 16px 16px;border-radius:28px;}
