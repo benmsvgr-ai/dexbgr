@@ -642,7 +642,7 @@ function updatePlayerUiMeta(){
     const shown = unlocked.length ? unlocked.map(id => all.find(b => b.id === id) || {id, name:id, icon:'🏅', desc:'Badge terbuka'}) : all.slice(0,4);
     badgeGrid.innerHTML = (shown.slice(0,8).map((b,idx)=>`
       <div class="profile-badge-card ${unlocked.includes(b.id) ? 'unlocked' : 'locked'}">
-        <div class="profile-badge-icon" aria-label="${b.name || b.id || 'Badge'}"></div>
+        <div class="profile-badge-icon"><span class="badge-sprite-icon" style="--badge-col:${idx % 6};--badge-row:${Math.floor(idx / 6)}"></span></div>
         <b>${b.name || b.id || 'Badge'}</b>
         <small>${b.desc || b.category || 'Prestasi BogorDex'}</small>
       </div>`).join('')) || `
@@ -2842,7 +2842,7 @@ function renderMapDex(){
   const radarPts = distributeRadarPoints(items.slice(0,14), 1200, 34);
   radarPts.forEach(({item,x,y}) => {
     const btn = document.createElement("button");
-    btn.className = "mapdex-pin pin-" + item.type;
+    btn.className = "mapdex-pin " + item.type;
     btn.style.left = x + "%";
     btn.style.top = y + "%";
     btn.title = item.name;
@@ -2857,10 +2857,10 @@ function renderMapDex(){
     const desc = item.type === "portal" ? "Gerbang menuju lokasi penting" : item.type === "npc" ? (item.ref?.role || "Warga & penjaga BogorDex") : (item.ref?.category ? String(item.ref.category).replace(/_/g,' ') : "Info warga di sekitar kamu");
     row.innerHTML = `
       <span class="mapdex-row-left">
-        <i class="mapdex-row-ico row-${item.type}"></i>
+        <i class="mapdex-row-ico ${item.type}"></i>
         <span class="mapdex-row-copy">
-          <strong>${item.name}</strong>
-          <small><em class="type-chip type-${item.type}">${label}</em><label>${desc}</label></small>
+          <strong>${item.name || (item.type === 'report' ? 'Info titik dari user' : 'Titik BogorDex')}</strong>
+          <small><em class="type-chip ${item.type}">${label}</em><label>${desc}</label></small>
         </span>
       </span>
       <b>${Math.round(item.dist)} m <u>›</u></b>`;
