@@ -3392,3 +3392,107 @@ body.overlay-open #bottomGameNav{display:flex!important;}
   .report-card{padding-top:62px!important}.report-card::before{top:-52px!important;width:106px!important;height:100px!important}.report-card h3{font-size:27px!important}
   #weatherChip,.weather-chip{top:14px!important;min-width:150px!important;padding:9px 12px!important}.weather-icon{font-size:20px!important}.weather-info div{font-size:16px!important}.weather-info small{font-size:11px!important}
 }
+
+
+/* ===== v101 targeted readability + modal alignment fixes ===== */
+#weatherChip,
+.weather-chip{
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,251,255,.94))!important;
+  border:1px solid rgba(176,197,230,.55)!important;
+  box-shadow:0 14px 28px rgba(42,82,145,.10)!important;
+}
+#weatherChip *, .weather-chip *{color:#24406f!important;text-shadow:none!important;}
+#weatherTemp{color:#1f3d71!important;font-weight:1000!important;}
+#weatherDesc{color:#486286!important;font-weight:900!important;}
+#weatherLocTime{color:#6a7e9e!important;}
+.weather-icon{font-size:18px!important;opacity:.95!important;}
+.weather-main{gap:8px!important;}
+
+.inventory-modal-card,
+.inventory-modal-card *{opacity:1!important;}
+.inventory-modal-card .inventory-chip-list,
+.inventory-modal-card .inventory-chip-list *{color:#24406f!important;}
+.inventory-modal-card .inventory-chip{background:#ffffff!important;border:1px solid rgba(187,204,230,.9)!important;color:#24406f!important;box-shadow:0 6px 14px rgba(52,86,140,.06)!important;}
+.inventory-modal-card .inventory-chip.unlocked{background:linear-gradient(135deg,#fff8d8,#eef8ff,#ffe8f5)!important;color:#24406f!important;}
+.inventory-modal-card .section-title,
+.inventory-modal-card strong,
+.inventory-modal-card span,
+.inventory-modal-card p,
+.inventory-modal-card b{color:#24406f!important;}
+
+.report-card select#reportCategory,
+#reportCategory{
+  font-size:14px!important;
+  padding:14px 16px!important;
+}
+#reportCategory option{font-size:14px!important;}
+
+#dexModal .character-avatar-big{
+  background:linear-gradient(180deg,rgba(255,255,255,.50),rgba(129,223,255,.22)),url('assets/player/player-front.png') 64% bottom 12px/126px auto no-repeat!important;
+}
+@media (max-width: 768px){
+  #dexModal .character-avatar-big{
+    background:linear-gradient(180deg,rgba(255,255,255,.50),rgba(129,223,255,.22)),url('assets/player/player-front.png') 62% bottom 8px/80px auto no-repeat!important;
+  }
+}
+
+.bottom-sheet.report-center{
+  position:absolute!important;
+  inset:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:18px!important;
+  background:rgba(8,14,31,.46)!important;
+  backdrop-filter:blur(10px)!important;
+  z-index:180!important;
+}
+.bottom-sheet.report-center.collapsed{transform:none!important;}
+.bottom-sheet.report-center .sheet-handle{display:none!important;}
+.bottom-sheet.report-center .sheet-close-btn{
+  top:calc(50% - min(39dvh,320px) + 18px)!important;
+  right:calc(50% - min(46vw,260px) + 16px)!important;
+  background:#edf3fb!important;
+  color:#23416f!important;
+  border:1px solid rgba(189,205,232,.8)!important;
+  box-shadow:0 10px 18px rgba(45,77,128,.10)!important;
+}
+.bottom-sheet.report-center .sheet-content{
+  width:min(92vw,520px)!important;
+  max-height:78dvh!important;
+  overflow:auto!important;
+  padding:0!important;
+  background:transparent!important;
+}
+.bottom-sheet.report-center .report-sheet-card{
+  background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(247,250,255,.95))!important;
+  border:1px solid rgba(191,208,235,.9)!important;
+  border-radius:34px!important;
+  box-shadow:0 20px 50px rgba(31,61,113,.14)!important;
+  padding:22px!important;
+}
+.bottom-sheet.report-center .report-sheet-card *{color:#23416f!important;opacity:1!important;}
+.bottom-sheet.report-center .report-sheet-summary-desc,
+.bottom-sheet.report-center .report-sheet-meta-sub,
+.bottom-sheet.report-center .report-history-row span,
+.bottom-sheet.report-center .report-history-row small,
+.bottom-sheet.report-center .report-sheet-titlewrap p{color:#6a7e9e!important;}
+
+/* polish stat icons, including EXP */
+#dexModal .character-stat:nth-child(1)::before,
+#dexModal .character-stat:nth-child(2)::before,
+#dexModal .character-stat:nth-child(3)::before,
+#dexModal .character-stat:nth-child(4)::before{
+  content:'';
+  display:block;
+  width:34px;
+  height:34px;
+  margin:0 auto 8px;
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:contain;
+}
+#dexModal .character-stat:nth-child(1)::before{background-image:url('assets/ui/frameplayer1.png');}
+#dexModal .character-stat:nth-child(2)::before{background-image:url('assets/ui/iconexp.png');}
+#dexModal .character-stat:nth-child(3)::before{background-image:url('assets/ui/coinrubo.png');}
+#dexModal .character-stat:nth-child(4)::before{background-image:url('assets/ui/gpsicon.png');}
