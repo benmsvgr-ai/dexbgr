@@ -246,7 +246,43 @@
       </div>
     </div>
 
-
+    <div id="portalModal" class="portal-modal hidden">
+      <div class="portal-modal-backdrop"></div>
+      <div class="portal-modal-card">
+        <button id="portalModalClose" class="portal-modal-close" title="Tutup">×</button>
+        <div class="portal-modal-head">
+          <div id="portalModalIcon" class="portal-modal-icon"></div>
+          <div class="portal-modal-headcopy">
+            <div id="portalModalKicker" class="portal-modal-kicker">Portal</div>
+            <h3 id="portalModalTitle">BogorDex Portal</h3>
+            <div id="portalModalChips" class="portal-modal-chips"></div>
+          </div>
+        </div>
+        <div class="portal-modal-grid">
+          <div class="portal-modal-row">
+            <span>Status</span>
+            <b id="portalModalStatus">Aktif</b>
+          </div>
+          <div class="portal-modal-row">
+            <span>Fungsi</span>
+            <b id="portalModalFunction">Belum diisi</b>
+          </div>
+          <div class="portal-modal-row">
+            <span>Info Lokasi</span>
+            <b id="portalModalLocation">-</b>
+          </div>
+          <div class="portal-modal-note">
+            <span>Catatan Portal</span>
+            <p id="portalModalNote">Belum ada catatan tambahan.</p>
+          </div>
+        </div>
+        <div class="portal-modal-actions">
+          <button id="portalNavigateBtn" class="portal-btn primary">Navigasi</button>
+          <button id="portalScanBtn" class="portal-btn secondary">Scan Lagi</button>
+          <button id="portalCloseBtn2" class="portal-btn ghost">Tutup</button>
+        </div>
+      </div>
+    </div>
 
     <div id="mapDexModal" class="mapdex-modal hidden">
       <div class="mapdex-phone">
