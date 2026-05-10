@@ -3032,3 +3032,255 @@ body.overlay-open .top-right-hud, body.overlay-open .fab-locate, body.overlay-op
 .top-status.compact-status{background:linear-gradient(180deg,rgba(10,40,98,.92),rgba(18,54,121,.88))!important;border:1px solid rgba(125,206,255,.18)!important;box-shadow:0 16px 30px rgba(3,18,54,.22)!important;}
 #weatherChip{background:linear-gradient(180deg,rgba(8,34,84,.94),rgba(16,59,131,.9))!important;border:1px solid rgba(139,210,255,.18)!important;color:#fff!important;box-shadow:0 18px 36px rgba(4,18,52,.26)!important;}
 #weatherChip *{color:#eff6ff!important;}
+
+/* ===== v97 readability cleanup patch ===== */
+:root{
+  --bdx-text:#183964;
+  --bdx-text-soft:#5f7598;
+  --bdx-card:linear-gradient(180deg,rgba(255,255,255,.96),rgba(240,247,255,.93));
+  --bdx-card-alt:linear-gradient(180deg,rgba(255,255,255,.98),rgba(245,249,255,.94));
+}
+
+.report-modal,.mapdex-modal,.game-menu-modal,.modal{
+  align-items:center!important;
+  justify-content:center!important;
+  padding:18px!important;
+  backdrop-filter:blur(8px)!important;
+}
+
+.game-menu-backdrop,
+.report-modal::before,
+.mapdex-modal::before,
+.modal::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:linear-gradient(180deg,rgba(10,28,68,.14),rgba(10,28,68,.22));
+  pointer-events:none;
+}
+
+body.overlay-open .top-status,
+body.overlay-open #weatherChip,
+body.overlay-open .top-right-hud,
+body.overlay-open .fab-locate,
+body.overlay-open .fab-compass,
+body.overlay-open .mapdex-action,
+body.overlay-open .report-action,
+body.overlay-open #bottomGameNav,
+body.overlay-open .move-pad,
+body.overlay-open .rubo-assistant,
+body.overlay-open .bottom-left-profile,
+body.overlay-open .main-action{
+  opacity:0!important;
+  pointer-events:none!important;
+  transform:translateY(8px) scale(.96)!important;
+  transition:opacity .18s ease,transform .18s ease!important;
+}
+
+.report-card,
+.mapdex-phone,
+#dexModal .character-modal-card,
+.inventory-modal-card,
+.game-menu-card{
+  background:var(--bdx-card)!important;
+  color:var(--bdx-text)!important;
+  border:1px solid rgba(255,255,255,.86)!important;
+  box-shadow:0 28px 72px rgba(25,49,95,.22), inset 0 1px 0 rgba(255,255,255,.96)!important;
+}
+
+.report-card::before,
+.mapdex-phone::before,
+#dexModal .character-modal-card::before,
+.inventory-modal-card::before,
+.game-menu-card::before{
+  background:linear-gradient(135deg,rgba(123,236,255,.12),rgba(255,255,255,0) 35%,rgba(255,173,223,.12))!important;
+}
+
+.report-card h3,
+.report-card p,
+.report-card label,
+.mapdex-head h3,
+.mapdex-head p,
+.mapdex-row b,
+.mapdex-row small,
+#dexModal .modal-head h3,
+#dexModal p,
+#dexModal strong,
+#dexModal span,
+.inventory-modal-card .modal-head h3,
+.inventory-modal-card p,
+.inventory-modal-card b,
+.inventory-modal-card strong,
+.inventory-modal-card span,
+.game-menu-card h2,
+.game-menu-card p,
+.game-menu-card strong,
+.game-menu-card small{
+  color:var(--bdx-text)!important;
+  text-shadow:none!important;
+}
+
+.report-card p,
+.mapdex-head p,
+.mapdex-row small,
+#dexModal p,
+.inventory-modal-card p,
+.game-menu-card p,
+.game-menu-card small{
+  color:var(--bdx-text-soft)!important;
+}
+
+.report-card{
+  width:min(92vw,440px)!important;
+  max-height:min(78dvh,760px)!important;
+  border-radius:30px!important;
+  padding:20px!important;
+}
+.report-rubo-hero{
+  background:linear-gradient(135deg,rgba(230,247,255,.95),rgba(255,242,250,.95))!important;
+  border:1px solid rgba(209,226,255,.75)!important;
+}
+.report-card select,
+.report-card textarea,
+.report-card input{
+  background:rgba(255,255,255,.96)!important;
+  color:var(--bdx-text)!important;
+  border:1px solid rgba(187,206,238,.85)!important;
+  box-shadow:0 8px 18px rgba(72,102,156,.08)!important;
+}
+.report-card textarea::placeholder{color:#89a0bf!important;}
+.report-actions button:first-child{
+  background:linear-gradient(135deg,#3981ff,#6668ff 58%,#74ddff)!important;
+  color:#fff!important;
+}
+.report-actions button:last-child{
+  background:#edf4ff!important;
+  color:#2c4a7b!important;
+}
+
+.mapdex-phone{
+  width:min(92vw,420px)!important;
+  max-height:min(80dvh,780px)!important;
+  height:auto!important;
+  border-radius:32px!important;
+  padding:18px!important;
+}
+.mapdex-canvas{
+  background:linear-gradient(180deg,#9fd6ff,#76bff7)!important;
+  border:1px solid rgba(173,205,245,.8)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.26),0 12px 26px rgba(71,114,173,.12)!important;
+}
+.mapdex-canvas::before{
+  opacity:.28!important;
+}
+.mapdex-legend,
+.mapdex-rubo-tip,
+.mapdex-row{
+  background:rgba(255,255,255,.84)!important;
+  border:1px solid rgba(208,224,247,.84)!important;
+  color:var(--bdx-text)!important;
+}
+.mapdex-row{
+  box-shadow:0 10px 24px rgba(69,98,148,.08)!important;
+}
+.mapdex-row .poi-pill,
+.mapdex-row .poi-tag,
+.report-status-pill,
+.report-status-location,
+.category-chip,
+.inventory-chip,
+.profile-badges .tag{
+  background:#f2f7ff!important;
+  color:#32568d!important;
+  border:1px solid rgba(200,217,244,.88)!important;
+}
+.mapdex-row .poi-distance{
+  color:#3860a8!important;
+  background:#eef4ff!important;
+  border:1px solid rgba(200,217,244,.88)!important;
+}
+
+#dexModal .character-modal-card,
+.inventory-modal-card{
+  width:min(92vw,430px)!important;
+  max-height:min(80dvh,780px)!important;
+  border-radius:30px!important;
+  padding:18px!important;
+}
+#dexModal .character-profile-hero,
+.inventory-hero,
+.character-badge-showcase,
+.character-profile-section,
+.inventory-section{
+  background:var(--bdx-card-alt)!important;
+  border:1px solid rgba(208,223,245,.86)!important;
+  box-shadow:0 10px 24px rgba(69,98,148,.08)!important;
+}
+#dexModal .character-stat,
+.inventory-stat{
+  background:#ffffff!important;
+  border:1px solid rgba(208,223,245,.86)!important;
+  box-shadow:0 10px 24px rgba(69,98,148,.06)!important;
+  color:var(--bdx-text)!important;
+}
+#dexModal .character-stat span,
+.inventory-stat span{color:#7891b5!important;}
+
+.game-menu-card{
+  width:min(92vw,420px)!important;
+  max-height:min(80dvh,780px)!important;
+  border-radius:30px!important;
+  padding:18px!important;
+}
+.game-menu-item{
+  background:#fff!important;
+  border:1px solid rgba(208,223,245,.86)!important;
+  box-shadow:0 10px 24px rgba(69,98,148,.08)!important;
+}
+.game-menu-item strong{color:var(--bdx-text)!important}
+.game-menu-item small{color:var(--bdx-text-soft)!important}
+.game-menu-item.primary{background:linear-gradient(135deg,#fefeff,#eef8ff)!important}
+
+.top-status.compact-status{
+  width:138px!important;
+  min-width:138px!important;
+  max-width:138px!important;
+  padding:8px 10px!important;
+  border-radius:18px!important;
+}
+#weatherChip,.weather-chip{
+  width:168px!important;
+  min-width:168px!important;
+  padding:10px 12px!important;
+  border-radius:24px!important;
+}
+.top-right-hud{top:14px!important;right:14px!important;gap:8px!important;}
+.player-hud{min-width:auto!important;padding:0!important;background:transparent!important;box-shadow:none!important;border:none!important;}
+.player-hud .player-hud-meta{display:none!important;}
+.player-hud .player-hud-frame{width:64px!important;height:64px!important;}
+.chat-toggle.icon-only{width:62px!important;height:62px!important;}
+
+.fab-compass,.fab-locate,.mapdex-action,.report-action{
+  width:62px!important;height:62px!important;right:12px!important;
+}
+.fab-locate{top:146px!important;}
+.fab-compass{top:218px!important;}
+.mapdex-action{top:290px!important;}
+.report-action{top:362px!important;}
+
+.bottom-game-nav{
+  width:min(94vw,430px)!important;
+  height:74px!important;
+  padding:10px 14px!important;
+  border-radius:28px!important;
+}
+.bottom-nav-item{min-width:62px!important;}
+.bottom-nav-item small{font-size:11px!important;line-height:1.1!important;color:#7088ae!important;}
+.bottom-nav-item.active small{color:#2d61d8!important;}
+
+@media (max-width: 720px){
+  .report-modal,.mapdex-modal,.game-menu-modal,.modal{padding:14px!important;}
+  .report-card,.mapdex-phone,#dexModal .character-modal-card,.inventory-modal-card,.game-menu-card{width:min(92vw,400px)!important;max-height:76dvh!important;border-radius:26px!important;padding:16px!important;}
+  .report-card h3,.mapdex-head h3,#dexModal .modal-head h3,.inventory-modal-card .modal-head h3{font-size:19px!important;line-height:1.15!important;}
+  .report-card p,.mapdex-head p,#dexModal p,.inventory-modal-card p{font-size:13px!important;line-height:1.45!important;}
+}
