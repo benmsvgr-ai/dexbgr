@@ -648,9 +648,13 @@ function updatePlayerUiMeta(){
       </div>`).join('')) || `
       <div class="profile-badge-card locked"><div class="profile-badge-icon">🔒</div><b>Belum ada</b><small>Jelajahi lokasi untuk membuka badge.</small></div>`;
   }
+  const totalBadges = (Array.isArray(state.badges) && state.badges.length) ? state.badges.length : Math.max(1, (state.unlockedBadges||new Set()).size);
   if(badgeCount){
-    const total = (Array.isArray(state.badges) && state.badges.length) ? state.badges.length : Math.max(1, (state.unlockedBadges||new Set()).size);
-    badgeCount.textContent = `${(state.unlockedBadges||new Set()).size} / ${total}`;
+    badgeCount.textContent = `${(state.unlockedBadges||new Set()).size} / ${totalBadges}`;
+  }
+  const progressFill = document.getElementById('profileProgressFill');
+  if(progressFill){
+    progressFill.style.width = `${Math.max(8, Math.min(100, (((state.unlockedBadges||new Set()).size || 0) / Math.max(1, totalBadges)) * 100))}%`;
   }
   const lbl = document.querySelector('.player-name-tag b');
   if(lbl) lbl.textContent = PLAYER_PROFILE.name;
@@ -964,9 +968,10 @@ function renderUserReportSheet(poi){
   const status = report.status || "menunggu";
   const statusLabel = status === "benar" ? "Sudah benar" : status === "salah" ? "Belum sesuai" : "Menunggu verifikasi";
   const category = report.category || "lainnya";
-  const coordsText = Array.isArray(report.coords) ? `Bogor Tengah, Kota Bogor` : `Bogor Tengah, Kota Bogor`;
+  const coordsText = `Bogor Tengah, Kota Bogor`;
+  const updatedText = new Date(report.updatedAt || report.createdAt || Date.now()).toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
   document.getElementById("sheetContent").innerHTML = `
-    <div class="report-sheet-card report-sheet-card-ref">
+    <div class="report-sheet-card report-sheet-card-ref mobile-report-sheet">
       <div class="report-sheet-head report-sheet-head-ref">
         <div class="report-sheet-icon report-sheet-thumb ${category}"></div>
         <div class="report-sheet-titlewrap">
@@ -975,36 +980,35 @@ function renderUserReportSheet(poi){
           <p>Kelola informasi yang kamu buat di BogorDex.</p>
         </div>
       </div>
-      <div class="report-sheet-summary-card">
+      <div class="report-sheet-summary-card mobile-report-maincard">
         <div class="report-sheet-summary-thumb ${category}"></div>
         <div class="report-sheet-summary-body">
           <div class="report-sheet-summary-top">
             <strong>${report.note || poi.desc || "Info titik dari user"}</strong>
             <span class="report-status-pill ${status}">${statusLabel}</span>
           </div>
-          <p class="report-sheet-summary-desc">${category === 'lobang' ? 'Jalan berlubang cukup dalam dekat pertigaan, mohon diperbaiki.' : (report.note || 'Informasi lapangan dari Ranger BogorDex.')}</p>
           <div class="report-sheet-meta-line">📍 <b>${coordsText}</b></div>
           <div class="report-sheet-meta-sub">dekat lokasi karakter saat laporan dibuat</div>
           <div class="report-sheet-meta-time">🕒 ${reportRelativeTime(report.createdAt)}</div>
         </div>
       </div>
-      <div class="report-action-grid report-action-grid-ref">
-        <button id="reportStatusRefresh" class="report-manage-btn blue">Perbarui Status</button>
-        <button id="reportStatusCorrect" class="report-manage-btn green">Tandai Sudah Benar</button>
-        <button id="reportDeleteBtn" class="report-manage-btn red">Hapus Laporan</button>
+      <div class="report-sheet-tile-grid">
+        <div class="report-sheet-tile"><span>Status</span><b>${status === 'benar' ? 'Aktif' : status === 'salah' ? 'Dicek Ulang' : 'Menunggu'}</b></div>
+        <div class="report-sheet-tile"><span>Visibility</span><b>Publik</b></div>
+        <div class="report-sheet-tile"><span>Lapisan</span><b>Laporan</b></div>
+        <div class="report-sheet-tile"><span>Terakhir Update</span><b>${updatedText}</b></div>
       </div>
-      <div class="report-history-card">
-        <div class="section-title">Riwayat Laporan</div>
-        <div class="report-history-row"><span>Dibuat</span><b>${new Date(report.createdAt || Date.now()).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</b><small>Oleh Kamu</small></div>
-        <div class="report-history-row"><span>Terakhir Diperbarui</span><b>${new Date(report.updatedAt || report.createdAt || Date.now()).toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})}</b><small>Oleh Kamu</small></div>
-        <div class="report-history-tip">✨ Info Anda membantu Bogor jadi lebih baik!</div>
+      <div class="report-action-grid report-action-grid-ref mobile-report-actions">
+        <button id="reportStatusRefresh" class="report-manage-btn blue">Menunggu</button>
+        <button id="reportStatusCorrect" class="report-manage-btn green">Sudah Benar</button>
+        <button id="reportDeleteBtn" class="report-manage-btn red">Hapus</button>
       </div>
+      <div class="report-history-tip mobile-tip-card">✨ Titik kamu membantu warga lain menemukan lokasi penting di BogorDex!</div>
     </div>`;
   document.getElementById("reportStatusRefresh")?.addEventListener("click", () => setReportStatus(poi.id, "menunggu"));
   document.getElementById("reportStatusCorrect")?.addEventListener("click", () => setReportStatus(poi.id, "benar"));
   document.getElementById("reportDeleteBtn")?.addEventListener("click", () => deleteUserReportById(poi.id));
 }
-
 function openSheet(poi, mode="manual"){
   sheetEl().classList.remove("hidden-sheet");
   sheetEl().classList.remove("collapsed");
@@ -2697,24 +2701,81 @@ function openCharacterProfile(){
 }
 function closeCharacterProfile(){ document.getElementById('dexModal')?.classList.add('hidden'); setOverlayMode(false); }
 function renderInventory(){
-  const chipList = document.getElementById('inventoryChipList');
   const allBadges = Array.isArray(state.badges) ? state.badges : [];
   const unlocked = Array.from(state.unlockedBadges || []);
+  const reports = Array.isArray(state.userReports) ? state.userReports : [];
+  const discoveredCount = (state.discovered || new Set()).size;
   document.getElementById('invCoin') && (document.getElementById('invCoin').textContent = String(state.playerProgress.coin || 0));
   document.getElementById('invBadge') && (document.getElementById('invBadge').textContent = String(unlocked.length));
-  document.getElementById('invReport') && (document.getElementById('invReport').textContent = String((state.userReports||[]).length));
-  document.getElementById('invFound') && (document.getElementById('invFound').textContent = String((state.discovered||new Set()).size));
+  document.getElementById('invReport') && (document.getElementById('invReport').textContent = String(reports.length));
+  document.getElementById('invFound') && (document.getElementById('invFound').textContent = String(discoveredCount));
+
+  const itemsGrid = document.getElementById('inventoryItemsGrid');
+  if(itemsGrid){
+    const baseItems = [
+      { name:'Radar Mini', icon:'assets/ui/mapdex-device.png', count:3 },
+      { name:'Kompas', icon:'assets/ui/bkompas.png', count:2 },
+      { name:'Drone Scan', icon:'🛸', count:1 },
+      { name:'Kamera', icon:'📷', count:2 },
+      { name:'Marker Lokasi', icon:'📍', count:Math.max(1, reports.length) },
+      { name:'Notepad', icon:'🗒️', count:4 },
+      { name:'Kartu ID', icon:'🪪', count:1 },
+      { name:'Power Cell', icon:'🔋', count:3 }
+    ];
+    itemsGrid.innerHTML = baseItems.map(item => `
+      <div class="inventory-item-card">
+        <div class="inventory-item-icon ${String(item.icon).startsWith('assets/') ? 'asset' : ''}" ${String(item.icon).startsWith('assets/') ? `style="background-image:url('${item.icon}')"` : ''}>${String(item.icon).startsWith('assets/') ? '' : item.icon}</div>
+        <div class="inventory-item-name">${item.name}</div>
+        <div class="inventory-item-count">${item.count}</div>
+      </div>`).join('');
+  }
+
+  const reportList = document.getElementById('inventoryReportList');
+  if(reportList){
+    const topReports = reports.slice().sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0,2);
+    if(topReports.length){
+      reportList.innerHTML = topReports.map((r, idx) => {
+        const ok = r.status === 'benar';
+        const waiting = r.status !== 'benar' && r.status !== 'salah';
+        const statusLabel = ok ? 'Terverifikasi' : waiting ? 'Menunggu Verifikasi' : 'Dicek Ulang';
+        const statusClass = ok ? 'ok' : waiting ? 'wait' : 'bad';
+        const title = r.note || 'Info warga';
+        const dateText = new Date(r.createdAt || Date.now()).toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+        return `
+          <button type="button" class="inventory-report-card" data-report-id="${r.id}">
+            <div class="inventory-report-thumb ${r.category || 'lainnya'}"></div>
+            <div class="inventory-report-copy">
+              <strong>${title}</strong>
+              <span>Bogor Tengah, Kota Bogor</span>
+              <small>${dateText}</small>
+            </div>
+            <span class="inventory-report-status ${statusClass}">${statusLabel}</span>
+          </button>`;
+      }).join('');
+      reportList.querySelectorAll('[data-report-id]').forEach(btn => btn.addEventListener('click', () => {
+        const report = getUserReportById(btn.dataset.reportId);
+        if(report){
+          closeInventoryModal();
+          openSheet({id:report.id,name:'Info Warga',desc:report.note || 'Info titik',fungsi:'Kategori: ' + reportEmoji(report.category),tupoksi:'Titik laporan dari user.',group:'CITIZEN REPORT',aktif:true}, 'manual');
+        }
+      }));
+    }else{
+      reportList.innerHTML = `<div class="inventory-empty-state">Belum ada laporan tersimpan. Tekan tombol Laporkan untuk menambah info titik baru.</div>`;
+    }
+  }
+
+  const chipList = document.getElementById('inventoryChipList');
   if(chipList){
     const chips = [];
-    if(unlocked.length){
-      unlocked.slice(0,6).forEach(id => { const b = allBadges.find(x => x.id===id) || {name:id, icon:'🏅'}; chips.push(`<span class="inventory-chip unlocked">${b.icon || '🏅'} ${b.name}</span>`); });
-    }
+    unlocked.slice(0,4).forEach(id => {
+      const b = allBadges.find(x => x.id===id) || {name:id, icon:'🏅'};
+      chips.push(`<span class="inventory-chip unlocked">${b.icon || '🏅'} ${b.name}</span>`);
+    });
     chips.push(`<span class="inventory-chip">🪙 Coin ${(state.playerProgress.coin||0)}</span>`);
-    chips.push(`<span class="inventory-chip">📍 Laporan ${(state.userReports||[]).length}</span>`);
+    chips.push(`<span class="inventory-chip">📍 Laporan ${reports.length}</span>`);
+    chips.push(`<span class="inventory-chip">🧭 Lokasi ${discoveredCount}</span>`);
     chips.push(`<span class="inventory-chip">✨ Bonus EXP +20%</span>`);
-    chipList.innerHTML = chips.join('') + `
-      <div class="inventory-gallery-block"><div class="section-title">Token Warga</div><img class="inventory-gallery-sheet" src="assets/rewards/alltoken.png" alt="Token Warga"></div>
-      <div class="inventory-gallery-block"><div class="section-title">Suvenir Bogor</div><img class="inventory-gallery-sheet" src="assets/rewards/allsuvenir.png" alt="Suvenir Bogor"></div>`;
+    chipList.innerHTML = chips.join('');
   }
   updateTopHud();
 }
@@ -2796,6 +2857,26 @@ function focusMapDexItem(item){
     openSheet({id:item.ref.id,name:"Info Warga",desc:item.ref.note || "Info titik",fungsi:"Kategori: " + reportEmoji(item.ref.category),tupoksi:"Titik laporan dari user.",group:"CITIZEN REPORT",aktif:true}, "manual");
   }
 }
+function mapDexTypeLabel(type){
+  return type === 'portal' ? 'Portal' : type === 'npc' ? 'NPC' : 'Laporan';
+}
+function mapDexThumb(item){
+  if(item.type === 'npc' && item.ref?.asset) return item.ref.asset;
+  if(item.type === 'report') return 'assets/ui/iconlaporan.png';
+  if(item.type === 'portal'){
+    const cat = String(item.ref?.category || item.ref?.group || '').toLowerCase();
+    if(cat.includes('halte') || cat.includes('transit')) return 'assets/ui/porthalte.png';
+    if(cat.includes('health') || cat.includes('rumah sakit') || cat.includes('puskesmas')) return 'assets/ui/portrs.png';
+    if(cat.includes('umkm') || cat.includes('kuliner')) return 'assets/ui/portumkm.png';
+    return 'assets/ui/portopd.png';
+  }
+  return 'assets/ui/mapdex-device.png';
+}
+function mapDexDesc(item){
+  if(item.type === 'portal') return item.ref?.group || 'Lokasi penting BogorDex';
+  if(item.type === 'npc') return item.ref?.role || 'Warga & penjaga BogorDex';
+  return item.ref?.category ? String(item.ref.category).replace(/_/g,' ') : 'Info warga di sekitar kamu';
+}
 function openMapDex(){
   closeAllOverlays();
   renderMapDex();
@@ -2835,11 +2916,14 @@ function distributeRadarPoints(items, radiusMeters, maxPct){
 function renderMapDex(){
   const canvas = document.getElementById("mapDexCanvas");
   const list = document.getElementById("mapDexList");
+  const filtersWrap = document.getElementById('mapDexFilters');
   if(!canvas || !list) return;
   canvas.querySelectorAll(".mapdex-pin").forEach(n => n.remove());
   list.innerHTML = "";
+  const filter = state.mapDexFilter || 'all';
   const items = getMapDexItems();
-  const radarPts = distributeRadarPoints(items.slice(0,14), 1200, 34);
+  const filtered = filter === 'all' ? items : items.filter(item => item.type === filter);
+  const radarPts = distributeRadarPoints(filtered.slice(0,14), 1200, 34);
   radarPts.forEach(({item,x,y}) => {
     const btn = document.createElement("button");
     btn.className = "mapdex-pin " + item.type;
@@ -2850,14 +2934,31 @@ function renderMapDex(){
     btn.addEventListener("click", () => focusMapDexItem(item));
     canvas.appendChild(btn);
   });
-  items.forEach(item => {
+  if(filtersWrap){
+    const defs = [
+      {id:'all', label:'Semua'},
+      {id:'portal', label:'Portal'},
+      {id:'npc', label:'NPC'},
+      {id:'report', label:'Laporan'}
+    ];
+    filtersWrap.innerHTML = defs.map(def => `<button type="button" class="mapdex-filter-chip ${def.id === filter ? 'active' : ''}" data-filter="${def.id}">${def.label}</button>`).join('');
+    filtersWrap.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => { state.mapDexFilter = btn.dataset.filter; renderMapDex(); }));
+  }
+  if(!filtered.length){
+    list.innerHTML = `<div class="mapdex-empty-state">Belum ada data pada filter ini.</div>`;
+    return;
+  }
+  filtered.forEach(item => {
     const row = document.createElement("button");
     row.className = "mapdex-row";
-    const label = item.type === "portal" ? "Portal" : item.type === "npc" ? "NPC" : "Laporan";
-    const desc = item.type === "portal" ? "Gerbang menuju lokasi penting" : item.type === "npc" ? (item.ref?.role || "Warga & penjaga BogorDex") : (item.ref?.category ? String(item.ref.category).replace(/_/g,' ') : "Info warga di sekitar kamu");
+    const label = mapDexTypeLabel(item.type);
+    const desc = mapDexDesc(item);
+    const thumb = mapDexThumb(item);
     row.innerHTML = `
       <span class="mapdex-row-left">
-        <i class="mapdex-row-ico ${item.type}"></i>
+        <span class="mapdex-row-avatar ${item.type}">
+          ${thumb.startsWith('assets/') ? `<img src="${thumb}" alt="${item.name}">` : thumb}
+        </span>
         <span class="mapdex-row-copy">
           <strong>${item.name}</strong>
           <small><em class="type-chip ${item.type}">${label}</em><label>${desc}</label></small>
@@ -2868,7 +2969,6 @@ function renderMapDex(){
     list.appendChild(row);
   });
 }
-
 document.getElementById("locateBtn").addEventListener("click", startLocation);
 document.addEventListener("pointerdown", requestDeviceCompass, { once:true, passive:true });
 document.getElementById("resetViewBtn").addEventListener("click", resetGameCamera);
