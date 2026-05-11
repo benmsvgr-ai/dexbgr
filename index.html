@@ -250,6 +250,7 @@
 
     <div id="mapDexModal" class="mapdex-modal hidden">
       <div class="mapdex-phone">
+        <div class="mobile-sheet-handle"></div>
         <div class="mapdex-head">
           <div>
             <div class="mapdex-kicker">BogorDex Phone</div>
@@ -261,30 +262,37 @@
         <div id="mapDexCanvas" class="mapdex-canvas">
           <div class="mapdex-player-dot">YOU</div>
         </div>
+        <div id="mapDexFilters" class="mapdex-filters"></div>
         <div class="mapdex-legend">
           <span><b class="pin portal"></b>Portal</span>
           <span><b class="pin npc"></b>NPC</span>
           <span><b class="pin report"></b>Laporan</span>
         </div>
-        <div class="mapdex-rubo-tip"><img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"><span>Scan radius aktif. Tap titik untuk lihat detail!</span></div>
         <div id="mapDexList" class="mapdex-list"></div>
+        <div class="mapdex-rubo-tip"><img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"><span>Scan radius aktif. Tap titik untuk lihat detail!</span></div>
       </div>
     </div>
 
     <div id="dexModal" class="modal hidden">
       <div class="modal-card character-modal-card">
-        <div class="modal-head">
-          <h3>Info Karakter</h3>
+        <div class="mobile-sheet-handle"></div>
+        <div class="modal-head mobile-game-head">
+          <div>
+            <span class="section-kicker">BogorDex</span>
+            <h3>Info Karakter</h3>
+          </div>
           <button id="closeDexBtn" class="close-btn">×</button>
         </div>
-        <div class="character-profile-hero">
-          <div class="character-avatar-big"></div>
+        <div class="character-profile-hero mobile-game-hero">
+          <div class="character-avatar-panel">
+            <div class="character-avatar-big"></div>
+          </div>
           <div class="character-hero-meta">
             <h4 id="profileName">Ranger Panji</h4>
-            <div class="profile-badges">
-              <span class="tag">Explorer</span>
-              <span class="tag">Road Guardian</span>
-              <span class="tag">Lv <b id="profileLevel">10</b></span>
+            <div class="profile-badges profile-badges-game">
+              <span class="tag success">Ranger</span>
+              <span class="tag info">Explorer</span>
+              <span class="tag level">Lv <b id="profileLevel">10</b></span>
             </div>
             <p id="profileStatus">Sedang patroli di jalan BogorDex.</p>
           </div>
@@ -303,9 +311,10 @@
             </div>
             <span id="profileBadgeCount" class="badge-count-pill">0 / 0</span>
           </div>
+          <div class="profile-progress-track"><span id="profileProgressFill" class="profile-progress-fill"></span></div>
           <div id="profileBadgeGrid" class="profile-badge-grid"></div>
         </div>
-        <div class="character-rubo-tip">
+        <div class="character-rubo-tip mobile-tip-card">
           <img src="assets/rubo/KAGET-RUBO.png" alt="RUBO" />
           <div><b>RUBO bilang:</b><span>Badge makin banyak kalau kamu sering eksplorasi, cek titik, dan bantu warga.</span></div>
         </div>
@@ -321,8 +330,12 @@
 
     <div id="inventoryModal" class="modal hidden">
       <div class="modal-card inventory-modal-card">
-        <div class="modal-head">
-          <h3>Inventori Ranger</h3>
+        <div class="mobile-sheet-handle"></div>
+        <div class="modal-head mobile-game-head">
+          <div>
+            <span class="section-kicker">BogorDex</span>
+            <h3>Inventori Ranger</h3>
+          </div>
           <button id="closeInventoryBtn" class="close-btn">×</button>
         </div>
         <div class="inventory-hero">
@@ -339,8 +352,20 @@
           <div class="inventory-stat"><span>Lokasi</span><strong id="invFound">0</strong></div>
         </div>
         <div class="inventory-section">
-          <div class="section-title">Isi inventori</div>
+          <div class="section-title">Item Inventori</div>
+          <div id="inventoryItemsGrid" class="inventory-items-grid"></div>
+        </div>
+        <div class="inventory-section inventory-report-section">
+          <div class="section-title">Laporan Tersimpan</div>
+          <div id="inventoryReportList" class="inventory-report-list"></div>
+        </div>
+        <div class="inventory-section inventory-bonus-section">
+          <div class="section-title">Bonus & Koleksi</div>
           <div id="inventoryChipList" class="inventory-chip-list"></div>
+        </div>
+        <div class="inventory-tip mobile-tip-card">
+          <img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO">
+          <div><b>Tip:</b><span>Kumpulkan item dan buat laporan untuk bantu membangun Bogor yang lebih baik!</span></div>
         </div>
       </div>
     </div>
