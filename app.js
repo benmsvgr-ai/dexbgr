@@ -817,7 +817,7 @@ function renderArGuide(){
 
 function initializeArTargets(baseHeading) {
   state.arTargetBaseHeading = baseHeading;
-  // Sebarkan 3 target digital melayang di sumbu horizontal spasial sekeliling pemain
+  // Sebarkan 3 target digital melayang di sekeliling pemain
   state.arTargets = [
     { id: 1, angle: normalizeHeading(baseHeading + 35), cleared: false, name: "Node Portal Alpha" },
     { id: 2, angle: normalizeHeading(baseHeading - 45), cleared: false, name: "Data Anomali Beta" },
@@ -830,7 +830,7 @@ function initializeArTargets(baseHeading) {
 
 function updateArMinigameHud() {
   const badge = document.getElementById('arGuideStepBadge'); const title = document.getElementById('arGuideTitle'); const body = document.getElementById('arGuideText');
-  if (__arGuideStep < 3) return; // Hanya tampilkan game HUD jika sudah di step 4 (instruksi game)
+  if (__arGuideStep < 3) return; 
   
   const currentTarget = state.arTargets[state.arCurrentTargetIdx];
   if (!currentTarget) {
@@ -849,7 +849,7 @@ function checkArTargetDetection(currentHeading) {
   const currentTarget = state.arTargets[state.arCurrentTargetIdx]; if (!currentTarget) return;
   
   const diff = shortestHeadingDiff(currentTarget.angle, currentHeading); const absDiff = Math.abs(diff);
-  const isAligned = absDiff < 8.0; // Toleransi reticle bidikan (8 derajat)
+  const isAligned = absDiff < 8.0; 
   
   const lineEl = document.getElementById('arGuideLine');
   if (lineEl) {
@@ -921,7 +921,7 @@ function openArCameraModal(){
   const initialHeading = state.deviceHeadingRaw || 180; initializeArTargets(initialHeading);
   window.addEventListener('deviceorientation', handleArDeviceOrientation, true);
   
-  // Aktifkan kamera latar belakang otomatis
+  // Aktifkan kamera otomatis
   startArCamera();
   updateStatus?.('AR Immersive Mode aktif');
 }
@@ -1083,7 +1083,7 @@ function renderUserReportSheet(poi){
 function openSheet(poi, mode="manual"){
   setOverlayMode(true); sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.remove("collapsed"); state.activePoiId = poi.id || null; state.activePoiMode = mode; state.lastPoi = poi;
   if(poi.group === "CITIZEN REPORT"){ renderUserReportSheet(poi); syncMiniButton(); updateStatus(poi.name || "Info Warga"); return; }
-  markPortalVisited(poi, true); const quest = getQuestById(poi.questId); const rewardLines = portalRewardSummary(poi, quest); const statusText = portalStatusLabel(poi); const statusBadge = portalStatusBadgeHtml(poi); const badgeText = poi.rewardBadgeId ? badgeLabel(poi.rewardBadgeId) : ""; const radiusText = portalRadiusValue(poi) + " m"; const distanceText = portalDistanceText(poi); const actionLabel = portalStatusCode(poi) === 'completed' ? 'Portal Selesai' : 'Masuk Portal';
+  markPortalVisited(poi, true); const quest = getQuestById(poi.questId); const rewardLines = portalRewardSummary(poi, quest); const statusBadge = portalStatusBadgeHtml(poi); const actionLabel = portalStatusCode(poi) === 'completed' ? 'Portal Selesai' : 'Masuk Portal';
   document.getElementById("sheetContent").innerHTML = `
     <div class="portal-detail-sheet">
       <div class="portal-detail-head">
@@ -1092,28 +1092,8 @@ function openSheet(poi, mode="manual"){
         <div class="portal-detail-status-row">
           ${statusBadge}
           <span class="portal-status-pill soft">${poi.group || 'Portal BogorDex'}</span>
-          ${poi.subkategori ? `<span class="portal-status-pill soft">${poi.subkategori}</span>` : ''}
         </div>
         <p>${poi.desc || poi.fungsi || 'Portal BogorDex siap dibuka. Masuk portal untuk lanjut ke tahap berikutnya.'}</p>
-      </div>
-      <div class="portal-quick-grid">
-        <div class="portal-quick-card"><span>Status</span><b>${statusText}</b></div>
-        <div class="portal-quick-card"><span>Radius</span><b>${radiusText}</b></div>
-        <div class="portal-quick-card"><span>Jarak</span><b>${distanceText}</b></div>
-        <div class="portal-quick-card"><span>MapDex</span><b>${state.discovered.has(poi.id) ? 'Tersimpan' : 'Belum'}</b></div>
-      </div>
-      <div class="section portal-info-card">
-        <div class="section-title">Info Portal</div>
-        <p>${poi.fungsi || poi.desc || 'Belum ada info portal.'}</p>
-      </div>
-      <div class="section portal-info-card">
-        <div class="section-title">Lokasi</div>
-        <p>${poi.address || poi.tupoksi || 'Belum ada alamat/detail tambahan.'}</p>
-      </div>
-      ${quest ? `<div class="section portal-info-card"><div class="section-title">Quest Terkait</div><p><b>${quest.name}</b><br>${quest.desc || 'Buka portal ini untuk melanjutkan quest.'}</p></div>` : ''}
-      <div class="section portal-info-card">
-        <div class="section-title">Reward</div>
-        <p>${rewardLines.length ? rewardLines.join('<br>') : (badgeText ? badgeText : 'Reward detail bisa dikembangkan lagi di mode AR.')}</p>
       </div>
       <div class="portal-action-grid">
         <button type="button" class="portal-action-btn primary" id="portalEnterBtn">${actionLabel}</button>
@@ -1656,7 +1636,7 @@ function bindMoveButton(btn){
 map.on("load", () => {
   clearNavigationTarget(true); setupMapLibre3D(); updateRenderBounds(true);
   
-  // Handlers dynamic fallback icon untuk console error asset yang hilang (V135)
+  // Handlers dynamic fallback icon untuk console error asset yang hilang
   map.on('styleimagemissing', (e) => {
     const id = e.id; console.warn(`Menggambar billboard fallback dinamis untuk: "${id}"`);
     const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const ctx = canvas.getContext('2d');
@@ -1836,4 +1816,82 @@ function renderMapDex(){
   radarPts.forEach(({item,x,y}) => { const btn = document.createElement("button"); btn.className = "mapdex-pin " + item.type; btn.style.left = x + "%"; btn.style.top = y + "%"; btn.title = item.name; btn.innerHTML = `<i><span></span></i>`; btn.addEventListener("click", () => focusMapDexItem(item)); canvas.appendChild(btn); });
   if(filtersWrap){
     const defs = [ {id:'all', label:'Semua'}, {id:'portal', label:'Portal'}, {id:'report', label:'Laporan'} ];
-    filtersWrap.innerHTML = defs.map(def => `<button type="button" class="mapdex-filter-chip ${def.id === filter ? 'active' : ''}" data-filter="${def.id}">${def.
+    filtersWrap.innerHTML = defs.map(def => `<button type="button" class="mapdex-filter-chip ${def.id === filter ? 'active' : ''}" data-filter="${def.id}">${def.label}</button>`).join('');
+  }
+  if(!filtered.length){ list.innerHTML = `<div class="mapdex-empty-state">Belum ada data pada filter ini.</div>`; return; }
+  filtered.forEach(item => {
+    const row = document.createElement("button"); row.className = "mapdex-row"; const label = mapDexTypeLabel(item.type); const desc = mapDexDesc(item); const thumb = mapDexThumb(item); const statusChip = item.type === 'portal' ? `<span class="portal-list-state ${portalStatusCode(item.ref)}">${portalStatusLabel(item.ref)}</span>` : '';
+    row.innerHTML = `
+      <span class="mapdex-row-left">
+        <span class="mapdex-row-avatar ${item.type}">
+          ${thumb.startsWith('assets/') ? `<img src="${thumb}" alt="${item.name}">` : thumb}
+        </span>
+        <span class="mapdex-row-copy">
+          <strong>${item.name}</strong>
+          <small><em class="type-chip ${item.type}">${label}</em><label>${desc}</label>${statusChip}</small>
+        </span>
+      </span>
+      <b>${Math.round(item.dist)} m <u>›</u></b>`;
+    row.addEventListener("click", () => focusMapDexItem(item)); list.appendChild(row);
+  });
+}
+
+document.getElementById("locateBtn").addEventListener("click", startLocation);
+document.addEventListener("pointerdown", requestDeviceCompass, { once:true, passive:true });
+document.getElementById("resetViewBtn").addEventListener("click", resetGameCamera);
+document.getElementById("toggleTransitBtn").addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.transit = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
+document.getElementById("toggleGovBtn").addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.gov = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
+document.getElementById("toggleHealthBtn").addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.health = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
+document.getElementById("toggleUmkmBtn").addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.umkm = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
+document.getElementById("mainMenuBtn").addEventListener("click", openMainMenu);
+document.getElementById("closeMainMenuBtn").addEventListener("click", closeMainMenu);
+document.querySelector("#mainMenuModal .game-menu-backdrop").addEventListener("click", closeMainMenu);
+document.getElementById("menuExploreBtn").addEventListener("click", () => { closeMainMenu(); updateStatus("Mode jelajah portal aktif"); });
+document.getElementById("menuScanBtn").addEventListener("click", () => { closeMainMenu(); scanNearestFromMenu(); });
+document.getElementById("menuDexBtn").addEventListener("click", openPortalProgressFromMenu);
+document.getElementById("menuResetBtn").addEventListener("click", () => { closeMainMenu(); resetGameCamera(); });
+document.getElementById("menuReportBtn").addEventListener("click", () => { closeMainMenu(); openReportModal(); });
+document.getElementById("reportCloseBtn").addEventListener("click", closeReportModal);
+document.getElementById("reportCancelBtn").addEventListener("click", closeReportModal);
+document.getElementById("reportSaveBtn").addEventListener("click", saveCurrentPointReport);
+document.getElementById("reportModal").addEventListener("click", (e) => { if(e.target.id === "reportModal") closeReportModal(); });
+document.getElementById("questStartBtn").addEventListener("click", startQuestFromPopup);
+document.getElementById("questCloseBtn").addEventListener("click", dismissActiveQuestPopup);
+const __navCancelBtn = document.getElementById("navCancelBtn"); if(__navCancelBtn){ __navCancelBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); clearNavigationTarget(false); }); }
+document.addEventListener("click", (e) => { if(e.target && e.target.id === "navCancelBtn"){ e.preventDefault(); e.stopPropagation(); clearNavigationTarget(false); } }, true);
+document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
+document.getElementById("chatToggleBtn").addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
+setInterval(() => updateCompassNeedleVisual(state.gpsHeading ?? state.deviceHeadingBearing), 700);
+document.getElementById("playerHudBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); openCharacterProfile(); });
+document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
+document.getElementById("closeMissionBtn")?.addEventListener("click", closeMissionModal);
+document.getElementById("missionModal")?.addEventListener("click", (e) => { if(e.target.id === "missionModal") closeMissionModal(); });
+document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
+document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
+document.getElementById("closeDexBtn").addEventListener("click", closeCharacterProfile);
+document.getElementById("dexModal").addEventListener("click", (e) => { if(e.target.id === "dexModal") closeCharacterProfile(); });
+document.getElementById("closeInventoryBtn")?.addEventListener("click", closeInventoryModal);
+document.getElementById("inventoryModal")?.addEventListener("click", (e) => { if(e.target.id === "inventoryModal") closeInventoryModal(); });
+document.getElementById("sheetHandle").addEventListener("click", () => { sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.toggle("collapsed"); syncMiniButton(); });
+document.getElementById("sheetCloseBtn").addEventListener("click", (e) => { e.stopPropagation(); closeSheet(true, true); });
+const __sheetMiniBtn = document.getElementById("sheetMiniBtn"); if(__sheetMiniBtn){ __sheetMiniBtn.addEventListener("click", () => { if(state.lastPoi) openSheet(state.lastPoi, state.activePoiMode || "manual"); }); }
+document.querySelectorAll(".move-btn").forEach(bindMoveButton);
+setupSafeMapDragControls();
+
+document.getElementById("reportQuickBtn")?.addEventListener("click", () => { setBottomNavActive('home'); openReportModal(); });
+document.getElementById("bottomHomeBtn")?.addEventListener("click", () => { setBottomNavActive('home'); openMainMenu(); });
+document.getElementById("bottomMissionBtn")?.addEventListener("click", () => { setBottomNavActive('mission'); openMissionModal(); });
+document.getElementById("bottomHubBtn")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); setBottomNavActive('hub'); openArCameraModal(); });
+document.getElementById("bottomInventoryBtn")?.addEventListener("click", () => { setBottomNavActive('inventory'); openInventoryModal(); });
+document.getElementById("bottomProfileBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); openCharacterProfile(); });
+
+updateWeatherChip(); updatePlayerUiMeta(); setTimeout(() => { refreshEnvironment(true); }, 900);
+
+function bindIconHoverFx(){
+  document.querySelectorAll('.fab-compass,.fab-locate,.mapdex-action,.report-action,.bottom-nav-item,.bottom-hub-orb,.player-hud,.chat-toggle,.mapdex-row,.sheet-route-btn').forEach(el=>{
+    if(el.dataset.fxBound) return; el.dataset.fxBound='1';
+    const on=()=>{el.classList.add('icon-bounce'); setTimeout(()=>el.classList.remove('icon-bounce'),520);};
+    el.addEventListener('mouseenter', on); el.addEventListener('pointerdown', on);
+  });
+}
+setTimeout(bindIconHoverFx,200);
