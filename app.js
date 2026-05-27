@@ -1780,8 +1780,8 @@ function darken(hex, amount){
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
 
-const CAMERA_PITCH = 76;
-const CAMERA_ZOOM = 20.2;
+const CAMERA_PITCH = 72;
+const CAMERA_ZOOM = 20.3;
 // Jangan terlalu jauh: kalau terlalu besar karakter terdorong ke bawah dan hilang di balik UI.
 const CAMERA_AHEAD_METERS = 11.5;
 const CAMERA_FOLLOW_MIN_MS = 360;
@@ -2021,10 +2021,10 @@ function setupAnimeMapMode(){
         type:'fill-extrusion',
         minzoom:15,
         paint:{
-          'fill-extrusion-color':'#0d5880',
+          'fill-extrusion-color':'#aaccff',
           'fill-extrusion-height':['interpolate',['linear'],['zoom'],15,2,18,['coalesce',['get','render_height'],['get','height'],18]],
           'fill-extrusion-base':['coalesce',['get','render_min_height'],['get','min_height'],0],
-          'fill-extrusion-opacity':0.42,
+          'fill-extrusion-opacity':0.52,
           'fill-extrusion-vertical-gradient':true
         }
       }, beforeId);
@@ -2056,9 +2056,9 @@ function tuneMapLibreTone(){
   layers.forEach(layer => {
     const id = String(layer.id || '').toLowerCase();
     try{
-      if(layer.type === 'background') map.setPaintProperty(layer.id, 'background-color', '#0a1428');
+      if(layer.type === 'background') map.setPaintProperty(layer.id, 'background-color', '#d4e8f7');
       if(layer.type === 'fill'){
-        if(id.includes('water')) map.setPaintProperty(layer.id, 'fill-color', '#0a3a6e');
+        if(id.includes('water')) map.setPaintProperty(layer.id, 'fill-color', '#7ecef4');
         if(id.includes('park') || id.includes('grass') || id.includes('landuse') || id.includes('wood')) map.setPaintProperty(layer.id, 'fill-opacity', 0.88);
       }
       if(layer.type === 'line' && (id.includes('road') || id.includes('street') || id.includes('transportation'))){
