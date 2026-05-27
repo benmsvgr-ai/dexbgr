@@ -1,5 +1,5 @@
 /* =========================================================
-   BogorDex - app.js (v137 Pro Follow Cam & Immersive AR)
+   BogorDex - app.js (v137 Pro - Final Safeguarded Edition)
    ========================================================= */
 
 const SHEET_ID = window.BOGORDEX_MASTER_SHEET_ID || "1PcKcAJ0d8eco6gonlSxwffzmqEl-FjAsJ2tbxctzdnU";
@@ -532,6 +532,11 @@ function getNavigationProgressIndex(routeCoords, opts={}){
   return nextIndex;
 }
 
+// AR target distance detector helper
+function findAngleDiff(target, current){
+  return shortestHeadingDiff(target, current);
+}
+
 function closestRoutePointInfo(routeCoords, fromIndex=0, lookAhead=80){
   const route = Array.isArray(routeCoords) ? routeCoords : [];
   const player = Array.isArray(state.playerWorld) ? [Number(state.playerWorld[0]), Number(state.playerWorld[1])] : null;
@@ -643,7 +648,7 @@ const OSRM_ROUTE_PROFILES = Array.from(new Set([OSRM_PROFILE, "driving", "walkin
 const OSRM_NEAREST_MIN_INTERVAL_MS = 2400;
 
 function setStatus(text){
-  statusEl().textContent = text;
+  const el = statusEl(); if(el) el.textContent = text;
   const lamp = document.getElementById("statusLamp");
   if(lamp){
     lamp.classList.remove("lamp-green","lamp-yellow","lamp-red");
@@ -848,7 +853,7 @@ function checkArTargetDetection(currentHeading) {
   if (__arGuideStep < 3) return;
   const currentTarget = state.arTargets[state.arCurrentTargetIdx]; if (!currentTarget) return;
   
-  const diff = shortestHeadingDiff(currentTarget.angle, currentHeading); const absDiff = Math.abs(diff);
+  const diff = findAngleDiff(currentTarget.angle, currentHeading); const absDiff = Math.abs(diff);
   const isAligned = absDiff < 8.0; 
   
   const lineEl = document.getElementById('arGuideLine');
@@ -1357,8 +1362,13 @@ function showQuestPopup(poi, dist){
   markPortalPopupDone(poi.id); state.activeQuestPoiId = poi.id; state.lastPoi = poi;
   if(poi.group === "CITIZEN REPORT"){ renderUserReportSheet(poi); syncMiniButton(); updateStatus(poi.name || "Info Warga"); return; }
   const quest = getQuestById(poi.questId);
-  document.getElementById("questPortalName").textContent = poi.name; document.getElementById("questPortalType").textContent = poi.group || "Portal"; document.getElementById("questPortalDesc").textContent = quest ? `${quest.name} • ${quest.desc || poi.fungsi || poi.desc || ""}` : (poi.fungsi || poi.desc || "Dekati portal untuk membuka misi.");
-  document.getElementById("questPortalDistance").textContent = Math.max(1, Math.round(dist)) + " m"; el.classList.remove("hidden"); el.classList.remove("quest-pop"); void el.offsetWidth; el.classList.add("quest-pop");
+  
+  const pName = document.getElementById("questPortalName"); if(pName) pName.textContent = poi.name;
+  const pType = document.getElementById("questPortalType"); if(pType) pType.textContent = poi.group || "Portal";
+  const pDesc = document.getElementById("questPortalDesc"); if(pDesc) pDesc.textContent = quest ? `${quest.name} • ${quest.desc || poi.fungsi || poi.desc || ""}` : (poi.fungsi || poi.desc || "Dekati portal untuk membuka misi.");
+  const pDist = document.getElementById("questPortalDistance"); if(pDist) pDist.textContent = Math.max(1, Math.round(dist)) + " m";
+  
+  el.classList.remove("hidden"); el.classList.remove("quest-pop"); void el.offsetWidth; el.classList.add("quest-pop");
 }
 function hideQuestPopup(markDismissed=false){ if(markDismissed && state.activeQuestPoiId) markPortalPopupDone(state.activeQuestPoiId); const el = questPopupEl(); if(el) el.classList.add("hidden"); state.activeQuestPoiId = null; }
 function dismissActiveQuestPopup(){ hideQuestPopup(true); }
@@ -1446,7 +1456,7 @@ async function fetchOsrmRoute(start, target, profile=OSRM_PROFILE){
 
 async function fetchOsrmNearest(coord, profile=OSRM_PROFILE){
   try{
-    const url = `${OSRM_BASE_URL}/nearest/v1/${profile}/${coord[0]},${coord[1]}?number=1`; const res = await fetch(url, { cache:'no-store' }); if(!res.ok) throw new Error('HTTP ' + res.status); const data = await res.json(); const wp = data && data.waypoints && data.waypoints[0]; if(wp && Array.isArray(wp.location) && wp.location.length === 2) return [Number(wp.location[0]), Number(wp.location[1])];
+    const url = `${OSRM_BASE_URL}/nearest/v1/${profile}/${coord[0],coord[1]}?number=1`; const res = await fetch(url, { cache:'no-store' }); if(!res.ok) throw new Error('HTTP ' + res.status); const data = await res.json(); const wp = data && data.waypoints && data.waypoints[0]; if(wp && Array.isArray(wp.location) && wp.location.length === 2) return [Number(wp.location[0]), Number(wp.location[1])];
   }catch(err){ console.warn('OSRM nearest failed', profile, err); }
   return null;
 }
@@ -1531,7 +1541,7 @@ function handleDeviceOrientation(ev){
 }
 async function requestDeviceCompass(){
   if(state.compassRequested) return; state.compassRequested = true;
-  try{ if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function"){ const res = await DeviceOrientationEvent.requestPermission(); if(res !== "granted"){ updateStatus("Kompas HP belum diizinkan"); return; } } window.addEventListener("deviceorientationabsolute", handleDeviceOrientation, true); window.addEventListener("deviceorientation", handleDeviceOrientation, true); window.addEventListener("orientationchange", () => setTimeout(() => { if(state.deviceHeadingEnabled) followPlayerCamera({ duration:120 }); }, 180), true); updateStatus("Kompas HP aktif • mode halus"); }catch(err){ console.warn("Compass unavailable", err); }
+  try { if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function"){ const res = await DeviceOrientationEvent.requestPermission(); if(res !== "granted"){ updateStatus("Kompas HP belum diizinkan"); return; } } window.addEventListener("deviceorientationabsolute", handleDeviceOrientation, true); window.addEventListener("deviceorientation", handleDeviceOrientation, true); window.addEventListener("orientationchange", () => setTimeout(() => { if(state.deviceHeadingEnabled) followPlayerCamera({ duration:120 }); }, 180), true); updateStatus("Kompas HP aktif • mode halus"); }catch(err){ console.warn("Compass unavailable", err); }
 }
 function startLocation(){
   requestDeviceCompass(); if(!navigator.geolocation){ updateStatus("Browser tidak mendukung lokasi"); return; }
@@ -1636,7 +1646,7 @@ function bindMoveButton(btn){
 map.on("load", () => {
   clearNavigationTarget(true); setupMapLibre3D(); updateRenderBounds(true);
   
-  // Handlers dynamic fallback icon untuk console error asset yang hilang
+  // Handlers dynamic fallback icon untuk console error asset yang hilang (V135)
   map.on('styleimagemissing', (e) => {
     const id = e.id; console.warn(`Menggambar billboard fallback dinamis untuk: "${id}"`);
     const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const ctx = canvas.getContext('2d');
@@ -1836,44 +1846,44 @@ function renderMapDex(){
   });
 }
 
-document.getElementById("locateBtn").addEventListener("click", startLocation);
+document.getElementById("locateBtn")?.addEventListener("click", startLocation);
 document.addEventListener("pointerdown", requestDeviceCompass, { once:true, passive:true });
-document.getElementById("resetViewBtn").addEventListener("click", resetGameCamera);
-document.getElementById("toggleTransitBtn").addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.transit = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
-document.getElementById("toggleGovBtn").addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.gov = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
-document.getElementById("toggleHealthBtn").addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.health = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
-document.getElementById("toggleUmkmBtn").addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.umkm = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
-document.getElementById("mainMenuBtn").addEventListener("click", openMainMenu);
-document.getElementById("closeMainMenuBtn").addEventListener("click", closeMainMenu);
-document.querySelector("#mainMenuModal .game-menu-backdrop").addEventListener("click", closeMainMenu);
-document.getElementById("menuExploreBtn").addEventListener("click", () => { closeMainMenu(); updateStatus("Mode jelajah portal aktif"); });
-document.getElementById("menuScanBtn").addEventListener("click", () => { closeMainMenu(); scanNearestFromMenu(); });
-document.getElementById("menuDexBtn").addEventListener("click", openPortalProgressFromMenu);
-document.getElementById("menuResetBtn").addEventListener("click", () => { closeMainMenu(); resetGameCamera(); });
-document.getElementById("menuReportBtn").addEventListener("click", () => { closeMainMenu(); openReportModal(); });
-document.getElementById("reportCloseBtn").addEventListener("click", closeReportModal);
-document.getElementById("reportCancelBtn").addEventListener("click", closeReportModal);
-document.getElementById("reportSaveBtn").addEventListener("click", saveCurrentPointReport);
-document.getElementById("reportModal").addEventListener("click", (e) => { if(e.target.id === "reportModal") closeReportModal(); });
-document.getElementById("questStartBtn").addEventListener("click", startQuestFromPopup);
-document.getElementById("questCloseBtn").addEventListener("click", dismissActiveQuestPopup);
+document.getElementById("resetViewBtn")?.addEventListener("click", resetGameCamera);
+document.getElementById("toggleTransitBtn")?.addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.transit = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
+document.getElementById("toggleGovBtn")?.addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.gov = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
+document.getElementById("toggleHealthBtn")?.addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.health = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
+document.getElementById("toggleUmkmBtn")?.addEventListener("click", (e) => { e.currentTarget.classList.toggle("active"); state.layers.umkm = e.currentTarget.classList.contains("active"); applyLayerFilters(); });
+document.getElementById("mainMenuBtn")?.addEventListener("click", openMainMenu);
+document.getElementById("closeMainMenuBtn")?.addEventListener("click", closeMainMenu);
+document.querySelector("#mainMenuModal .game-menu-backdrop")?.addEventListener("click", closeMainMenu);
+document.getElementById("menuExploreBtn")?.addEventListener("click", () => { closeMainMenu(); updateStatus("Mode jelajah portal aktif"); });
+document.getElementById("menuScanBtn")?.addEventListener("click", () => { closeMainMenu(); scanNearestFromMenu(); });
+document.getElementById("menuDexBtn")?.addEventListener("click", openPortalProgressFromMenu);
+document.getElementById("menuResetBtn")?.addEventListener("click", () => { closeMainMenu(); resetGameCamera(); });
+document.getElementById("menuReportBtn")?.addEventListener("click", () => { closeMainMenu(); openReportModal(); });
+document.getElementById("reportCloseBtn")?.addEventListener("click", closeReportModal);
+document.getElementById("reportCancelBtn")?.addEventListener("click", closeReportModal);
+document.getElementById("reportSaveBtn")?.addEventListener("click", saveCurrentPointReport);
+document.getElementById("reportModal")?.addEventListener("click", (e) => { if(e.target.id === "reportModal") closeReportModal(); });
+document.getElementById("questStartBtn")?.addEventListener("click", startQuestFromPopup);
+document.getElementById("questCloseBtn")?.addEventListener("click", dismissActiveQuestPopup);
 const __navCancelBtn = document.getElementById("navCancelBtn"); if(__navCancelBtn){ __navCancelBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); clearNavigationTarget(false); }); }
 document.addEventListener("click", (e) => { if(e.target && e.target.id === "navCancelBtn"){ e.preventDefault(); e.stopPropagation(); clearNavigationTarget(false); } }, true);
-document.getElementById("mapDexBtn").addEventListener("click", openMapDex);
-document.getElementById("chatToggleBtn").addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
+document.getElementById("mapDexBtn")?.addEventListener("click", openMapDex);
+document.getElementById("chatToggleBtn")?.addEventListener("click", () => { chatDock()?.classList.toggle("collapsed"); });
 setInterval(() => updateCompassNeedleVisual(state.gpsHeading ?? state.deviceHeadingBearing), 700);
 document.getElementById("playerHudBtn")?.addEventListener("click", () => { setBottomNavActive('profile'); openCharacterProfile(); });
-document.getElementById("chatCloseBtn").addEventListener("click", closeChatDock);
+document.getElementById("chatCloseBtn")?.addEventListener("click", closeChatDock);
 document.getElementById("closeMissionBtn")?.addEventListener("click", closeMissionModal);
 document.getElementById("missionModal")?.addEventListener("click", (e) => { if(e.target.id === "missionModal") closeMissionModal(); });
-document.getElementById("closeMapDexBtn").addEventListener("click", closeMapDex);
-document.getElementById("mapDexModal").addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
-document.getElementById("closeDexBtn").addEventListener("click", closeCharacterProfile);
-document.getElementById("dexModal").addEventListener("click", (e) => { if(e.target.id === "dexModal") closeCharacterProfile(); });
+document.getElementById("closeMapDexBtn")?.addEventListener("click", closeMapDex);
+document.getElementById("mapDexModal")?.addEventListener("click", (e) => { if(e.target.id === "mapDexModal") closeMapDex(); });
+document.getElementById("closeDexBtn")?.addEventListener("click", closeCharacterProfile);
+document.getElementById("dexModal")?.addEventListener("click", (e) => { if(e.target.id === "dexModal") closeCharacterProfile(); });
 document.getElementById("closeInventoryBtn")?.addEventListener("click", closeInventoryModal);
 document.getElementById("inventoryModal")?.addEventListener("click", (e) => { if(e.target.id === "inventoryModal") closeInventoryModal(); });
-document.getElementById("sheetHandle").addEventListener("click", () => { sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.toggle("collapsed"); syncMiniButton(); });
-document.getElementById("sheetCloseBtn").addEventListener("click", (e) => { e.stopPropagation(); closeSheet(true, true); });
+document.getElementById("sheetHandle")?.addEventListener("click", () => { sheetEl().classList.remove("hidden-sheet"); sheetEl().classList.toggle("collapsed"); syncMiniButton(); });
+document.getElementById("sheetCloseBtn")?.addEventListener("click", (e) => { e.stopPropagation(); closeSheet(true, true); });
 const __sheetMiniBtn = document.getElementById("sheetMiniBtn"); if(__sheetMiniBtn){ __sheetMiniBtn.addEventListener("click", () => { if(state.lastPoi) openSheet(state.lastPoi, state.activePoiMode || "manual"); }); }
 document.querySelectorAll(".move-btn").forEach(bindMoveButton);
 setupSafeMapDragControls();
