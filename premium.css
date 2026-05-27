@@ -1,0 +1,598 @@
+/* ============================================================
+   BOGORDEX PREMIUM — Visual & 3D Enhancement Overlay
+   Inject AFTER style.css for full override
+   ============================================================ */
+
+/* ── GLOBAL RESET: Darker, richer base ── */
+html, body, #app {
+  background: #060d1e !important;
+  font-family: 'Segoe UI', Inter, system-ui, sans-serif !important;
+}
+
+/* ── MAP: deep night-mode game feel ── */
+#map { filter: saturate(1.32) contrast(1.08); }
+
+/* ── SCREEN VIGNETTE: dramatic cinematic frame ── */
+#app::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 48%, transparent 0%, transparent 52%, rgba(3,8,24,.55) 82%, rgba(3,8,24,.88) 100%);
+}
+
+/* ── BOTTOM LIGHT GLOW: ground ambient like Pokémon GO ── */
+#app::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 220px;
+  z-index: 6;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(6,14,40,.72) 0%, transparent 100%);
+}
+
+/* ── PLAYER: 3D floating with vivid glow ── */
+.player-anchor {
+  z-index: 16 !important;
+  filter: drop-shadow(0 0 18px rgba(107,230,255,.68)) drop-shadow(0 24px 16px rgba(0,0,0,.55)) !important;
+  animation: playerHoverPremium 2.2s ease-in-out infinite !important;
+}
+@keyframes playerHoverPremium {
+  0%,100% { transform: translate(-50%,-61%) translateY(0px) scale(1); }
+  50%      { transform: translate(-50%,-61%) translateY(-4px) scale(1.015); }
+}
+
+.player-sprite {
+  image-rendering: auto !important;
+  filter: brightness(1.12) saturate(1.28) !important;
+}
+
+.player-shadow {
+  width: 56px !important;
+  height: 18px !important;
+  background: radial-gradient(ellipse, rgba(0,180,255,.45) 0%, rgba(0,0,0,.0) 70%) !important;
+  filter: blur(4px) !important;
+  animation: shadowPulsePremium 2.2s ease-in-out infinite !important;
+}
+@keyframes shadowPulsePremium {
+  0%,100% { transform: translateX(-50%) scale(1); opacity: .8; }
+  50%      { transform: translateX(-50%) scale(.78); opacity: .45; }
+}
+
+/* ── SCAN RING: premium holographic ── */
+.scan-ring {
+  border: none !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+.scan-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2.5px solid rgba(107,230,255,.55);
+  box-shadow:
+    0 0 22px rgba(107,230,255,.45),
+    0 0 56px rgba(107,230,255,.18),
+    inset 0 0 22px rgba(107,230,255,.10);
+  animation: scanRingPremium 2.8s linear infinite;
+}
+.scan-ring::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(255,109,180,.38);
+  animation: scanRingPremiumRev 4.2s linear infinite;
+}
+@keyframes scanRingPremium    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes scanRingPremiumRev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
+/* ── TOP STATUS: ultra-premium HUD chip ── */
+.top-status, .compact-status {
+  background:
+    radial-gradient(circle at 22% 0%, rgba(107,230,255,.18), transparent 52%),
+    linear-gradient(170deg, rgba(12,26,72,.96) 0%, rgba(8,22,62,.94) 100%) !important;
+  border: 1px solid rgba(107,230,255,.32) !important;
+  box-shadow:
+    0 24px 56px rgba(0,10,40,.52),
+    0 0 0 1px rgba(255,255,255,.07) inset,
+    0 0 32px rgba(107,230,255,.12) !important;
+  backdrop-filter: blur(24px) saturate(1.8) !important;
+}
+
+/* ── LIVE DOT: brighter pulse ── */
+.live-dot {
+  background: #00ffb3 !important;
+  box-shadow: 0 0 0 0 rgba(0,255,179,.6) !important;
+}
+@keyframes livePulse {
+  0%  { box-shadow: 0 0 0 0 rgba(0,255,179,.6); }
+  100%{ box-shadow: 0 0 0 12px rgba(0,255,179,0); }
+}
+
+/* ── TOP PILLS: game badge style ── */
+.top-actions { gap: 8px !important; }
+.pill {
+  background:
+    linear-gradient(160deg, rgba(30,90,220,.95) 0%, rgba(14,58,168,.92) 100%) !important;
+  border: 1px solid rgba(107,200,255,.35) !important;
+  box-shadow:
+    0 10px 28px rgba(14,58,168,.45),
+    0 0 12px rgba(107,230,255,.18),
+    inset 0 1px 0 rgba(255,255,255,.22) !important;
+  text-shadow: 0 1px 6px rgba(0,80,220,.55) !important;
+  letter-spacing: .05em !important;
+  transition: all .18s ease !important;
+}
+.pill:active { transform: scale(.96) !important; }
+.pill:not(.active) {
+  background: linear-gradient(160deg, rgba(18,32,70,.85) 0%, rgba(12,22,52,.82) 100%) !important;
+  border-color: rgba(255,255,255,.08) !important;
+  box-shadow: none !important;
+}
+
+/* ── WEATHER CHIP ── */
+.weather-chip {
+  background:
+    linear-gradient(160deg, rgba(14,30,80,.94) 0%, rgba(10,24,62,.92) 100%) !important;
+  border: 1px solid rgba(107,230,255,.22) !important;
+  box-shadow: 0 12px 32px rgba(0,10,50,.40), 0 0 18px rgba(107,230,255,.10) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+/* ── COIN HUD ── */
+.coin-hud {
+  background:
+    linear-gradient(150deg, rgba(18,32,80,.96) 0%, rgba(12,22,58,.94) 100%) !important;
+  border: 1px solid rgba(255,215,60,.35) !important;
+  box-shadow:
+    0 10px 28px rgba(0,10,40,.45),
+    0 0 16px rgba(255,215,60,.18) !important;
+}
+#coinHudValue { color: #ffd84a !important; text-shadow: 0 0 14px rgba(255,215,60,.65) !important; }
+
+/* ── FAB BUTTONS: glassmorphic 3D ── */
+.fab {
+  background: linear-gradient(160deg, rgba(255,255,255,.97) 0%, rgba(228,238,255,.92) 100%) !important;
+  box-shadow:
+    0 18px 36px rgba(14,40,110,.35),
+    0 3px 0 rgba(255,255,255,.5) inset,
+    0 -2px 0 rgba(0,0,0,.12) inset !important;
+  border: 1px solid rgba(255,255,255,.5) !important;
+  transition: transform .14s ease, box-shadow .14s ease !important;
+}
+.fab:active {
+  transform: translateY(2px) scale(.97) !important;
+  box-shadow: 0 8px 18px rgba(14,40,110,.28) !important;
+}
+
+/* ── MOVE PAD: premium dark glass ── */
+.move-pad {
+  background: radial-gradient(circle, rgba(14,30,80,.55) 0%, rgba(8,18,48,.45) 70%) !important;
+  border: 1.5px solid rgba(107,200,255,.25) !important;
+  box-shadow:
+    0 18px 40px rgba(0,10,40,.55),
+    0 0 28px rgba(107,200,255,.15),
+    inset 0 0 24px rgba(107,200,255,.08) !important;
+  backdrop-filter: blur(18px) !important;
+}
+.move-btn {
+  background: linear-gradient(160deg, rgba(255,255,255,.94) 0%, rgba(220,234,255,.88) 100%) !important;
+  box-shadow: 0 8px 18px rgba(14,40,110,.32), inset 0 1px 0 rgba(255,255,255,.7) !important;
+  border: 1px solid rgba(107,180,255,.22) !important;
+  color: #0e2b6a !important;
+  font-weight: 900 !important;
+  transition: all .12s ease !important;
+}
+.move-btn:active {
+  background: linear-gradient(160deg, rgba(107,200,255,.92), rgba(60,140,240,.88)) !important;
+  color: #fff !important;
+  transform: scale(.92) !important;
+  box-shadow: 0 4px 12px rgba(60,140,240,.5) !important;
+}
+
+/* ── BOTTOM NAV: premium frosted bar ── */
+.bottom-game-nav {
+  background:
+    linear-gradient(180deg, rgba(10,22,60,.96) 0%, rgba(7,16,50,.98) 100%) !important;
+  border-top: 1px solid rgba(107,200,255,.22) !important;
+  box-shadow:
+    0 -18px 48px rgba(0,10,50,.60),
+    0 0 36px rgba(107,200,255,.12) !important;
+  backdrop-filter: blur(32px) saturate(2) !important;
+}
+.bottom-nav-item {
+  color: rgba(180,200,255,.65) !important;
+  transition: color .18s, transform .14s !important;
+}
+.bottom-nav-item.active {
+  color: #6be6ff !important;
+}
+.bottom-nav-item.active .nav-ico {
+  filter: drop-shadow(0 0 10px rgba(107,230,255,.8)) !important;
+}
+.bottom-nav-item:active { transform: scale(.92) !important; }
+
+/* ── AR HUB ORB: glowing central button ── */
+.bottom-hub-orb {
+  background:
+    radial-gradient(circle at 40% 30%, rgba(255,255,255,.38), transparent 52%),
+    linear-gradient(160deg, #3b7fff 0%, #8b2fff 50%, #ff4fa8 100%) !important;
+  box-shadow:
+    0 0 0 4px rgba(255,255,255,.12),
+    0 0 32px rgba(107,100,255,.65),
+    0 18px 40px rgba(0,10,60,.50) !important;
+  border: 2px solid rgba(255,255,255,.25) !important;
+  animation: hubOrbPulse 2.4s ease-in-out infinite !important;
+}
+@keyframes hubOrbPulse {
+  0%,100% { box-shadow: 0 0 0 4px rgba(255,255,255,.12), 0 0 32px rgba(107,100,255,.65), 0 18px 40px rgba(0,10,60,.50); }
+  50%     { box-shadow: 0 0 0 8px rgba(255,255,255,.07), 0 0 56px rgba(140,60,255,.80), 0 18px 40px rgba(0,10,60,.50); }
+}
+
+/* ── MAIN POKÉBALL BUTTON: elevated 3D ── */
+.main-action {
+  box-shadow:
+    0 24px 48px rgba(0,10,50,.55),
+    0 0 40px rgba(255,80,100,.25),
+    0 4px 0 rgba(0,0,0,.25) !important;
+  filter: drop-shadow(0 0 12px rgba(255,80,100,.30)) !important;
+  transition: transform .14s ease, box-shadow .14s ease !important;
+}
+.main-action:active {
+  transform: translateX(-50%) scale(.94) translateY(3px) !important;
+  box-shadow: 0 12px 26px rgba(0,10,50,.45) !important;
+}
+
+/* ── BOTTOM-LEFT PROFILE ── */
+.bottom-left-profile {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(107,230,255,.18), transparent 42%),
+    linear-gradient(160deg, rgba(10,22,68,.94) 0%, rgba(8,18,54,.92) 100%) !important;
+  border: 1px solid rgba(107,200,255,.28) !important;
+  box-shadow:
+    0 18px 40px rgba(0,10,50,.50),
+    0 0 22px rgba(107,200,255,.14) !important;
+  backdrop-filter: blur(20px) !important;
+}
+.trainer-level { color: #6be6ff !important; text-shadow: 0 0 12px rgba(107,230,255,.55) !important; }
+.trainer-name { color: #e8f2ff !important; }
+.trainer-avatar-ui {
+  background: linear-gradient(160deg, #ffd26f 0%, #ffefa8 36%, #6bb9ff 36%, #3d78d9 100%) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.5), 0 0 20px rgba(107,200,255,.45) !important;
+}
+
+/* ── DAILY STEPS HUD ── */
+.daily-steps-hud {
+  background:
+    linear-gradient(160deg, rgba(10,22,68,.94) 0%, rgba(8,18,54,.92) 100%) !important;
+  border: 1px solid rgba(107,200,255,.25) !important;
+  box-shadow: 0 12px 28px rgba(0,10,50,.40) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+/* ── NPC: more vivid glow + bigger float ── */
+.npc {
+  filter: drop-shadow(0 16px 20px rgba(20,38,84,.42)) drop-shadow(0 0 12px rgba(107,230,255,.28)) !important;
+  animation: npcFloatPremium 2.8s ease-in-out infinite !important;
+}
+@keyframes npcFloatPremium {
+  0%,100% { margin-top: 0px; filter: drop-shadow(0 16px 20px rgba(20,38,84,.42)) drop-shadow(0 0 12px rgba(107,230,255,.28)); }
+  50%     { margin-top: -6px; filter: drop-shadow(0 22px 26px rgba(20,38,84,.52)) drop-shadow(0 0 22px rgba(107,230,255,.52)); }
+}
+.npc.near .npc-sprite {
+  filter: drop-shadow(0 0 22px rgba(107,230,255,.88)) !important;
+}
+.npc .npc-quest-mark {
+  box-shadow: 0 0 28px rgba(255,210,82,.90), 0 0 56px rgba(255,210,82,.40), 0 8px 16px rgba(0,0,0,.22) !important;
+}
+.npc .npc-name {
+  background: rgba(6,14,40,.88) !important;
+  color: #a8d4ff !important;
+  border: 1px solid rgba(107,200,255,.35) !important;
+  box-shadow: 0 8px 22px rgba(0,10,50,.45), 0 0 12px rgba(107,200,255,.18) !important;
+}
+
+/* ── PORTAL / QUEST POPUP ── */
+.quest-aura {
+  background: radial-gradient(circle, rgba(107,230,255,.55), rgba(255,109,180,.25) 45%, transparent 72%) !important;
+  animation: questAuraPremium 2s ease-in-out infinite !important;
+}
+@keyframes questAuraPremium {
+  0%,100% { transform: scale(1); opacity: .85; }
+  50%     { transform: scale(1.08); opacity: 1; }
+}
+.quest-card {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(107,230,255,.28), transparent 38%),
+    radial-gradient(circle at 88% 90%, rgba(255,109,180,.22), transparent 38%),
+    linear-gradient(160deg, rgba(8,20,62,.97) 0%, rgba(6,16,52,.96) 100%) !important;
+  border: 1px solid rgba(107,230,255,.38) !important;
+  box-shadow:
+    0 32px 80px rgba(0,0,0,.65),
+    0 0 60px rgba(107,230,255,.28),
+    inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+.quest-icon {
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.92), #6be6ff 45%, #5b5dff 75%, #ff6db4) !important;
+  box-shadow: 0 0 40px rgba(107,230,255,.55), 0 0 80px rgba(107,100,255,.28), 0 14px 28px rgba(0,0,0,.28) !important;
+  animation: questIconSpinPremium 3s linear infinite !important;
+}
+@keyframes questIconSpinPremium {
+  from { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.06); }
+  to   { transform: rotate(360deg) scale(1); }
+}
+
+/* ── NPC DIALOG ── */
+.npc-dialog {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(107,230,255,.22), transparent 38%),
+    linear-gradient(180deg, rgba(4,10,32,.52), rgba(6,14,48,.78)) !important;
+  backdrop-filter: blur(22px) saturate(1.8) !important;
+}
+.npc-dialog-card {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(107,230,255,.32), transparent 38%),
+    radial-gradient(circle at 88% 8%, rgba(255,215,107,.22), transparent 38%),
+    linear-gradient(160deg, rgba(12,26,80,.97) 0%, rgba(8,20,62,.96) 100%) !important;
+  border: 1px solid rgba(107,230,255,.38) !important;
+  box-shadow:
+    0 36px 90px rgba(0,0,0,.60),
+    0 0 48px rgba(107,230,255,.22),
+    inset 0 1px 0 rgba(255,255,255,.20) !important;
+}
+.npc-dialog-avatar {
+  box-shadow: 0 0 0 3px rgba(107,230,255,.55), 0 0 28px rgba(107,230,255,.40) !important;
+  border-color: rgba(107,230,255,.72) !important;
+}
+
+/* ── MODALS: premium dark glass ── */
+.modal {
+  background: rgba(4,8,28,.55) !important;
+  backdrop-filter: blur(14px) saturate(1.8) !important;
+}
+.modal-card, .mission-card, .mapdex-phone, .report-card, .game-menu-card {
+  background:
+    radial-gradient(circle at 20% 4%, rgba(107,200,255,.12), transparent 40%),
+    linear-gradient(180deg, rgba(10,20,58,.98) 0%, rgba(7,16,48,.99) 100%) !important;
+  border: 1px solid rgba(107,200,255,.22) !important;
+  box-shadow:
+    0 -4px 0 rgba(107,200,255,.18),
+    0 32px 80px rgba(0,0,0,.68) !important;
+  color: #dce8ff !important;
+}
+.modal-head h3, .close-btn, .mission-card h3, .mapdex-head h3 {
+  color: #e8f4ff !important;
+}
+.close-btn {
+  background: rgba(255,255,255,.10) !important;
+  color: #a8d4ff !important;
+  border: 1px solid rgba(107,200,255,.22) !important;
+}
+.close-btn:hover { background: rgba(255,255,255,.18) !important; }
+
+/* ── GAME MENU ── */
+.game-menu-card {
+  border-top-left-radius: 32px !important;
+  border-top-right-radius: 32px !important;
+}
+.game-menu-orb {
+  background:
+    radial-gradient(circle at 36% 28%, rgba(255,255,255,.38), transparent 55%),
+    linear-gradient(160deg, #3b7fff 0%, #8b2fff 55%, #ff4fa8 100%) !important;
+  box-shadow: 0 0 40px rgba(107,100,255,.70), 0 14px 32px rgba(0,0,0,.45) !important;
+  color: #fff !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,.45) !important;
+}
+.game-menu-item {
+  background:
+    linear-gradient(160deg, rgba(16,32,86,.94) 0%, rgba(10,22,62,.92) 100%) !important;
+  border: 1px solid rgba(107,200,255,.22) !important;
+  color: #c8dcff !important;
+  transition: all .18s ease !important;
+  box-shadow: 0 8px 22px rgba(0,10,50,.40) !important;
+}
+.game-menu-item.primary {
+  background:
+    radial-gradient(circle at 28% 14%, rgba(107,230,255,.22), transparent 50%),
+    linear-gradient(160deg, rgba(22,60,160,.96) 0%, rgba(14,45,128,.94) 100%) !important;
+  border-color: rgba(107,230,255,.40) !important;
+  box-shadow: 0 10px 28px rgba(14,45,128,.55), 0 0 20px rgba(107,230,255,.18) !important;
+}
+.game-menu-item:active { transform: scale(.96) !important; }
+
+/* ── REWARD BANNER ── */
+.reward-banner {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,215,60,.35), transparent 52%),
+    linear-gradient(160deg, rgba(12,26,80,.97), rgba(8,20,60,.96)) !important;
+  border: 1px solid rgba(255,215,60,.45) !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55), 0 0 40px rgba(255,215,60,.25) !important;
+}
+
+/* ── AR CAMERA MODAL ── */
+.ar-camera-card, .ar-v134-card {
+  background:
+    radial-gradient(circle at 20% 8%, rgba(107,230,255,.18), transparent 42%),
+    linear-gradient(180deg, rgba(8,18,54,.98) 0%, rgba(5,12,38,.99) 100%) !important;
+  border: 1px solid rgba(107,230,255,.28) !important;
+  box-shadow: 0 32px 80px rgba(0,0,0,.75), 0 0 48px rgba(107,230,255,.15) !important;
+}
+
+/* ── MAPDEX: premium phone shell ── */
+.mapdex-phone {
+  border-top-left-radius: 32px !important;
+  border-top-right-radius: 32px !important;
+}
+.mapdex-canvas {
+  background: radial-gradient(circle at 50% 50%, rgba(16,40,100,.98), rgba(6,14,40,.99)) !important;
+  border: 1px solid rgba(107,200,255,.25) !important;
+  box-shadow: inset 0 0 40px rgba(107,200,255,.10) !important;
+}
+.mapdex-player-dot {
+  background: linear-gradient(160deg, #6be6ff, #3b7fff) !important;
+  box-shadow: 0 0 18px rgba(107,230,255,.80) !important;
+  color: #fff !important;
+  font-weight: 900 !important;
+}
+
+/* ── INVENTORY ── */
+.inventory-hero-icon {
+  background:
+    radial-gradient(circle at 36% 28%, rgba(255,255,255,.38), transparent 55%),
+    linear-gradient(160deg, #3b7fff 0%, #8b2fff 55%, #ff4fa8 100%) !important;
+  box-shadow: 0 0 28px rgba(107,100,255,.60), 0 10px 24px rgba(0,0,0,.40) !important;
+}
+.inventory-stat {
+  background: linear-gradient(160deg, rgba(16,32,86,.94), rgba(10,22,62,.92)) !important;
+  border: 1px solid rgba(107,200,255,.20) !important;
+}
+.inventory-stat strong { color: #6be6ff !important; text-shadow: 0 0 10px rgba(107,230,255,.45) !important; }
+
+/* ── REPORT MODAL ── */
+.report-card {
+  border-top-left-radius: 32px !important;
+  border-top-right-radius: 32px !important;
+}
+.report-card h3, .report-card label { color: #e8f4ff !important; }
+.report-card select, .report-card textarea {
+  background: rgba(12,26,80,.90) !important;
+  border: 1px solid rgba(107,200,255,.28) !important;
+  color: #c8dcff !important;
+  border-radius: 14px !important;
+}
+#reportSaveBtn {
+  background: linear-gradient(160deg, #3b7fff, #8b2fff) !important;
+  box-shadow: 0 10px 28px rgba(60,80,255,.45), 0 0 18px rgba(107,100,255,.30) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+/* ── PORTAL RING on map: brighter ── */
+.portal-ring-el, .portal-icon, [class*="portal"] {
+  filter: drop-shadow(0 0 16px rgba(107,230,255,.72)) !important;
+}
+
+/* ── NAV CENTER BANNER ── */
+.nav-center-banner {
+  background:
+    linear-gradient(160deg, rgba(10,22,68,.97), rgba(7,16,50,.96)) !important;
+  border: 1px solid rgba(107,200,255,.28) !important;
+  box-shadow: 0 18px 48px rgba(0,10,50,.55), 0 0 24px rgba(107,200,255,.14) !important;
+  backdrop-filter: blur(22px) !important;
+}
+
+/* ── TOAST: vivid notification ── */
+.anime-toast-stack > div, [class*="toast"] {
+  background:
+    linear-gradient(160deg, rgba(10,22,68,.97), rgba(7,16,50,.96)) !important;
+  border: 1px solid rgba(107,200,255,.25) !important;
+  color: #c8dcff !important;
+  box-shadow: 0 14px 36px rgba(0,10,50,.50), 0 0 18px rgba(107,200,255,.14) !important;
+}
+
+/* ── SECTION KICKER / LABELS ── */
+.section-kicker { color: #6be6ff !important; letter-spacing: .14em !important; }
+.section-title { color: #6be6ff !important; }
+
+/* ── MISSION SUMMARY CARDS ── */
+.mission-summary-card {
+  background: linear-gradient(160deg, rgba(16,32,86,.94), rgba(10,22,62,.92)) !important;
+  border: 1px solid rgba(107,200,255,.20) !important;
+}
+.mission-summary-card b { color: #6be6ff !important; text-shadow: 0 0 10px rgba(107,230,255,.45) !important; }
+
+/* ── CHARACTER PROFILE ── */
+.character-avatar-big {
+  background: linear-gradient(160deg, #ffd26f 0%, #ffefa8 36%, #6bb9ff 36%, #3d78d9 100%) !important;
+  box-shadow: 0 0 0 4px rgba(107,200,255,.45), 0 0 28px rgba(107,200,255,.35) !important;
+}
+.character-stat { border-bottom-color: rgba(107,200,255,.12) !important; }
+.character-stat strong { color: #6be6ff !important; }
+
+/* ── CHAT DOCK ── */
+.anime-chat-dock {
+  background:
+    radial-gradient(circle at 20% 4%, rgba(107,200,255,.12), transparent 40%),
+    linear-gradient(180deg, rgba(10,22,62,.97), rgba(7,16,50,.98)) !important;
+  border-left: 1px solid rgba(107,200,255,.22) !important;
+  border-top: 1px solid rgba(107,200,255,.22) !important;
+}
+
+/* ── RUBO TIP CARDS ── */
+.character-rubo-tip, .inventory-tip, .mapdex-rubo-tip {
+  background: linear-gradient(160deg, rgba(14,30,84,.94), rgba(8,20,58,.92)) !important;
+  border: 1px solid rgba(107,200,255,.20) !important;
+  border-radius: 20px !important;
+}
+
+/* ── MOBILE SHEET HANDLE ── */
+.mobile-sheet-handle, .sheet-handle {
+  background: rgba(107,200,255,.35) !important;
+}
+
+/* ── RAIN/MIST: softer blend ── */
+.rain-layer, .mist-layer, .cloud-band {
+  opacity: .6 !important;
+  mix-blend-mode: screen !important;
+}
+
+/* ── REPORT LOCATION STRIP ── */
+.report-location-strip {
+  background: rgba(12,26,80,.85) !important;
+  border: 1px solid rgba(107,200,255,.22) !important;
+  border-radius: 14px !important;
+}
+.report-location-strip strong { color: #6be6ff !important; }
+
+/* ── BADGE SHOWCASE ── */
+.character-badge-showcase {
+  background: linear-gradient(160deg, rgba(12,26,80,.94), rgba(8,18,58,.92)) !important;
+  border: 1px solid rgba(107,200,255,.18) !important;
+  border-radius: 20px !important;
+  padding: 14px !important;
+}
+.profile-progress-track {
+  background: rgba(16,32,80,.80) !important;
+  border: 1px solid rgba(107,200,255,.18) !important;
+}
+.profile-progress-fill {
+  background: linear-gradient(90deg, #3b7fff, #6be6ff, #ff4fa8) !important;
+  box-shadow: 0 0 12px rgba(107,230,255,.55) !important;
+}
+
+/* ── SCROLLBAR: styled ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(8,16,48,.80); }
+::-webkit-scrollbar-thumb { background: rgba(107,200,255,.40); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(107,200,255,.65); }
+
+/* ── MapDex & Radar action buttons ── */
+.mapdex-action, .report-action {
+  background:
+    linear-gradient(160deg, rgba(14,30,84,.96), rgba(8,20,58,.94)) !important;
+  border: 1px solid rgba(107,200,255,.28) !important;
+  box-shadow: 0 12px 28px rgba(0,10,50,.48), 0 0 14px rgba(107,200,255,.14) !important;
+  color: #a8d4ff !important;
+  transition: all .16s ease !important;
+}
+.mapdex-action:active, .report-action:active { transform: scale(.94) !important; }
+
+/* ── CHAT TOGGLE BUTTON ── */
+.chat-toggle {
+  background:
+    linear-gradient(160deg, rgba(14,30,84,.96), rgba(8,20,58,.94)) !important;
+  border: 1px solid rgba(107,200,255,.28) !important;
+  box-shadow: 0 10px 24px rgba(0,10,50,.45), 0 0 12px rgba(107,200,255,.14) !important;
+}
+
+/* ── REFERENCE CHECKLIST (dev overlay) ── */
+.reference-checklist { display: none !important; }
+
+/* ── 3D MAP BUILDINGS: brighter, more vivid ghost ── */
+/* (patched via app.js JS overrides — see premium-patch.js) */
