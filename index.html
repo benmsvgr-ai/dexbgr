@@ -1,26 +1,35 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BogorDex GO Pro Edition</title>
+  <title>BogorDex v134 AR RUBO Simple Guide</title>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=137" />
+  <link rel="stylesheet" href="style.css?v=134?v=131" />
+  <link rel="stylesheet" href="premium.css?v=1" />
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 </head>
 <body>
   <div id="app">
-    <!-- PETA UTAMA -->
     <div id="map"></div>
-
     <div class="rain-layer rain-front"></div>
     <div class="cloud-band cloud-band-b"></div>
     <div class="mist-layer mist-layer-a"></div>
+    <div class="mist-layer mist-layer-b"></div>
+    <div class="snow-dust"></div>
+    <div id="npcLayer" class="npc-layer" aria-label="NPC BogorDex"></div>
 
-    <!-- TOP BAR GAMEPLAY -->
     <div class="top-status compact-status">
       <div class="status-row"><span id="statusLamp" class="live-dot lamp-green"></span><b>Live Map</b></div>
-      <div class="status-sub" id="statusText">Memuat peta...</div>
+      <div class="status-sub" id="statusText">Memuat data peta…</div>
+    </div>
+
+    <div class="top-actions">
+      <button id="toggleTransitBtn" class="pill active">BisKita</button>
+      <button id="toggleGovBtn" class="pill active">Instansi</button>
+      <button id="toggleHealthBtn" class="pill active">Kesehatan</button>
+      <button id="toggleUmkmBtn" class="pill active">UMKM</button>
     </div>
 
     <div id="weatherChip" class="weather-chip" aria-live="polite">
@@ -38,76 +47,229 @@
         <span class="coin-hud-icon"></span>
         <b id="coinHudValue">0</b>
       </div>
-      <button id="chatToggleBtn" class="chat-toggle icon-only" title="Buka chat">
-        <span class="chat-icon-asset"></span>
-      </button>
+      <button id="chatToggleBtn" class="chat-toggle icon-only" title="Buka chat"><span class="chat-icon-asset"></span></button>
     </div>
 
-    <!-- TOMBOL AKSES HUD KANAN -->
     <button id="locateBtn" class="fab fab-locate" title="Ambil lokasi"><span>GPS</span></button>
-    <button id="resetViewBtn" class="fab fab-compass" title="Kompas / Reset View"><i class="compass-disc"></i><span>Kompas</span></button>
-    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex"><span class="mapdex-asset"></span><small>Radar</small></button>
-    <button id="reportQuickBtn" class="report-action" title="Laporkan titik"><span>＋</span><small>Laporkan</small></button>
+    <button id="resetViewBtn" class="fab fab-compass" title="Kompas / Reset View"><i class="compass-disc"><b class="compass-needle"></b></i><span>Kompas</span></button>
 
     <div id="dailyStepsHud" class="daily-steps-hud" title="Langkah hari ini">
       <i>👟</i>
       <div><b id="dailyStepsHudValue">0</b><small>Langkah hari ini</small></div>
     </div>
 
-    <!-- DETAIL LOKASI (BOTTOM SHEET) -->
-    <div id="bottomSheet" class="bottom-sheet collapsed hidden-sheet">
-      <div id="sheetHandle" class="sheet-handle"></div>
-      <button id="sheetCloseBtn" class="sheet-close-btn" title="Tutup">×</button>
-      <div class="sheet-content" id="sheetContent"></div>
-    </div>
+    <div class="scan-ring"></div>
 
-    <!-- MODAL GAMEPLAY LAINNYA -->
-    <div id="mainMenuModal" class="game-menu-modal hidden">
-      <div class="game-menu-backdrop"></div>
-      <div class="game-menu-card">
-        <button id="closeMainMenuBtn" class="game-menu-close">×</button>
-        <div class="game-menu-orb">BD</div>
-        <div class="game-menu-kicker">BogorDex Portal Hub</div>
-        <h2>Portal Kota di Sekitarmu</h2>
-        <p class="game-menu-desc">Akses dan kelola seluruh penemuan portal spasial di Bogor.</p>
-        <div class="game-menu-grid">
-          <button id="menuExploreBtn" class="game-menu-item primary">
-            <span class="menu-emoji">🌀</span>
-            <strong>Portal Terdekat</strong>
-            <small>Akses portal aktif terdekat dari karakter.</small>
-          </button>
-          <button id="menuScanBtn" class="game-menu-item">
-            <span class="menu-emoji">📡</span>
-            <strong>Scan Portal</strong>
-            <small>Cari titik koordinat spasial di sekitar.</small>
-          </button>
-          <button id="menuDexBtn" class="game-menu-item">
-            <span class="menu-emoji">✅</span>
-            <strong>Progress Portal</strong>
-            <small>Pantau portal yang telah diselesaikan.</small>
-          </button>
-          <button id="menuResetBtn" class="game-menu-item">
-            <span class="menu-emoji">🎯</span>
-            <strong>Reset Kamera</strong>
-            <small>Fokuskan kamera kembali ke karakter.</small>
-          </button>
+    <div id="npcDialog" class="npc-dialog hidden">
+      <div class="npc-dialog-card">
+        <button id="npcDialogClose" class="npc-dialog-close" title="Tutup">×</button>
+        <div class="npc-dialog-head">
+          <div id="npcDialogAvatar" class="npc-dialog-avatar"></div>
+          <div>
+            <div id="npcDialogRole" class="npc-dialog-role">NPC</div>
+            <h3 id="npcDialogName">Warga Bogor</h3>
+          </div>
+        </div>
+        <p id="npcDialogText">Halo Ranger!</p>
+        <div class="npc-dialog-actions">
+          <button id="npcDialogQuestBtn">Ambil Quest</button>
+          <button id="npcDialogLaterBtn">Nanti dulu</button>
         </div>
       </div>
     </div>
 
-    <!-- MODAL FORM LAPORAN -->
+    <div id="questPopup" class="quest-popup hidden">
+      <div class="quest-aura"></div>
+      <div class="quest-card">
+        <button id="questCloseBtn" class="quest-close" title="Tutup">×</button>
+        <div class="quest-topline"><span class="quest-dot"></span> Portal Quest Terdeteksi</div>
+        <div class="quest-main">
+          <div class="quest-icon">🌀</div>
+          <div>
+            <h3 id="questPortalName">Portal BogorDex</h3>
+            <div id="questPortalType" class="quest-type">Portal</div>
+          </div>
+        </div>
+        <p id="questPortalDesc">Dekati portal untuk membuka misi.</p>
+        <div class="quest-footer">
+          <span>Jarak: <b id="questPortalDistance">0 m</b></span>
+          <button id="questStartBtn">Mulai Quest</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="player-anchor">
+      <div class="player-shadow"></div>
+      <div id="playerSprite" class="player-sprite idle"></div>
+    </div>
+
+    <div class="bottom-left-profile">
+      <div class="trainer-avatar-ui"></div>
+      <div class="trainer-meta">
+        <div class="trainer-level">Lv 10 Explorer</div>
+        <div class="trainer-name">BogorDex Ranger</div>
+      </div>
+    </div>
+
+    <button id="mainMenuBtn" class="main-action" title="Menu utama" aria-label="Buka menu utama"></button>
+
+    <nav id="bottomGameNav" class="bottom-game-nav" aria-label="Navigasi BogorDex">
+      <button id="bottomHomeBtn" class="bottom-nav-item active" type="button"><span class="nav-ico nav-home"></span><small>Portal</small></button>
+      <button id="bottomMissionBtn" class="bottom-nav-item" type="button"><span class="nav-ico nav-mission"></span><em>3</em><small>Misi</small></button>
+      <button id="bottomHubBtn" class="bottom-hub-orb ar-hub" type="button" aria-label="Buka AR Kamera"><span></span><small>AR</small></button>
+      <button id="bottomInventoryBtn" class="bottom-nav-item" type="button"><span class="nav-ico nav-inventory"></span><small>Inventori</small></button>
+      <button id="bottomProfileBtn" class="bottom-nav-item" type="button"><span class="nav-ico nav-profile"></span><small>Profil</small></button>
+    </nav>
+
+    <div class="move-pad" aria-label="Kontrol gerak">
+      <button class="move-btn up" data-dir="up">▲</button>
+      <button class="move-btn left" data-dir="left">◀</button>
+      <button class="move-btn right" data-dir="right">▶</button>
+      <button class="move-btn down" data-dir="down">▼</button>
+    </div>
+
+    <button id="mapDexBtn" class="mapdex-action" title="Buka MapDex" aria-label="Buka MapDex"><span class="mapdex-asset"></span><small>Radar</small></button>
+    <button id="reportQuickBtn" class="report-action" title="Laporkan titik" aria-label="Laporkan titik"><span>＋</span><small>Laporkan</small></button>
+
+
+    <div id="arCameraModal" class="ar-camera-modal hidden ar-guide-v134" aria-label="AR RUBO Portal Guide">
+      <div class="ar-camera-card ar-v134-card">
+        <button id="arCameraCloseBtn" class="ar-camera-close" type="button" title="Tutup">×</button>
+
+        <header class="ar-v134-header">
+          <div class="ar-v134-rubo-head"><img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"></div>
+          <div>
+            <span>RUBO PORTAL GUIDE</span>
+            <h2>RUBO Jelaskan Titik Ini</h2>
+            <p>Baca fungsi portal, ikuti arahan, lalu scan untuk menyelesaikan kunjungan.</p>
+          </div>
+        </header>
+
+        <section class="ar-v134-stage ar-camera-preview">
+          <video id="arCameraVideo" autoplay playsinline muted></video>
+          <div class="ar-camera-placeholder ar-v134-world">
+            <div class="ar-v134-sky"></div>
+            <div class="ar-v134-road"><i></i><i></i><i></i></div>
+            <span class="ar-v134-target-dot">Titik Scan</span>
+          </div>
+          <div id="arGuideLine" class="ar-guide-line ar-v134-line" aria-hidden="true"><i></i><span></span></div>
+          <div class="ar-v134-rubo-model">
+            <model-viewer id="arRuboModel" src="assets/models/rubo_chibi_basic.glb" autoplay interaction-prompt="none" camera-orbit="180deg 72deg 2.15m" min-camera-orbit="180deg 72deg 2.15m" max-camera-orbit="180deg 72deg 2.15m" field-of-view="28deg" shadow-intensity="0.75" exposure="1.08" ar ar-modes="webxr scene-viewer quick-look"></model-viewer>
+            <img class="ar-rubo-face" src="assets/rubo/SERIUS-RUBO.png" alt="RUBO">
+          </div>
+        </section>
+
+        <section class="ar-v134-dialog">
+          <div class="ar-v134-step"><span id="arGuideStepBadge">1/5</span><b id="arGuideTitle">Halo Ranger!</b></div>
+          <p id="arGuideText">RUBO akan menjelaskan portal ini dan membimbing kamu menyelesaikan scan.</p>
+        </section>
+
+        <section class="ar-portal-card ar-v134-portal-card">
+          <span class="ar-portal-kicker">Portal target</span>
+          <b id="arPortalName">Mencari portal terdekat…</b>
+          <small id="arPortalMeta">Dekati portal untuk scan AR.</small>
+        </section>
+
+        <div class="ar-camera-actions ar-v134-actions">
+          <button id="arNextGuideBtn" type="button">Lanjut</button>
+          <button id="arPathBtn" type="button">Jalur</button>
+          <button id="arScanBtn" type="button">Scan</button>
+          <button id="arCompleteBtn" type="button">Selesai</button>
+          <button id="arCameraStartBtn" type="button">Kamera</button>
+          <button id="arCameraStopBtn" type="button">Matikan</button>
+        </div>
+      </div>
+    </div>
+
+    <aside id="animeChatDock" class="anime-chat-dock collapsed" aria-label="Chat karakter">
+      <div class="chat-dock-head">
+        <div>
+          <b>Chat Ranger</b>
+          <small>Firebase belum dihubungkan</small>
+        </div>
+        <button id="chatCloseBtn" class="chat-close-btn" title="Tutup">×</button>
+      </div>
+      <div class="chat-dock-body">
+        <div class="chat-placeholder-orb"></div>
+        <p>Kolom chat transparan anime sudah siap. Nanti tinggal sambungkan ke Firebase realtime chat.</p>
+      </div>
+    </aside>
+
+    <!-- RUBO floating assistant removed in v115 -->
+
+
+
+    <div class="reference-checklist" aria-hidden="true">
+      <div class="ref-card"><b>✔ KAMERA & ZOOM SEPERTI GAMBAR REFERENSI</b><span>• Jarak kamera pas<br>• Fokus area dekat karakter</span></div>
+      <div class="ref-card"><b>✔ KARAKTER SELALU DI JALAN</b><span>• Auto nempel ke jalan terdekat<br>• Tidak bisa masuk gedung / tembus</span></div>
+      <div class="ref-card"><b>✔ EFEK BERAWAN & EMBUN</b><span>• Awan tebal di horizon<br>• Kabut / embun halus di kejauhan</span></div>
+      <div class="ref-card"><b>✔ SMOOTH & STABIL</b><span>• Gerakan halus tanpa jitter<br>• GPS filter + road snap</span></div>
+    </div>
+
+    <div id="bottomSheet" class="bottom-sheet collapsed hidden-sheet">
+      <div id="sheetHandle" class="sheet-handle"></div>
+      <button id="sheetCloseBtn" class="sheet-close-btn" title="Tutup">×</button>
+      <div class="sheet-content" id="sheetContent">
+        <h3>BogorDex GO v28</h3>
+        <p>Portal dunia digital, karakter tidak muter saat diam, dan area map lebih terasa game.</p>
+      </div>
+    </div>
+
+
+    <div id="mainMenuModal" class="game-menu-modal hidden">
+      <div class="game-menu-backdrop"></div>
+      <div class="game-menu-card">
+        <button id="closeMainMenuBtn" class="game-menu-close" title="Tutup">×</button>
+        <div class="game-menu-orb">BD</div>
+        <div class="game-menu-kicker">BogorDex Portal Hub</div>
+        <h2>Portal Kota di Sekitarmu</h2>
+        <p class="game-menu-desc">Menu ini khusus untuk masuk ke titik dunia: portal terdekat, portal yang sudah ditemukan, dan portal selesai.</p>
+        <div class="game-menu-grid">
+          <button id="menuExploreBtn" class="game-menu-item primary">
+            <span class="menu-emoji">🌀</span>
+            <strong>Portal Terdekat</strong>
+            <small>Lihat titik portal terdekat lalu masuk ke detail portal.</small>
+          </button>
+          <button id="menuScanBtn" class="game-menu-item">
+            <span class="menu-emoji">📡</span>
+            <strong>Scan Portal</strong>
+            <small>Cari titik BogorDex paling dekat dari karakter.</small>
+          </button>
+          <button id="menuDexBtn" class="game-menu-item">
+            <span class="menu-emoji">✅</span>
+            <strong>Progress Portal</strong>
+            <small>Lihat portal yang sudah discovered, visited, dan completed.</small>
+          </button>
+          <button id="menuResetBtn" class="game-menu-item">
+            <span class="menu-emoji">🎯</span>
+            <strong>Reset Kamera</strong>
+            <small>Balik ke posisi eksplorasi utama.</small>
+          </button>
+          <button id="menuReportBtn" class="game-menu-item warning">
+            <span class="menu-emoji">📍</span>
+            <strong>Tambah Info Titik</strong>
+            <small>Laporkan lobang, pohon, pembangunan, macet, atau info lapangan.</small>
+          </button>
+        </div>
+        <div class="game-menu-footer">
+          <span>HP: pakai tombol arah untuk jalan</span>
+          <span>Dekati portal = detail & quest muncul</span>
+        </div>
+      </div>
+    </div>
+
     <div id="reportModal" class="report-modal hidden">
       <div class="report-card report-card-clean">
-        <button id="reportCloseBtn" class="report-close">×</button>
-        <div class="report-rubo-single">
+        <button id="reportCloseBtn" class="report-close" title="Tutup">×</button>
+        <div class="report-rubo-single" aria-label="RUBO">
           <img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO">
         </div>
         <h3>Tambah Info di Titik Ini</h3>
-        <p class="report-intro">Bantu warga dengan melaporkan kondisi jalan, hambatan, atau info lapangan terbaru.</p>
+        <p class="report-intro">Bantu sesama pelatih dengan melaporkan kondisi sekitar. Informasi kamu akan membuat BogorDex semakin akurat.</p>
         <div class="report-location-strip">
           <span class="report-location-icon">📍</span>
           <div>
-            <small>Lokasi karakter saat ini</small>
+            <small>Laporan terhubung dengan posisi karaktermu saat ini</small>
             <strong id="reportLocationText">Bogor Tengah, Kota Bogor</strong>
           </div>
           <span class="report-accuracy">± 10 m</span>
@@ -120,8 +282,9 @@
           <option value="macet">🚗 Macet</option>
           <option value="lainnya">📌 Lainnya</option>
         </select>
-        <label>Keterangan Tambahan</label>
-        <textarea id="reportNote" maxlength="200" placeholder="Contoh: Ada lubang cukup dalam di lajur kiri jalan utama..."></textarea>
+        <label>Keterangan (Opsional)</label>
+        <textarea id="reportNote" maxlength="200" placeholder="Berikan detail tambahan seperti lokasi spesifik, ukuran, atau keterangan lainnya..."></textarea>
+        <div class="report-tips">💡 Tips: Laporkan dengan detail agar lebih cepat ditindaklanjuti.</div>
         <div class="report-actions report-actions-stack">
           <button id="reportSaveBtn">✈ Pasang di Map ✨</button>
           <button id="reportCancelBtn">Batal</button>
@@ -129,7 +292,8 @@
       </div>
     </div>
 
-    <!-- MODAL MISI -->
+
+
     <div id="missionModal" class="modal mission-modal hidden">
       <div class="modal-card mission-card">
         <div class="mobile-sheet-handle"></div>
@@ -137,19 +301,21 @@
           <div>
             <span class="section-kicker">BogorDex Mission Board</span>
             <h3>Misi Ranger</h3>
+            <p class="mission-subtitle">Tugas harian, eksplorasi, dan event. Beda dari Portal: ini daftar target dan reward.</p>
           </div>
           <button id="closeMissionBtn" class="close-btn">×</button>
         </div>
+
         <div class="mission-summary-grid">
           <div class="mission-summary-card"><span>Portal ditemukan</span><b id="missionDiscoveredCount">0</b></div>
           <div class="mission-summary-card"><span>Portal selesai</span><b id="missionCompletedCount">0</b></div>
           <div class="mission-summary-card"><span>Laporan warga</span><b id="missionReportCount">0</b></div>
         </div>
+
         <div id="missionList" class="mission-list"></div>
       </div>
     </div>
 
-    <!-- MODAL RADAR (MAPDEX) -->
     <div id="mapDexModal" class="mapdex-modal hidden">
       <div class="mapdex-phone">
         <div class="mobile-sheet-handle"></div>
@@ -157,6 +323,7 @@
           <div>
             <div class="mapdex-kicker">BogorDex Phone</div>
             <h3>MapDex Radar</h3>
+            <p class="mapdex-desc">Temukan portal dan laporan di sekitarmu.</p>
           </div>
           <button id="closeMapDexBtn" class="close-btn">×</button>
         </div>
@@ -164,17 +331,21 @@
           <div class="mapdex-player-dot">YOU</div>
         </div>
         <div id="mapDexFilters" class="mapdex-filters"></div>
+        <div class="mapdex-legend">
+          <span><b class="pin portal"></b>Portal</span>
+                    <span><b class="pin report"></b>Laporan</span>
+        </div>
         <div id="mapDexList" class="mapdex-list"></div>
+        <div class="mapdex-rubo-tip"><img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO"><span>Scan radius aktif. Tap titik untuk lihat detail!</span></div>
       </div>
     </div>
 
-    <!-- MODAL PROFIL (CHARACTER) -->
     <div id="dexModal" class="modal hidden">
       <div class="modal-card character-modal-card">
         <div class="mobile-sheet-handle"></div>
         <div class="modal-head mobile-game-head">
           <div>
-            <span class="section-kicker">Ranger Profile</span>
+            <span class="section-kicker">BogorDex</span>
             <h3>Info Karakter</h3>
           </div>
           <button id="closeDexBtn" class="close-btn">×</button>
@@ -185,211 +356,111 @@
           </div>
           <div class="character-hero-meta">
             <h4 id="profileName">Ranger Panji</h4>
-            <div class="profile-badges-game">
+            <div class="profile-badges profile-badges-game">
               <span class="tag success">Ranger</span>
-              <span class="tag level">Lv <b id="profileLevel">1</b></span>
+              <span class="tag info">Explorer</span>
+              <span class="tag level">Lv <b id="profileLevel">10</b></span>
             </div>
-            <p id="profileStatus">Patroli aktif wilayah Bogor.</p>
+            <p id="profileStatus">Sedang patroli di jalan BogorDex.</p>
           </div>
         </div>
-        <div class="profile-purpose-grid">
-          <div class="profile-purpose-card"><b>🪪 Identitas Ranger</b><span>ID Eksplorasi aktif di sistem spasial BogorDex.</span></div>
-          <div class="profile-purpose-card"><b>📈 Progress Jelajah</b><span>Status koin, exp, dan total area yang telah terbuka.</span></div>
+        <div class="profile-purpose-grid profile-purpose-grid-v118">
+          <div class="profile-purpose-card"><b>🪪 Identitas Ranger</b><span>Profil ini dipakai untuk melihat karakter utama, status patroli, dan mode jelajah BogorDex.</span></div>
+          <div class="profile-purpose-card"><b>📈 Progress Jelajah</b><span>Ringkasan level, coin, lokasi ditemukan, portal yang selesai, dan perkembangan eksplorasi.</span></div>
+          <div class="profile-purpose-card"><b>🏅 Prestasi & Badge</b><span>Tempat melihat badge yang sudah terbuka dan target koleksi berikutnya.</span></div>
         </div>
         <div class="character-stat-grid">
+          <div class="character-stat"><span>Nama</span><strong id="profileName2">Ranger Panji</strong></div>
+          <div class="character-stat"><span>Gender</span><strong id="profileGender">Laki-laki</strong></div>
+          <div class="character-stat"><span>Status</span><strong id="profileRole">BogorDex Ranger</strong></div>
+          <div class="character-stat"><span>Mode</span><strong id="profileMode">Road Patrol</strong></div>
           <div class="character-stat"><span>Langkah Hari Ini</span><strong id="profileDailySteps">0 langkah</strong></div>
-          <div class="character-stat"><span>Progress</span><strong id="profileStatus2">Ranger Baru</strong></div>
+          <div class="character-stat"><span>Fungsi Profil</span><strong>Lihat progres</strong></div>
+          <div class="character-stat"><span>Koleksi</span><strong>Badge & reward</strong></div>
         </div>
         <div class="character-badge-showcase">
           <div class="badge-showcase-head">
-            <strong>Prestasi & Badge</strong>
+            <div>
+              <span class="section-kicker">BADGE DIPEROLEH</span>
+              <strong>Prestasi Ranger</strong>
+            </div>
             <span id="profileBadgeCount" class="badge-count-pill">0 / 0</span>
           </div>
           <div class="profile-progress-track"><span id="profileProgressFill" class="profile-progress-fill"></span></div>
           <div id="profileBadgeGrid" class="profile-badge-grid"></div>
         </div>
+        <div class="character-rubo-tip mobile-tip-card">
+          <img src="assets/rubo/KAGET-RUBO.png" alt="RUBO" />
+          <div><b>RUBO bilang:</b><span>Badge makin banyak kalau kamu sering eksplorasi, cek titik, dan bantu warga.</span></div>
+        </div>
+        <div class="character-profile-section">
+          <div class="section-title">Ringkasan</div>
+          <p id="profileSummary">Karakter utama eksplorasi BogorDex. Fokus pada patroli jalan, portal event, dan penelusuran titik kota.</p>
+        </div>
       </div>
     </div>
+  
 
-    <!-- MODAL INVENTORI -->
+
+
     <div id="inventoryModal" class="modal hidden">
       <div class="modal-card inventory-modal-card">
         <div class="mobile-sheet-handle"></div>
         <div class="modal-head mobile-game-head">
           <div>
-            <span class="section-kicker">Storage</span>
-            <h3>Kantong Ranger</h3>
+            <span class="section-kicker">BogorDex</span>
+            <h3>Inventori Ranger</h3>
           </div>
           <button id="closeInventoryBtn" class="close-btn">×</button>
         </div>
-        <div id="inventoryItemsGrid" class="inventory-items-grid"></div>
+        <div class="inventory-hero">
+          <div class="inventory-hero-icon"></div>
+          <div>
+            <b>Inventori & Peralatan Ranger</b>
+            <p>Semua alat penting tersimpan di sini: dipakai untuk Radar, AR, laporan warga, dan progres portal.</p>
+          </div>
+        </div>
+        <div class="inventory-stat-grid">
+          <div class="inventory-stat"><span>Coin</span><strong id="invCoin">0</strong></div>
+          <div class="inventory-stat"><span>Badge</span><strong id="invBadge">0</strong></div>
+          <div class="inventory-stat"><span>Laporan</span><strong id="invReport">0</strong></div>
+          <div class="inventory-stat"><span>Lokasi</span><strong id="invFound">0</strong></div>
+        </div>
+        <div class="inventory-section">
+          <div class="section-title">Peralatan Aktif & Kegunaan</div>
+          <div id="inventoryItemsGrid" class="inventory-items-grid"></div>
+        </div>
+        <div class="inventory-section inventory-report-section">
+          <div class="section-title">Riwayat Aktivitas</div>
+          <div id="inventoryReportList" class="inventory-report-list"></div>
+        </div>
+        <div class="inventory-section inventory-bonus-section">
+          <div class="section-title">Bonus, Badge & Efek</div>
+          <div id="inventoryChipList" class="inventory-chip-list"></div>
+        </div>
+        <div class="inventory-tip mobile-tip-card">
+          <img src="assets/rubo/SERIUS-RUBO.png" alt="RUBO">
+          <div><b>Tip:</b><span>Kumpulkan item dan buat laporan untuk bantu membangun Bogor yang lebih baik!</span></div>
+        </div>
       </div>
     </div>
 
-    <!-- BOTTOM GAME NAV (GLOSSY HUD) -->
-    <nav id="bottomGameNav" class="bottom-game-nav">
-      <button id="bottomHomeBtn" class="bottom-nav-item active" type="button">
-        <span class="nav-ico nav-home"></span>
-        <small>Portal</small>
-      </button>
-      <button id="bottomMissionBtn" class="bottom-nav-item" type="button">
-        <span class="nav-ico nav-mission"></span>
-        <small>Misi</small>
-      </button>
-      <button id="bottomHubBtn" class="bottom-hub-orb ar-hub" type="button">
-        <span></span>
-        <small>AR</small>
-      </button>
-      <button id="bottomInventoryBtn" class="bottom-nav-item" type="button">
-        <span class="nav-ico nav-inventory"></span>
-        <small>Tas</small>
-      </button>
-      <button id="bottomProfileBtn" class="bottom-nav-item" type="button">
-        <span class="nav-ico nav-profile"></span>
-        <small>Ranger</small>
-      </button>
-    </nav>
+    <div id="animeToastStack" class="anime-toast-stack" aria-live="polite"></div>
 
-    <!-- ANIME TOAST STACK -->
-    <div id="animeToastStack" class="anime-toast-stack"></div>
-    <div id="rewardBanner" class="reward-banner hidden">
+    <div id="rewardBanner" class="reward-banner hidden" aria-live="polite">
       <div class="reward-banner-spark"></div>
       <div class="reward-banner-inner">
         <div id="rewardBannerKicker" class="reward-banner-kicker">Reward</div>
-        <div id="rewardBannerTitle" class="reward-banner-title">Misi Berhasil!</div>
-        <div id="rewardBannerSub" class="reward-banner-sub">Selamat, koin Anda bertambah.</div>
+        <div id="rewardBannerTitle" class="reward-banner-title">Badge terbuka!</div>
+        <div id="rewardBannerSub" class="reward-banner-sub">Koleksi baru berhasil dibuka</div>
       </div>
     </div>
 
-    <!-- HUD PANDUAN NAVIGASI (DIRECTION BANNER) -->
-    <div id="navCenterBanner" class="nav-center-banner hidden">
-      <div id="navCenterTitle" class="nav-center-title">Target Navigasi</div>
+    <div id="navCenterBanner" class="nav-center-banner hidden" aria-live="polite">
+      <div class="nav-center-kicker">Sedang menuju</div>
+      <div id="navCenterTitle" class="nav-center-title">Tujuan</div>
       <div id="navCenterMeta" class="nav-center-meta">Menghitung rute...</div>
-      <button id="navCancelBtn" class="nav-cancel-btn" type="button">Batal</button>
-    </div>
-
-    <!-- =========================================================
-         MODAL FULLSCREEN AR HUD (RE-DESIGNED LIKE IMAGE 1)
-         ========================================================= -->
-    <div id="arCameraModal" class="ar-camera-modal-fullscreen hidden" aria-label="AR Portal Mode">
-      <!-- Background Kamera Penuh -->
-      <video id="arCameraVideo" autoplay playsinline muted></video>
-      
-      <!-- Alternatif Background jika Kamera Mati -->
-      <div class="ar-camera-placeholder">
-        <div class="ar-vsky"></div>
-        <div class="ar-vroad"><i></i><i></i><i></i></div>
-      </div>
-
-      <!-- GLOWING SPATIAL HUD OVERLAYS -->
-      <div class="ar-fullscreen-hud">
-        
-        <!-- Header Atas (Glass HUD) -->
-        <header class="ar-top-hud">
-          <div class="ar-top-brand">
-            <span class="ar-hamburger"></span>
-            <h2>BogorDex</h2>
-          </div>
-          <div class="ar-top-user">
-            <div class="ar-user-avatar"></div>
-            <div class="ar-user-copy">
-              <b>Ranger Baru</b>
-              <small>Lv. 24</small>
-            </div>
-          </div>
-        </header>
-
-        <!-- Floating Holographic Billboard Panel -->
-        <div class="ar-hologram-pointer-wrap">
-          <div class="ar-hologram-line"></div>
-          <div class="ar-hologram-node"></div>
-          
-          <div class="ar-hologram-billboard">
-            <div class="ar-billboard-decor">🌳</div>
-            <div class="ar-billboard-body">
-              <h4 id="arPortalName">Balai Kota Bogor</h4>
-              <span id="arPortalSub">Gerbang Hijau</span>
-              <strong id="arPortalDist">18 m</strong>
-              <p id="arPortalDesc">Pusat administrasi pemerintahan Kota Bogor dengan struktur arsitektur bersejarah.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Ground Hologram Ring (Perspektif 3D pada tanah) -->
-        <div class="ar-ground-projection">
-          <div class="ar-hologram-ring-outer"></div>
-          <div class="ar-hologram-ring-inner"></div>
-          <div class="ar-direction-arrows">
-            <span class="arrow-chevron"></span>
-            <span class="arrow-chevron"></span>
-            <span class="arrow-chevron"></span>
-          </div>
-        </div>
-
-        <!-- Target Lock Crosshair (Target-lock mini game) -->
-        <div id="arGuideLine" class="ar-scanning-reticle">
-          <div class="reticle-core"></div>
-          <span class="reticle-label">MENCARI SINYAL...</span>
-        </div>
-
-        <!-- Maskot Pendamping RUBO (Floating Bottom Left) -->
-        <div class="ar-mascot-companion">
-          <div class="ar-mascot-view">
-            <model-viewer id="arRuboModel" src="assets/models/rubo_chibi_basic.glb" autoplay interaction-prompt="none" camera-orbit="180deg 75deg 2.15m" field-of-view="28deg" shadow-intensity="0.75" exposure="1.08"></model-viewer>
-          </div>
-          <div class="ar-mascot-speech">
-            <b>RUBO</b>
-            <p id="arGuideText">Portal ini akan membawamu ke tantangan baru. Siap untuk scan?</p>
-          </div>
-        </div>
-
-        <!-- Bottom Widgets Area -->
-        <div class="ar-bottom-grid">
-          <!-- Widget Kiri: Misi Harian -->
-          <div class="ar-widget-misi">
-            <h5>MISI HARIAN</h5>
-            <div class="ar-misi-row">
-              <div class="ar-misi-title">Jelajahi 3 Portal di Bogor</div>
-              <div class="ar-misi-progress-track"><i style="width: 66%"></i></div>
-              <span class="ar-misi-fraction">2/3</span>
-            </div>
-            <div class="ar-misi-row">
-              <div class="ar-misi-title">Ambil 5 Foto Landmark</div>
-              <div class="ar-misi-progress-track"><i style="width: 60%"></i></div>
-              <span class="ar-misi-fraction">3/5</span>
-            </div>
-          </div>
-
-          <!-- Tombol Tengah: Scan Portal -->
-          <div class="ar-widget-action">
-            <button id="arScanBtn" class="ar-scan-portal-trigger" type="button">
-              <span id="arGuideStepBadge">SCAN PORTAL</span>
-            </button>
-          </div>
-
-          <!-- Widget Kanan: Rute Aktif -->
-          <div class="ar-widget-rute">
-            <h5>RUTE AKTIF</h5>
-            <b id="arPortalNameRute">Balai Kota Bogor</b>
-            <span id="arPortalSubRute">Gerbang Hijau</span>
-            <div class="ar-rute-flex">
-              <strong id="arPortalDistRute">18 m</strong>
-              <!-- Tombol Back berupa tanda panah keatas melingkar -->
-              <button id="arCameraCloseBtn" class="ar-back-trigger" type="button">↑</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Floater Stack -->
-        <div class="ar-right-floater-stack">
-          <button id="arPathBtn" class="ar-stack-btn">🧭<small>Peta</small></button>
-          <button id="arCompleteBtn" class="ar-stack-btn">🏁<small>Lainnya</small></button>
-          <button id="arCameraStartBtn" style="display:none;"></button>
-          <button id="arCameraStopBtn" style="display:none;"></button>
-          <button id="arNextGuideBtn" style="display:none;"></button>
-        </div>
-
-      </div>
+      <button id="navCancelBtn" class="nav-cancel-btn" type="button" onclick="window.clearBogorDexNavigation&&window.clearBogorDexNavigation()">Batalkan</button>
     </div>
 
   </div>
@@ -402,33 +473,54 @@
         "https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js",
         "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"
       ];
+      const cssUrls = [
+        "https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css",
+        "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+      ];
+      function ensureCss(){
+        if (document.querySelector('link[data-maplibre-fallback="1"]')) return;
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = cssUrls[0];
+        link.setAttribute("data-maplibre-fallback", "1");
+        document.head.appendChild(link);
+      }
       function loadScript(src){
         return new Promise((resolve, reject) => {
           const s = document.createElement("script");
-          s.src = src; s.async = false;
-          s.onload = resolve; s.onerror = reject;
+          s.src = src;
+          s.async = false;
+          s.onload = resolve;
+          s.onerror = reject;
           document.body.appendChild(s);
         });
       }
+      function loadApp(){
+        const s = document.createElement("script");
+        s.src = "app.js?v=130";
+        s.onerror = function(){ setStatus("Gagal memuat app.js"); };
+        document.body.appendChild(s);
+        // Premium visual patch
+        const sp = document.createElement("script");
+        sp.src = "premium-patch.js?v=1";
+        document.body.appendChild(sp);
+      }
       async function boot(){
         try{
+          ensureCss();
           if (window.maplibregl) { loadApp(); return; }
-          setStatus("Memuat peta…");
+          setStatus("Memuat engine peta…");
           for (const url of scriptUrls){
             try{
               await loadScript(url);
               if (window.maplibregl) { loadApp(); return; }
             }catch(e){}
           }
-          setStatus("Gagal memuat peta");
+          setStatus("Gagal memuat engine peta");
         }catch(err){
           setStatus("Error boot peta");
+          console.error(err);
         }
-      }
-      function loadApp(){
-        const s = document.createElement("script");
-        s.src = "app.js?v=137";
-        document.body.appendChild(s);
       }
       boot();
     })();
